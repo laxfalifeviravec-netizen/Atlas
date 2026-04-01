@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atlas</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="#" class="nav-logo">Atlas</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#explore">Explore</a></li>
+        <li><a href="#stats">Stats</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <div class="hero-content">
+      <span class="hero-badge">Discover the World</span>
+      <h1 class="hero-title">Navigate Your <span class="highlight">World</span> With Confidence</h1>
+      <p class="hero-subtitle">Atlas gives you the tools to explore, understand, and connect with places around the globe. Start your journey today.</p>
+      <div class="hero-actions">
+        <a href="#explore" class="btn btn-primary">Start Exploring</a>
+        <a href="#features" class="btn btn-secondary">Learn More</a>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="globe-container">
+        <div class="globe">
+          <div class="globe-ring ring-1"></div>
+          <div class="globe-ring ring-2"></div>
+          <div class="globe-ring ring-3"></div>
+          <div class="globe-dot dot-1"></div>
+          <div class="globe-dot dot-2"></div>
+          <div class="globe-dot dot-3"></div>
+          <div class="globe-dot dot-4"></div>
+          <div class="globe-dot dot-5"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-header">
+        <h2>Everything You Need</h2>
+        <p>Powerful tools for every explorer, from casual travellers to seasoned adventurers.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card" data-index="0">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+          <h3>Precise Location</h3>
+          <p>Pin-point accuracy with real-time coordinates and location history across all your devices.</p>
+        </div>
+        <div class="feature-card" data-index="1">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+          </div>
+          <h3>Global Coverage</h3>
+          <p>Explore every corner of the Earth with detailed maps covering 195 countries and territories.</p>
+        </div>
+        <div class="feature-card" data-index="2">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+            </svg>
+          </div>
+          <h3>Smart Navigation</h3>
+          <p>AI-powered route suggestions that adapt to traffic, weather, and your personal preferences.</p>
+        </div>
+        <div class="feature-card" data-index="3">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <h3>Community Maps</h3>
+          <p>Discover hidden gems and local favourites shared by a global community of explorers.</p>
+        </div>
+        <div class="feature-card" data-index="4">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+          </div>
+          <h3>Offline Maps</h3>
+          <p>Download regions for offline use. Stay on track even when you're off the grid.</p>
+        </div>
+        <div class="feature-card" data-index="5">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <h3>Privacy First</h3>
+          <p>Your location data is encrypted end-to-end. We never sell or share your data.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Explore / Interactive Map Placeholder -->
+  <section class="explore" id="explore">
+    <div class="container">
+      <div class="section-header">
+        <h2>Explore Destinations</h2>
+        <p>Click on a region to discover what's waiting for you.</p>
+      </div>
+      <div class="explore-wrapper">
+        <div class="region-tabs">
+          <button class="region-tab active" data-region="europe">Europe</button>
+          <button class="region-tab" data-region="asia">Asia</button>
+          <button class="region-tab" data-region="americas">Americas</button>
+          <button class="region-tab" data-region="africa">Africa</button>
+          <button class="region-tab" data-region="oceania">Oceania</button>
+        </div>
+        <div class="region-panels">
+          <div class="region-panel active" data-region="europe">
+            <div class="region-info">
+              <h3>Europe</h3>
+              <p>From the fjords of Norway to the ruins of Rome, Europe offers unparalleled diversity across 44 countries. Rich history, vibrant culture, and world-class cuisine await.</p>
+              <ul class="region-highlights">
+                <li>44 countries</li>
+                <li>743 million people</li>
+                <li>Top pick: Amalfi Coast, Italy</li>
+              </ul>
+            </div>
+            <div class="region-places">
+              <div class="place-card">
+                <div class="place-color" style="background: #4f8ef7"></div>
+                <div class="place-details"><strong>Paris, France</strong><span>City of Light</span></div>
+              </div>
+              <div class="place-card">
+                <div class="place-color" style="background: #e74c3c"></div>
+                <div class="place-details"><strong>Barcelona, Spain</strong><span>Gaudi's Masterpiece</span></div>
+              </div>
+              <div class="place-card">
+                <div class="place-color" style="background: #2ecc71"></div>
+                <div class="place-details"><strong>Santorini, Greece</strong><span>Aegean Gem</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="region-panel" data-region="asia">
+            <div class="region-info">
+              <h3>Asia</h3>
+              <p>The world's largest continent is home to ancient temples, futuristic skylines, and some of the most breathtaking landscapes on the planet. Over 4.7 billion stories to discover.</p>
+              <ul class="region-highlights">
+                <li>48 countries</li>
+                <li>4.7 billion people</li>
+                <li>Top pick: Ha Long Bay, Vietnam</li>
+              </ul>
+            </div>
+            <div class="region-places">
+              <div class="place-card">
+                <div class="place-color" style="background: #e74c3c"></div>
+                <div class="place-details"><strong>Tokyo, Japan</strong><span>Neon & Tradition</span></div>
+              </div>
+              <div class="place-card">
+                <div class="place-color" style="background: #f39c12"></div>
+                <div class="place-details"><strong>Bali, Indonesia</strong><span>Island of the Gods</span></div>
+              </div>
+              <div class="place-card">
+                <div class="place-color" style="background: #9b59b6"></div>
+                <div class="place-details"><strong>Kyoto, Japan</strong><span>Ancient Capital</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="region-panel" data-region="americas">
+            <div class="region-info">
+              <h3>Americas</h3>
+              <p>From the frozen tundra of Alaska to the rainforests of Patagonia, the Americas span nearly the full length of the globe with staggering natural wonder and cultural richness.</p>
+              <ul class="region-highlights">
+                <li>35 countries</li>
+                <li>1 billion people</li>
+                <li>Top pick: Patagonia, Argentina</li>
+              </ul>
+            </div>
+            <div class="region-places">
+              <div class="place-card">
+                <div class="place-color" style="background: #27ae60"></div>
+                <div class="place-details"><strong>Machu Picchu, Peru</strong><span>Lost City of the Incas</span></div>
+              </div>
+              <div class="place-card">
+                <div class="place-color" style="background: #3498db"></div>
+                <div class="place-details"><strong>New York, USA</strong><span>The Big Apple</span></div>
+              </div>
+              <div class="place-card">
+                <div class="place-color" style="background: #e67e22"></div>
+                <div class="place-details"><strong>Rio de Janeiro, Brazil</strong><span>Marvelous City</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="region-panel" data-region="africa">
+            <div class="region-info">
+              <h3>Africa</h3>
+              <p>The cradle of humanity, Africa is a continent of extraordinary diversity — from the Sahara's vast dunes to the Serengeti's teeming wildlife and the Nile's ancient monuments.</p>
+              <ul class="region-highlights">
+                <li>54 countries</li>
+                <li>1.4 billion people</li>
+                <li>Top pick: Serengeti, Tanzania</li>
+              </ul>
+            </div>
+            <div class="region-places">
+              <div class="place-card">
+                <div class="place-color" style="background: #f1c40f"></div>
+                <div class="place-details"><strong>Marrakech, Morocco</strong><span>Red City</span></div>
+              </div>
+              <div class="place-card">
+                <div class="place-color" style="background: #16a085"></div>
+                <div class="place-details"><strong>Cape Town, S. Africa</strong><span>Mother City</span></div>
+              </div>
+              <div class="place-card">
+                <div class="place-color" style="background: #8e44ad"></div>
+                <div class="place-details"><strong>Cairo, Egypt</strong><span>City of a Thousand Minarets</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="region-panel" data-region="oceania">
+            <div class="region-info">
+              <h3>Oceania</h3>
+              <p>Spread across the Pacific, Oceania's islands offer some of the world's most pristine beaches, unique wildlife, and indigenous cultures found nowhere else on Earth.</p>
+              <ul class="region-highlights">
+                <li>14 countries</li>
+                <li>44 million people</li>
+                <li>Top pick: Great Barrier Reef, Australia</li>
+              </ul>
+            </div>
+            <div class="region-places">
+              <div class="place-card">
+                <div class="place-color" style="background: #2980b9"></div>
+                <div class="place-details"><strong>Sydney, Australia</strong><span>Harbour City</span></div>
+              </div>
+              <div class="place-card">
+                <div class="place-color" style="background: #27ae60"></div>
+                <div class="place-details"><strong>Queenstown, NZ</strong><span>Adventure Capital</span></div>
+              </div>
+              <div class="place-card">
+                <div class="place-color" style="background: #e74c3c"></div>
+                <div class="place-details"><strong>Bora Bora, Fr. Polynesia</strong><span>Pearl of the Pacific</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="stats" id="stats">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-number" data-target="195">0</span>
+          <span class="stat-label">Countries Covered</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number" data-target="2400000">0</span>
+          <span class="stat-label">Active Users</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number" data-target="850000">0</span>
+          <span class="stat-label">Routes Mapped</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number" data-target="99">0</span>
+          <span class="stat-label">% Uptime</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Search Section -->
+  <section class="search-section" id="search">
+    <div class="container">
+      <div class="section-header">
+        <h2>Find Any Place</h2>
+        <p>Search our database of millions of locations worldwide.</p>
+      </div>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search cities, landmarks, coordinates..." autocomplete="off" />
+        <button class="search-btn" id="searchBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </button>
+      </div>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="contact" id="contact">
+    <div class="container">
+      <div class="section-header">
+        <h2>Get In Touch</h2>
+        <p>Have a question or want to work with us? We'd love to hear from you.</p>
+      </div>
+      <form class="contact-form" id="contactForm" novalidate>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" placeholder="Your name" required />
+            <span class="field-error" id="nameError"></span>
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="your@email.com" required />
+            <span class="field-error" id="emailError"></span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="subject">Subject</label>
+          <select id="subject" name="subject">
+            <option value="">Select a topic</option>
+            <option value="general">General Inquiry</option>
+            <option value="support">Technical Support</option>
+            <option value="partnership">Partnership</option>
+            <option value="feedback">Feedback</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="message">Message</label>
+          <textarea id="message" name="message" rows="5" placeholder="Your message..." required></textarea>
+          <span class="field-error" id="messageError"></span>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Send Message</button>
+        <div class="form-success" id="formSuccess">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Message sent! We'll get back to you soon.
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="#" class="nav-logo">Atlas</a>
+          <p>Navigate your world with confidence. Explore, discover, and connect with places across the globe.</p>
+        </div>
+        <div class="footer-links">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#explore">Explore</a></li>
+            <li><a href="#stats">Statistics</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="#contact">Contact</a></li>
+            <li><a href="#">About</a></li>
+            <li><a href="#">Blog</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Terms of Service</a></li>
+            <li><a href="#">Cookie Policy</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Atlas. All rights reserved.</p>
+        <p>Built with care for explorers everywhere.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

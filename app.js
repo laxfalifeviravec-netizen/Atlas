@@ -285,6 +285,27 @@ function updatePickedLocation() {
   els.pickedCoordinates.textContent = `Selected map point: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 }
 
+
+function openRoadOnMap(roadId) {
+  const road = appState.roads.find((r) => r.id === roadId);
+  if (!road) return;
+  setTab('map');
+  map.setView([road.lat, road.lng], 9);
+  if (!appState.selectedRoadIds.includes(roadId)) {
+    appState.selectedRoadIds.push(roadId);
+    saveState();
+  }
+  renderMapFeed();
+  showToast(`Opened ${road.name} on the map.`);
+}
+
+function openConversation(friend) {
+  if (!friend) return;
+  setTab('community');
+  els.conversationSelect.value = friend;
+  renderMessages();
+}
+
 function renderAtlas() {
   const q = els.atlasSearch.value.trim().toLowerCase();
   const roads = appState.roads.filter((road) => `${road.name} ${road.state} ${road.type}`.toLowerCase().includes(q));
@@ -302,7 +323,9 @@ function renderAtlas() {
       <div class="meta">${road.state} • ${road.type} • ${road.rating}/10</div>
       <p>${road.description}</p>
       <div class="meta">Shared by ${road.author}</div>
+      <button type="button" class="outline atlas-open">View on Map</button>
     `;
+    card.querySelector('.atlas-open').addEventListener('click', () => openRoadOnMap(road.id));
     els.atlasGrid.appendChild(card);
   });
 }
@@ -332,7 +355,8 @@ function renderSelectedRoads() {
 
   selected.forEach((road) => {
     const li = document.createElement('li');
-    li.innerHTML = `<strong>${road.name}</strong><br><span class="meta">${road.state} • ${road.type}</span>`;
+    li.innerHTML = `<strong>${road.name}</strong><br><span class="meta">${road.state} • ${road.type}</span><br><button type="button" class="outline">Go to road</button>`;
+    li.querySelector('button').addEventListener('click', () => openRoadOnMap(road.id));
     els.selectedRoadList.appendChild(li);
   });
 }
@@ -429,7 +453,8 @@ function renderFriends() {
 
   user.friends.forEach((friend) => {
     const li = document.createElement('li');
-    li.textContent = friend;
+    li.innerHTML = `<strong>@${friend}</strong><br><button type="button" class="outline">Message</button>`;
+    li.querySelector('button').addEventListener('click', () => openConversation(friend));
     els.friendList.appendChild(li);
 
     const option = document.createElement('option');
@@ -483,7 +508,6 @@ els.selectedOnly.addEventListener('change', (e) => {
 });
 els.conversationSelect.addEventListener('change', () => {
   renderMessages();
-  renderFriends();
 });
 els.clearSelected.addEventListener('click', () => {
   appState.selectedRoadIds = [];

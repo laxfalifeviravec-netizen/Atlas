@@ -38,17 +38,29 @@ function createSeedRoads() {
     createdAt: new Date().toISOString()
   }));
 
+  const namePartsA = [
+    'Canyon', 'Ridge', 'Summit', 'Skyline', 'River', 'Pine', 'Granite', 'Thunder', 'Eagle', 'Red Rock',
+    'Highland', 'Drift', 'Glacier', 'Mesa', 'Valley', 'Switchback', 'Timber', 'Coastal', 'Sunset', 'Prairie'
+  ];
+  const namePartsB = [
+    'Run', 'Pass', 'Byway', 'Drive', 'Road', 'Loop', 'Scenic Way', 'Trail', 'Grade', 'Highway'
+  ];
+
   for (let i = 1; i <= 120; i += 1) {
     const [state, latBase, lngBase] = stateCoords[i % stateCoords.length];
+    const partA = namePartsA[i % namePartsA.length];
+    const partB = namePartsB[(i * 3) % namePartsB.length];
+    const routeNumber = 10 + (i * 7) % 490;
+
     roads.push({
       id: generateId(),
-      name: `Atlas Route ${String(i).padStart(3, '0')}`,
+      name: `${partA} ${partB} (SR-${routeNumber})`,
       state,
       lat: latBase + ((i % 7) - 3) * 0.15,
       lng: lngBase + ((i % 9) - 4) * 0.15,
       type: typePool[i % typePool.length],
       rating: 6 + (i % 5),
-      description: `Route ${i} is known for balanced turns, low congestion windows, and strong scenery value.`,
+      description: `${partA} ${partB} is known for balanced turns, low congestion windows, and strong scenery value.`,
       author: 'atlas_admin',
       createdAt: new Date().toISOString()
     });

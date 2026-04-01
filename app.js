@@ -1,8 +1,20 @@
-const STORAGE_KEY = 'enthusiast-roads-app-v1';
+const STORAGE_KEY = 'enthusiast-roads-app-v2';
+
+function generateId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function deepClone(value) {
+  if (typeof structuredClone === 'function') return structuredClone(value);
+  return JSON.parse(JSON.stringify(value));
+}
 
 const seedRoads = [
   {
-    id: crypto.randomUUID(),
+    id: generateId(),
     name: 'Tail of the Dragon (US 129)',
     state: 'NC',
     description: '318 curves in 11 miles; iconic technical section for experienced drivers.',
@@ -14,7 +26,7 @@ const seedRoads = [
     createdAt: new Date().toISOString()
   },
   {
-    id: crypto.randomUUID(),
+    id: generateId(),
     name: 'Pacific Coast Highway (CA-1, Big Sur)',
     state: 'CA',
     description: 'Ocean cliffs, elevation changes, and unforgettable views.',
@@ -26,7 +38,7 @@ const seedRoads = [
     createdAt: new Date().toISOString()
   },
   {
-    id: crypto.randomUUID(),
+    id: generateId(),
     name: 'Beartooth Highway (US 212)',
     state: 'MT',
     description: 'High-altitude switchbacks and expansive mountain scenery.',
@@ -55,11 +67,13 @@ const defaultState = {
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return structuredClone(defaultState);
+  if (!raw) return deepClone(defaultState);
+
   try {
-    return { ...structuredClone(defaultState), ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    return { ...deepClone(defaultState), ...parsed };
   } catch {
-    return structuredClone(defaultState);
+    return deepClone(defaultState);
   }
 }
 
@@ -99,6 +113,7 @@ let draftMarker = null;
 map.on('click', (e) => {
   appState.selectedLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
   if (draftMarker) map.removeLayer(draftMarker);
+
   draftMarker = L.marker(e.latlng, { draggable: true }).addTo(map);
   draftMarker.on('dragend', () => {
     const p = draftMarker.getLatLng();
@@ -106,6 +121,7 @@ map.on('click', (e) => {
     updatePickedLocation();
     saveState();
   });
+
   updatePickedLocation();
   saveState();
 });
@@ -119,6 +135,7 @@ function updatePickedLocation() {
     els.pickedCoordinates.textContent = 'No map point selected yet.';
     return;
   }
+
   const { lat, lng } = appState.selectedLocation;
   els.pickedCoordinates.textContent = `Selected point: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 }
@@ -230,7 +247,7 @@ els.roadForm.addEventListener('submit', (e) => {
 
   const author = appState.activeUser || 'guest';
   appState.roads.push({
-    id: crypto.randomUUID(),
+    id: generateId(),
     name: els.roadName.value.trim(),
     state: els.roadState.value.trim().toUpperCase(),
     description: els.roadDescription.value.trim(),
@@ -307,11 +324,14 @@ els.messageForm.addEventListener('submit', (e) => {
     return;
   }
 
+  const messageText = els.messageInput.value.trim();
+  if (!messageText) return;
+
   const key = friendshipKey(appState.activeUser, friend);
   if (!appState.messages[key]) appState.messages[key] = [];
   appState.messages[key].push({
     from: appState.activeUser,
-    text: els.messageInput.value.trim(),
+    text: messageText,
     sentAt: new Date().toISOString()
   });
 

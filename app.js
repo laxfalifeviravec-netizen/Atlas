@@ -166,7 +166,8 @@ const defaultState = {
   messages: {},
   activeUser: null,
   selectedLocation: null,
-  selectedRoadIds: []
+  selectedRoadIds: [],
+  selectedOnlyMode: false
 };
 
 function loadState() {
@@ -198,6 +199,9 @@ const els = {
   pickedCoordinates: document.getElementById('picked-coordinates'),
   roadList: document.getElementById('road-list'),
   roadSearch: document.getElementById('road-search'),
+  fitAll: document.getElementById('fit-all'),
+  centerUS: document.getElementById('center-us'),
+  selectedOnly: document.getElementById('selected-only'),
   selectedRoadList: document.getElementById('selected-road-list'),
   clearSelected: document.getElementById('clear-selected'),
   profileForm: document.getElementById('profile-form'),
@@ -231,6 +235,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 const markerLayer = L.layerGroup().addTo(map);
 let draftMarker = null;
+els.selectedOnly.checked = Boolean(appState.selectedOnlyMode);
 
 function setTab(tabName) {
   els.tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === tabName));
@@ -326,9 +331,30 @@ function renderSelectedRoads() {
   });
 }
 
-function renderMapFeed() {
+
+function getVisibleRoads() {
   const q = els.roadSearch.value.trim().toLowerCase();
-  const roads = appState.roads.filter((road) => `${road.name} ${road.state} ${road.type}`.toLowerCase().includes(q));
+  let roads = appState.roads.filter((road) => `${road.name} ${road.state} ${road.type}`.toLowerCase().includes(q));
+
+  if (appState.selectedOnlyMode) {
+    const selected = new Set(appState.selectedRoadIds || []);
+    roads = roads.filter((road) => selected.has(road.id));
+  }
+
+  return roads;
+}
+
+function fitRoadBounds(roads) {
+  if (!roads.length) {
+    showToast('No roads available for this view.');
+    return;
+  }
+  const bounds = L.latLngBounds(roads.map((road) => [road.lat, road.lng]));
+  map.fitBounds(bounds, { padding: [25, 25] });
+}
+
+function renderMapFeed() {
+  const roads = getVisibleRoads();
 
   markerLayer.clearLayers();
   els.roadList.innerHTML = '';
@@ -426,9 +452,21 @@ function renderMessages() {
 
 els.atlasSearch.addEventListener('input', renderAtlas);
 els.roadSearch.addEventListener('input', renderMapFeed);
+els.fitAll.addEventListener('click', () => fitRoadBounds(getVisibleRoads()));
+els.centerUS.addEventListener('click', () => map.setView([39.5, -98.35], 4));
+els.selectedOnly.addEventListener('change', (e) => {
+  appState.selectedOnlyMode = e.target.checked;
+  saveState();
+  renderMapFeed();
+  showToast(appState.selectedOnlyMode ? 'Showing selected roads only.' : 'Showing all roads.');
+});
 els.conversationSelect.addEventListener('change', renderMessages);
 els.clearSelected.addEventListener('click', () => {
   appState.selectedRoadIds = [];
+  if (appState.selectedOnlyMode) {
+    appState.selectedOnlyMode = false;
+    els.selectedOnly.checked = false;
+  }
   saveState();
   renderMapFeed();
   showToast('Cleared selected roads.');

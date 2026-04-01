@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>US Enthusiast Roads</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>US Enthusiast Roads Atlas</h1>
+      <p>
+        A community-driven app for finding, publishing, and sharing great driving roads across the United States.
+      </p>
+    </header>
+
+    <main>
+      <section class="card" id="map-section">
+        <h2>Interactive Road Map</h2>
+        <p>Click the map to set a road location, then publish your find.</p>
+        <div id="map"></div>
+      </section>
+
+      <section class="grid-2">
+        <section class="card">
+          <h2>Publish a Road</h2>
+          <form id="road-form">
+            <label>
+              Road Name
+              <input type="text" id="road-name" required />
+            </label>
+            <label>
+              State
+              <input type="text" id="road-state" maxlength="2" placeholder="CA" required />
+            </label>
+            <label>
+              Why it's great
+              <textarea id="road-description" rows="3" required></textarea>
+            </label>
+            <label>
+              Road Type
+              <select id="road-type" required>
+                <option value="Twisty mountain">Twisty mountain</option>
+                <option value="Scenic coastal">Scenic coastal</option>
+                <option value="Desert sweepers">Desert sweepers</option>
+                <option value="Forest canyon">Forest canyon</option>
+              </select>
+            </label>
+            <label>
+              Enthusiast Rating (1-10)
+              <input type="number" id="road-rating" min="1" max="10" value="8" required />
+            </label>
+            <p id="picked-coordinates">No map point selected yet.</p>
+            <button type="submit">Publish Road</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <h2>Road Feed</h2>
+          <input id="road-search" type="search" placeholder="Search by name, state, or type" />
+          <ul id="road-list"></ul>
+        </section>
+      </section>
+
+      <section class="grid-2">
+        <section class="card">
+          <h2>Friend System</h2>
+          <form id="profile-form" class="inline-form">
+            <input type="text" id="profile-name" placeholder="Your username" required />
+            <button type="submit">Set Active Profile</button>
+          </form>
+          <p id="active-profile">Active profile: none</p>
+
+          <form id="friend-form" class="inline-form">
+            <input type="text" id="friend-name" placeholder="Friend username" required />
+            <button type="submit">Send Friend Request</button>
+          </form>
+
+          <div class="friend-columns">
+            <div>
+              <h3>Incoming Requests</h3>
+              <ul id="incoming-requests"></ul>
+            </div>
+            <div>
+              <h3>Friends</h3>
+              <ul id="friend-list"></ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Messaging</h2>
+          <label>
+            Conversation
+            <select id="conversation-select"></select>
+          </label>
+          <div id="message-thread"></div>
+          <form id="message-form" class="inline-form">
+            <input type="text" id="message-input" placeholder="Type a message" required />
+            <button type="submit">Send</button>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="app.js"></script>
+  </body>
+</html>

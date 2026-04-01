@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'enthusiast-roads-app-v3';
+const STORAGE_KEY = 'drive-club-app-v1';
 
 function generateId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
@@ -623,7 +623,7 @@ els.roadForm.addEventListener('submit', (e) => {
   renderAtlas();
   renderMapFeed();
   els.roadForm.reset();
-  showToast('Road published to the atlas.');
+  showToast('Road published to Drive Club.');
 });
 
 updateCounts();

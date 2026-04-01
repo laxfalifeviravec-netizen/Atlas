@@ -104,8 +104,19 @@ const els = {
   conversationSelect: document.getElementById('conversation-select'),
   messageThread: document.getElementById('message-thread'),
   messageForm: document.getElementById('message-form'),
-  messageInput: document.getElementById('message-input')
+  messageInput: document.getElementById('message-input'),
+  toast: document.getElementById('toast')
 };
+
+
+let toastTimer = null;
+function showToast(message) {
+  if (!els.toast) return;
+  els.toast.textContent = message;
+  els.toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => els.toast.classList.remove('show'), 2200);
+}
 
 const map = L.map('map').setView([39.5, -98.35], 4);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -162,6 +173,10 @@ function renderAtlas() {
   const roads = appState.roads.filter((road) => `${road.name} ${road.state} ${road.type}`.toLowerCase().includes(q));
 
   els.atlasGrid.innerHTML = '';
+  if (!roads.length) {
+    els.atlasGrid.innerHTML = '<p class="meta">No roads matched your search.</p>';
+    return;
+  }
   roads.slice(0, 140).forEach((road) => {
     const card = document.createElement('article');
     card.className = 'atlas-item';
@@ -181,6 +196,10 @@ function renderMapFeed() {
 
   markerLayer.clearLayers();
   els.roadList.innerHTML = '';
+
+  if (!roads.length) {
+    els.roadList.innerHTML = '<li class="meta">No mapped roads found for this filter.</li>';
+  }
 
   roads.forEach((road) => {
     L.marker([road.lat, road.lng])
@@ -272,16 +291,17 @@ els.profileForm.addEventListener('submit', (e) => {
   saveState();
   renderFriends();
   els.profileForm.reset();
+  showToast(`Active profile set to @${user}`);
 });
 
 els.friendForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  if (!appState.activeUser) return alert('Set a profile first.');
+  if (!appState.activeUser) return showToast('Set a profile first.');
   const target = ensureUser(els.friendName.value);
   if (!target || target === appState.activeUser) return;
 
   const me = appState.users[appState.activeUser];
-  if (me.friends.includes(target)) return alert('Already friends.');
+  if (me.friends.includes(target)) return showToast('You are already friends.');
 
   if (!appState.users[target].incomingRequests.includes(appState.activeUser)) {
     appState.users[target].incomingRequests.push(appState.activeUser);
@@ -289,13 +309,14 @@ els.friendForm.addEventListener('submit', (e) => {
   saveState();
   renderFriends();
   els.friendForm.reset();
+  showToast(`Friend request sent to @${target}`);
 });
 
 els.messageForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  if (!appState.activeUser) return alert('Set a profile first.');
+  if (!appState.activeUser) return showToast('Set a profile first.');
   const friend = els.conversationSelect.value;
-  if (!friend) return alert('Choose a friend conversation first.');
+  if (!friend) return showToast('Choose a friend conversation first.');
 
   const text = els.messageInput.value.trim();
   if (!text) return;
@@ -306,11 +327,12 @@ els.messageForm.addEventListener('submit', (e) => {
   saveState();
   renderMessages();
   els.messageForm.reset();
+  showToast('Message sent.');
 });
 
 els.roadForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  if (!appState.selectedLocation) return alert('Select a map location first from the Map tab.');
+  if (!appState.selectedLocation) return showToast('Select a map location first from the Map tab.');
 
   appState.roads.unshift({
     id: generateId(),
@@ -337,6 +359,7 @@ els.roadForm.addEventListener('submit', (e) => {
   renderAtlas();
   renderMapFeed();
   els.roadForm.reset();
+  showToast('Road published to the atlas.');
 });
 
 updateCounts();

@@ -30,21 +30,26 @@
             <p class="kicker">THE ENTHUSIAST'S ATLAS — VOL. II</p>
             <h1>World's Greatest <span>Driving Roads</span></h1>
             <p>
-              Curated routes for drivers who care about rhythm, flow, elevation, and surface quality.
-              Every road is tagged by character, difficulty, and best driving season.
+              A modern road discovery workspace for enthusiasts who care about rhythm, flow,
+              elevation, and surface quality.
             </p>
             <div class="hero-actions">
               <button class="outline" data-jump="map">Explore Community Map →</button>
               <button class="gold" data-jump="community">Join Community →</button>
             </div>
+            <div class="hero-chips">
+              <span>Difficulty tags</span>
+              <span>Seasonality hints</span>
+              <span>Community verified</span>
+            </div>
           </article>
           <article class="stat-card">
             <div class="big-number" id="hero-route-count">0</div>
-            <p>roads in the current atlas</p>
+            <p>roads currently in the atlas</p>
             <ul>
-              <li>Routes chosen by driving character, not tourist popularity</li>
-              <li>Difficulty and scenery ratings for enthusiast planning</li>
-              <li>Seasonality and route type filters for quick discovery</li>
+              <li>Search roads instantly by name, state, or road character</li>
+              <li>Open map routes to discover nearby driving gems</li>
+              <li>Publish your own finds directly from the community workflow</li>
             </ul>
           </article>
         </div>
@@ -62,18 +67,20 @@
         <div class="split">
           <section class="card">
             <h2>Publish Road</h2>
-            <p>Set your active profile and submit new roads for the community atlas.</p>
+            <p>Use the map tab to place a pin, then submit your road to the atlas.</p>
             <form id="road-form">
               <input type="text" id="road-name" placeholder="Road name" required />
               <input type="text" id="road-state" placeholder="State code (CA)" maxlength="2" required />
               <textarea id="road-description" rows="3" placeholder="Why this road is special" required></textarea>
-              <select id="road-type" required>
-                <option value="Twisty mountain">Twisty mountain</option>
-                <option value="Scenic coastal">Scenic coastal</option>
-                <option value="Forest canyon">Forest canyon</option>
-                <option value="Desert sweepers">Desert sweepers</option>
-              </select>
-              <input type="number" id="road-rating" min="1" max="10" value="8" required />
+              <div class="inline-form">
+                <select id="road-type" required>
+                  <option value="Twisty mountain">Twisty mountain</option>
+                  <option value="Scenic coastal">Scenic coastal</option>
+                  <option value="Forest canyon">Forest canyon</option>
+                  <option value="Desert sweepers">Desert sweepers</option>
+                </select>
+                <input type="number" id="road-rating" min="1" max="10" value="8" required />
+              </div>
               <p id="picked-coordinates">Select a location in the Map tab before publishing.</p>
               <button type="submit">Publish to Atlas</button>
             </form>
@@ -82,13 +89,13 @@
           <section class="card">
             <h2>Community</h2>
             <form id="profile-form" class="inline-form">
-              <input type="text" id="profile-name" placeholder="Your username" required />
+              <input type="text" id="profile-name" placeholder="Choose your username" required />
               <button type="submit">Set Profile</button>
             </form>
             <p id="active-profile">Active profile: none</p>
 
             <form id="friend-form" class="inline-form">
-              <input type="text" id="friend-name" placeholder="Send request to username" required />
+              <input type="text" id="friend-name" placeholder="Add friend by username" required />
               <button type="submit">Add Friend</button>
             </form>
 
@@ -116,17 +123,23 @@
 
       <section id="tab-map" class="tab-panel">
         <section class="card">
-          <h2>Interactive Community Map</h2>
-          <p>Click anywhere in the U.S. to stage a route location for publishing.</p>
+          <div class="section-head">
+            <h2>Interactive Community Map</h2>
+            <span class="meta">Click map to place a draft pin</span>
+          </div>
           <div id="map"></div>
         </section>
         <section class="card">
-          <h2>Live Route Feed</h2>
-          <input id="road-search" type="search" placeholder="Filter mapped roads" />
+          <div class="section-head">
+            <h2>Live Route Feed</h2>
+            <input id="road-search" type="search" placeholder="Filter mapped roads" />
+          </div>
           <ul id="road-list"></ul>
         </section>
       </section>
     </main>
+
+    <div id="toast" class="toast"></div>
 
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"

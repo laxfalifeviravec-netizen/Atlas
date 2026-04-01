@@ -165,7 +165,8 @@ const defaultState = {
   users: { atlas_admin: { username: 'atlas_admin', friends: [], incomingRequests: [] } },
   messages: {},
   activeUser: null,
-  selectedLocation: null
+  selectedLocation: null,
+  selectedRoadIds: []
 };
 
 function loadState() {
@@ -197,6 +198,8 @@ const els = {
   pickedCoordinates: document.getElementById('picked-coordinates'),
   roadList: document.getElementById('road-list'),
   roadSearch: document.getElementById('road-search'),
+  selectedRoadList: document.getElementById('selected-road-list'),
+  clearSelected: document.getElementById('clear-selected'),
   profileForm: document.getElementById('profile-form'),
   profileName: document.getElementById('profile-name'),
   activeProfile: document.getElementById('active-profile'),
@@ -293,6 +296,36 @@ function renderAtlas() {
   });
 }
 
+
+function toggleRoadSelection(roadId) {
+  if (!appState.selectedRoadIds) appState.selectedRoadIds = [];
+  if (appState.selectedRoadIds.includes(roadId)) {
+    appState.selectedRoadIds = appState.selectedRoadIds.filter((id) => id !== roadId);
+  } else {
+    appState.selectedRoadIds.push(roadId);
+  }
+  saveState();
+  renderMapFeed();
+}
+
+function renderSelectedRoads() {
+  els.selectedRoadList.innerHTML = '';
+  const selected = (appState.selectedRoadIds || [])
+    .map((id) => appState.roads.find((road) => road.id === id))
+    .filter(Boolean);
+
+  if (!selected.length) {
+    els.selectedRoadList.innerHTML = '<li class="meta">No selected roads yet. Click markers or route cards to select.</li>';
+    return;
+  }
+
+  selected.forEach((road) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<strong>${road.name}</strong><br><span class="meta">${road.state} • ${road.type}</span>`;
+    els.selectedRoadList.appendChild(li);
+  });
+}
+
 function renderMapFeed() {
   const q = els.roadSearch.value.trim().toLowerCase();
   const roads = appState.roads.filter((road) => `${road.name} ${road.state} ${road.type}`.toLowerCase().includes(q));
@@ -305,14 +338,23 @@ function renderMapFeed() {
   }
 
   roads.forEach((road) => {
-    L.marker([road.lat, road.lng])
-      .addTo(markerLayer)
-      .bindPopup(`<strong>${road.name}</strong><br>${road.state} • ${road.type}<br>${road.rating}/10`);
+    const marker = L.marker([road.lat, road.lng]).addTo(markerLayer);
+    marker.bindPopup(`<strong>${road.name}</strong><br>${road.state} • ${road.type}<br>${road.rating}/10`);
+    marker.on('click', () => toggleRoadSelection(road.id));
 
     const li = document.createElement('li');
+    const isActive = (appState.selectedRoadIds || []).includes(road.id);
+    if (isActive) li.classList.add('active-road');
     li.innerHTML = `<strong>${road.name}</strong><br><span class="meta">${road.state} • ${road.type} • ${road.rating}/10</span>`;
+    li.addEventListener('click', () => {
+      map.setView([road.lat, road.lng], 8);
+      marker.openPopup();
+      toggleRoadSelection(road.id);
+    });
     els.roadList.appendChild(li);
   });
+
+  renderSelectedRoads();
 }
 
 function ensureUser(username) {
@@ -385,6 +427,12 @@ function renderMessages() {
 els.atlasSearch.addEventListener('input', renderAtlas);
 els.roadSearch.addEventListener('input', renderMapFeed);
 els.conversationSelect.addEventListener('change', renderMessages);
+els.clearSelected.addEventListener('click', () => {
+  appState.selectedRoadIds = [];
+  saveState();
+  renderMapFeed();
+  showToast('Cleared selected roads.');
+});
 
 els.profileForm.addEventListener('submit', (e) => {
   e.preventDefault();

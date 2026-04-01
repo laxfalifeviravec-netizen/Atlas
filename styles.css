@@ -177,3 +177,8 @@ li {
   .top-nav { grid-template-columns: 1fr; }
   .hero-grid, .split { grid-template-columns: 1fr; }
 }
+
+
+.selected-roads { margin-top: .8rem; padding-top: .8rem; border-top: 1px solid #2a3550; }
+#selected-road-list li { border-color: #3d5075; background: #111b2c; }
+li.active-road { border-color: #5e7cc0; background: #182742; }

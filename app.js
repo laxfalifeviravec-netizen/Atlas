@@ -167,7 +167,8 @@ const defaultState = {
   activeUser: null,
   selectedLocation: null,
   selectedRoadIds: [],
-  selectedOnlyMode: false
+  selectedOnlyMode: false,
+  focusedRoadId: null
 };
 
 function loadState() {
@@ -241,6 +242,17 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 const markerLayer = L.layerGroup().addTo(map);
 let draftMarker = null;
+
+const defaultMarkerIcon = new L.Icon.Default();
+const focusedMarkerIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
 els.selectedOnly.checked = Boolean(appState.selectedOnlyMode);
 
 function setTab(tabName) {
@@ -290,6 +302,7 @@ function openRoadOnMap(roadId) {
   const road = appState.roads.find((r) => r.id === roadId);
   if (!road) return;
   setTab('map');
+  appState.focusedRoadId = roadId;
   map.setView([road.lat, road.lng], 9);
   if (!appState.selectedRoadIds.includes(roadId)) {
     appState.selectedRoadIds.push(roadId);
@@ -303,7 +316,6 @@ function openConversation(friend) {
   if (!friend) return;
   setTab('community');
   els.conversationSelect.value = friend;
-  if (previousConversation) els.conversationSelect.value = previousConversation;
   renderMessages();
   updateActionButtons();
 }
@@ -336,6 +348,7 @@ function renderAtlas() {
 
 function toggleRoadSelection(roadId) {
   if (!appState.selectedRoadIds) appState.selectedRoadIds = [];
+  appState.focusedRoadId = roadId;
   if (appState.selectedRoadIds.includes(roadId)) {
     appState.selectedRoadIds = appState.selectedRoadIds.filter((id) => id !== roadId);
   } else {
@@ -410,15 +423,17 @@ function renderMapFeed() {
   }
 
   roads.forEach((road) => {
-    const marker = L.marker([road.lat, road.lng]).addTo(markerLayer);
+    const markerIcon = road.id === appState.focusedRoadId ? focusedMarkerIcon : defaultMarkerIcon;
+    const marker = L.marker([road.lat, road.lng], { icon: markerIcon }).addTo(markerLayer);
     marker.bindPopup(`<strong>${road.name}</strong><br>${road.state} • ${road.type}<br>${road.rating}/10`);
     marker.on('click', () => toggleRoadSelection(road.id));
 
     const li = document.createElement('li');
-    const isActive = (appState.selectedRoadIds || []).includes(road.id);
+    const isActive = (appState.selectedRoadIds || []).includes(road.id) || road.id === appState.focusedRoadId;
     if (isActive) li.classList.add('active-road');
     li.innerHTML = `<strong>${road.name}</strong><br><span class="meta">${road.state} • ${road.type} • ${road.rating}/10</span>`;
     li.addEventListener('click', () => {
+      appState.focusedRoadId = road.id;
       map.setView([road.lat, road.lng], 8);
       marker.openPopup();
       toggleRoadSelection(road.id);
@@ -497,7 +512,6 @@ updateActionButtons();
     });
     els.conversationList.appendChild(conv);
   });
-  if (previousConversation) els.conversationSelect.value = previousConversation;
   renderMessages();
   updateActionButtons();
 }
@@ -534,12 +548,12 @@ els.selectedOnly.addEventListener('change', (e) => {
   showToast(appState.selectedOnlyMode ? 'Showing selected roads only.' : 'Showing all roads.');
 });
 els.conversationSelect.addEventListener('change', () => {
-  if (previousConversation) els.conversationSelect.value = previousConversation;
   renderMessages();
   updateActionButtons();
 });
 els.clearSelected.addEventListener('click', () => {
   appState.selectedRoadIds = [];
+  appState.focusedRoadId = null;
   if (appState.selectedOnlyMode) {
     appState.selectedOnlyMode = false;
     els.selectedOnly.checked = false;

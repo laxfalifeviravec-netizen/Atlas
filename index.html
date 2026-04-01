@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>US Enthusiast Roads</title>
+    <title>The Enthusiast's Atlas</title>
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -13,98 +13,117 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header>
-      <h1>US Enthusiast Roads Atlas</h1>
-      <p>
-        A community-driven app for finding, publishing, and sharing great driving roads across the United States.
-      </p>
+    <header class="top-nav">
+      <div class="brand">THE <span>ENTHUSIAST'S</span> ATLAS</div>
+      <nav>
+        <button class="tab active" data-tab="atlas">Atlas</button>
+        <button class="tab" data-tab="community">Community</button>
+        <button class="tab" data-tab="map">Map</button>
+      </nav>
+      <div id="route-count">0 routes catalogued</div>
     </header>
 
     <main>
-      <section class="card" id="map-section">
-        <h2>Interactive Road Map</h2>
-        <p>Click the map to set a road location, then publish your find.</p>
-        <div id="map"></div>
+      <section id="tab-atlas" class="tab-panel active">
+        <div class="hero-grid">
+          <article class="hero-card">
+            <p class="kicker">THE ENTHUSIAST'S ATLAS — VOL. II</p>
+            <h1>World's Greatest <span>Driving Roads</span></h1>
+            <p>
+              Curated routes for drivers who care about rhythm, flow, elevation, and surface quality.
+              Every road is tagged by character, difficulty, and best driving season.
+            </p>
+            <div class="hero-actions">
+              <button class="outline" data-jump="map">Explore Community Map →</button>
+              <button class="gold" data-jump="community">Join Community →</button>
+            </div>
+          </article>
+          <article class="stat-card">
+            <div class="big-number" id="hero-route-count">0</div>
+            <p>roads in the current atlas</p>
+            <ul>
+              <li>Routes chosen by driving character, not tourist popularity</li>
+              <li>Difficulty and scenery ratings for enthusiast planning</li>
+              <li>Seasonality and route type filters for quick discovery</li>
+            </ul>
+          </article>
+        </div>
+
+        <section class="card">
+          <div class="section-head">
+            <h2>Atlas (100+ Roads)</h2>
+            <input id="atlas-search" type="search" placeholder="Search by road, state, or type" />
+          </div>
+          <div id="atlas-grid" class="atlas-grid"></div>
+        </section>
       </section>
 
-      <section class="grid-2">
-        <section class="card">
-          <h2>Publish a Road</h2>
-          <form id="road-form">
-            <label>
-              Road Name
-              <input type="text" id="road-name" required />
-            </label>
-            <label>
-              State
-              <input type="text" id="road-state" maxlength="2" placeholder="CA" required />
-            </label>
-            <label>
-              Why it's great
-              <textarea id="road-description" rows="3" required></textarea>
-            </label>
-            <label>
-              Road Type
+      <section id="tab-community" class="tab-panel">
+        <div class="split">
+          <section class="card">
+            <h2>Publish Road</h2>
+            <p>Set your active profile and submit new roads for the community atlas.</p>
+            <form id="road-form">
+              <input type="text" id="road-name" placeholder="Road name" required />
+              <input type="text" id="road-state" placeholder="State code (CA)" maxlength="2" required />
+              <textarea id="road-description" rows="3" placeholder="Why this road is special" required></textarea>
               <select id="road-type" required>
                 <option value="Twisty mountain">Twisty mountain</option>
                 <option value="Scenic coastal">Scenic coastal</option>
-                <option value="Desert sweepers">Desert sweepers</option>
                 <option value="Forest canyon">Forest canyon</option>
+                <option value="Desert sweepers">Desert sweepers</option>
               </select>
-            </label>
-            <label>
-              Enthusiast Rating (1-10)
               <input type="number" id="road-rating" min="1" max="10" value="8" required />
-            </label>
-            <p id="picked-coordinates">No map point selected yet.</p>
-            <button type="submit">Publish Road</button>
-          </form>
-        </section>
+              <p id="picked-coordinates">Select a location in the Map tab before publishing.</p>
+              <button type="submit">Publish to Atlas</button>
+            </form>
+          </section>
 
-        <section class="card">
-          <h2>Road Feed</h2>
-          <input id="road-search" type="search" placeholder="Search by name, state, or type" />
-          <ul id="road-list"></ul>
-        </section>
+          <section class="card">
+            <h2>Community</h2>
+            <form id="profile-form" class="inline-form">
+              <input type="text" id="profile-name" placeholder="Your username" required />
+              <button type="submit">Set Profile</button>
+            </form>
+            <p id="active-profile">Active profile: none</p>
+
+            <form id="friend-form" class="inline-form">
+              <input type="text" id="friend-name" placeholder="Send request to username" required />
+              <button type="submit">Add Friend</button>
+            </form>
+
+            <div class="community-cols">
+              <div>
+                <h3>Requests</h3>
+                <ul id="incoming-requests"></ul>
+              </div>
+              <div>
+                <h3>Friends</h3>
+                <ul id="friend-list"></ul>
+              </div>
+            </div>
+
+            <h3>Messaging</h3>
+            <select id="conversation-select"></select>
+            <div id="message-thread"></div>
+            <form id="message-form" class="inline-form">
+              <input type="text" id="message-input" placeholder="Message a friend" required />
+              <button type="submit">Send</button>
+            </form>
+          </section>
+        </div>
       </section>
 
-      <section class="grid-2">
+      <section id="tab-map" class="tab-panel">
         <section class="card">
-          <h2>Friend System</h2>
-          <form id="profile-form" class="inline-form">
-            <input type="text" id="profile-name" placeholder="Your username" required />
-            <button type="submit">Set Active Profile</button>
-          </form>
-          <p id="active-profile">Active profile: none</p>
-
-          <form id="friend-form" class="inline-form">
-            <input type="text" id="friend-name" placeholder="Friend username" required />
-            <button type="submit">Send Friend Request</button>
-          </form>
-
-          <div class="friend-columns">
-            <div>
-              <h3>Incoming Requests</h3>
-              <ul id="incoming-requests"></ul>
-            </div>
-            <div>
-              <h3>Friends</h3>
-              <ul id="friend-list"></ul>
-            </div>
-          </div>
+          <h2>Interactive Community Map</h2>
+          <p>Click anywhere in the U.S. to stage a route location for publishing.</p>
+          <div id="map"></div>
         </section>
-
         <section class="card">
-          <h2>Messaging</h2>
-          <label>
-            Conversation
-            <select id="conversation-select"></select>
-          </label>
-          <div id="message-thread"></div>
-          <form id="message-form" class="inline-form">
-            <input type="text" id="message-input" placeholder="Type a message" required />
-            <button type="submit">Send</button>
-          </form>
+          <h2>Live Route Feed</h2>
+          <input id="road-search" type="search" placeholder="Filter mapped roads" />
+          <ul id="road-list"></ul>
         </section>
       </section>
     </main>

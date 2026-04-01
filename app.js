@@ -303,7 +303,9 @@ function openConversation(friend) {
   if (!friend) return;
   setTab('community');
   els.conversationSelect.value = friend;
+  if (previousConversation) els.conversationSelect.value = previousConversation;
   renderMessages();
+  updateActionButtons();
 }
 
 function renderAtlas() {
@@ -328,6 +330,7 @@ function renderAtlas() {
     card.querySelector('.atlas-open').addEventListener('click', () => openRoadOnMap(road.id));
     els.atlasGrid.appendChild(card);
   });
+  updateActionButtons();
 }
 
 
@@ -359,6 +362,7 @@ function renderSelectedRoads() {
     li.querySelector('button').addEventListener('click', () => openRoadOnMap(road.id));
     els.selectedRoadList.appendChild(li);
   });
+  updateActionButtons();
 }
 
 
@@ -381,6 +385,18 @@ function fitRoadBounds(roads) {
   }
   const bounds = L.latLngBounds(roads.map((road) => [road.lat, road.lng]));
   map.fitBounds(bounds, { padding: [25, 25] });
+}
+
+
+function updateActionButtons() {
+  const hasUser = Boolean(appState.activeUser);
+  const hasSelectedRoads = (appState.selectedRoadIds || []).length > 0;
+  const hasConversation = Boolean(els.conversationSelect.value);
+
+  els.signout.disabled = !hasUser;
+  els.friendForm.querySelector('button').disabled = !hasUser;
+  els.messageForm.querySelector('button').disabled = !hasUser || !hasConversation;
+  els.clearSelected.disabled = !hasSelectedRoads;
 }
 
 function renderMapFeed() {
@@ -411,6 +427,7 @@ function renderMapFeed() {
   });
 
   renderSelectedRoads();
+  updateActionButtons();
 }
 
 function ensureUser(username, password = '') {
@@ -428,12 +445,16 @@ function friendshipKey(a, b) {
 
 function renderFriends() {
   const user = appState.activeUser ? appState.users[appState.activeUser] : null;
+  const previousConversation = els.conversationSelect.value;
   els.activeProfile.textContent = appState.activeUser ? `Signed in as @${appState.activeUser}` : 'Signed out';
   els.incomingRequests.innerHTML = '';
   els.friendList.innerHTML = '';
   els.conversationSelect.innerHTML = '';
   els.conversationList.innerHTML = '';
-  if (!user) return;
+  if (!user) {
+    updateActionButtons();
+    return;
+  }
 
   user.incomingRequests.forEach((requester) => {
     const li = document.createElement('li');
@@ -446,6 +467,7 @@ function renderFriends() {
       if (other && !other.friends.includes(user.username)) other.friends.push(user.username);
       saveState();
       renderFriends();
+updateActionButtons();
     });
     li.appendChild(btn);
     els.incomingRequests.appendChild(li);
@@ -471,10 +493,13 @@ function renderFriends() {
       els.conversationSelect.value = friend;
       renderMessages();
       renderFriends();
+updateActionButtons();
     });
     els.conversationList.appendChild(conv);
   });
+  if (previousConversation) els.conversationSelect.value = previousConversation;
   renderMessages();
+  updateActionButtons();
 }
 
 function renderMessages() {
@@ -483,6 +508,7 @@ function renderMessages() {
   const friend = els.conversationSelect.value;
   if (!friend) {
     els.messageThread.innerHTML = '<p class="meta">Pick a friend conversation to begin messaging.</p>';
+    updateActionButtons();
     return;
   }
 
@@ -494,6 +520,7 @@ function renderMessages() {
     div.innerHTML = `${msg.text}<small>${msg.from} • ${new Date(msg.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>`;
     els.messageThread.appendChild(div);
   });
+  updateActionButtons();
 }
 
 els.atlasSearch.addEventListener('input', renderAtlas);
@@ -507,7 +534,9 @@ els.selectedOnly.addEventListener('change', (e) => {
   showToast(appState.selectedOnlyMode ? 'Showing selected roads only.' : 'Showing all roads.');
 });
 els.conversationSelect.addEventListener('change', () => {
+  if (previousConversation) els.conversationSelect.value = previousConversation;
   renderMessages();
+  updateActionButtons();
 });
 els.clearSelected.addEventListener('click', () => {
   appState.selectedRoadIds = [];
@@ -531,6 +560,7 @@ els.signupForm.addEventListener('submit', (e) => {
   appState.activeUser = username;
   saveState();
   renderFriends();
+updateActionButtons();
   els.signupForm.reset();
   showToast(`Account created. Signed in as @${username}`);
 });
@@ -545,6 +575,7 @@ els.signinForm.addEventListener('submit', (e) => {
   appState.activeUser = username;
   saveState();
   renderFriends();
+updateActionButtons();
   els.signinForm.reset();
   showToast(`Welcome back @${username}`);
 });
@@ -553,6 +584,7 @@ els.signout.addEventListener('click', () => {
   appState.activeUser = null;
   saveState();
   renderFriends();
+updateActionButtons();
   renderMessages();
   showToast('Signed out.');
 });
@@ -572,6 +604,7 @@ els.friendForm.addEventListener('submit', (e) => {
   }
   saveState();
   renderFriends();
+updateActionButtons();
   els.friendForm.reset();
   showToast(`Friend request sent to @${target}`);
 });
@@ -631,3 +664,4 @@ updatePickedLocation();
 renderAtlas();
 renderMapFeed();
 renderFriends();
+updateActionButtons();

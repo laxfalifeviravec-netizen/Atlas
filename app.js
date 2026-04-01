@@ -162,7 +162,7 @@ function createSeedRoads() {
 
 const defaultState = {
   roads: createSeedRoads(),
-  users: { atlas_admin: { username: 'atlas_admin', friends: [], incomingRequests: [] } },
+  users: { atlas_admin: { username: 'atlas_admin', password: 'atlas123', friends: [], incomingRequests: [] } },
   messages: {},
   activeUser: null,
   selectedLocation: null,
@@ -204,13 +204,19 @@ const els = {
   selectedOnly: document.getElementById('selected-only'),
   selectedRoadList: document.getElementById('selected-road-list'),
   clearSelected: document.getElementById('clear-selected'),
-  profileForm: document.getElementById('profile-form'),
-  profileName: document.getElementById('profile-name'),
+  signupForm: document.getElementById('signup-form'),
+  signupName: document.getElementById('signup-name'),
+  signupPassword: document.getElementById('signup-password'),
+  signinForm: document.getElementById('signin-form'),
+  signinName: document.getElementById('signin-name'),
+  signinPassword: document.getElementById('signin-password'),
+  signout: document.getElementById('signout'),
   activeProfile: document.getElementById('active-profile'),
   friendForm: document.getElementById('friend-form'),
   friendName: document.getElementById('friend-name'),
   incomingRequests: document.getElementById('incoming-requests'),
   friendList: document.getElementById('friend-list'),
+  conversationList: document.getElementById('conversation-list'),
   conversationSelect: document.getElementById('conversation-select'),
   messageThread: document.getElementById('message-thread'),
   messageForm: document.getElementById('message-form'),
@@ -383,10 +389,12 @@ function renderMapFeed() {
   renderSelectedRoads();
 }
 
-function ensureUser(username) {
+function ensureUser(username, password = '') {
   const clean = username.trim().toLowerCase();
   if (!clean) return null;
-  if (!appState.users[clean]) appState.users[clean] = { username: clean, friends: [], incomingRequests: [] };
+  if (!appState.users[clean]) {
+    appState.users[clean] = { username: clean, password, friends: [], incomingRequests: [] };
+  }
   return clean;
 }
 
@@ -396,10 +404,11 @@ function friendshipKey(a, b) {
 
 function renderFriends() {
   const user = appState.activeUser ? appState.users[appState.activeUser] : null;
-  els.activeProfile.textContent = `Active profile: ${appState.activeUser || 'none'}`;
+  els.activeProfile.textContent = appState.activeUser ? `Signed in as @${appState.activeUser}` : 'Signed out';
   els.incomingRequests.innerHTML = '';
   els.friendList.innerHTML = '';
   els.conversationSelect.innerHTML = '';
+  els.conversationList.innerHTML = '';
   if (!user) return;
 
   user.incomingRequests.forEach((requester) => {
@@ -427,6 +436,18 @@ function renderFriends() {
     option.value = friend;
     option.textContent = friend;
     els.conversationSelect.appendChild(option);
+
+    const threadKey = friendshipKey(appState.activeUser, friend);
+    const lastMsg = (appState.messages[threadKey] || []).slice(-1)[0];
+    const conv = document.createElement('li');
+    if (els.conversationSelect.value === friend) conv.classList.add('active-road');
+    conv.innerHTML = `<strong>@${friend}</strong><br><span class="meta">${lastMsg ? lastMsg.text.slice(0, 28) : 'No messages yet'}</span>`;
+    conv.addEventListener('click', () => {
+      els.conversationSelect.value = friend;
+      renderMessages();
+      renderFriends();
+    });
+    els.conversationList.appendChild(conv);
   });
   renderMessages();
 }
@@ -445,7 +466,7 @@ function renderMessages() {
   thread.forEach((msg) => {
     const div = document.createElement('div');
     div.className = `msg ${msg.from === appState.activeUser ? 'self' : 'other'}`;
-    div.innerHTML = `<strong>${msg.from}</strong>: ${msg.text}`;
+    div.innerHTML = `${msg.text}<small>${msg.from} • ${new Date(msg.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>`;
     els.messageThread.appendChild(div);
   });
 }
@@ -460,7 +481,10 @@ els.selectedOnly.addEventListener('change', (e) => {
   renderMapFeed();
   showToast(appState.selectedOnlyMode ? 'Showing selected roads only.' : 'Showing all roads.');
 });
-els.conversationSelect.addEventListener('change', renderMessages);
+els.conversationSelect.addEventListener('change', () => {
+  renderMessages();
+  renderFriends();
+});
 els.clearSelected.addEventListener('click', () => {
   appState.selectedRoadIds = [];
   if (appState.selectedOnlyMode) {
@@ -472,22 +496,49 @@ els.clearSelected.addEventListener('click', () => {
   showToast('Cleared selected roads.');
 });
 
-els.profileForm.addEventListener('submit', (e) => {
+els.signupForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  const user = ensureUser(els.profileName.value);
-  if (!user) return;
-  appState.activeUser = user;
+  const username = els.signupName.value.trim().toLowerCase();
+  const password = els.signupPassword.value.trim();
+  if (!username || !password) return showToast('Enter username and password.');
+  if (appState.users[username]) return showToast('Username already exists.');
+
+  ensureUser(username, password);
+  appState.activeUser = username;
   saveState();
   renderFriends();
-  els.profileForm.reset();
-  showToast(`Active profile set to @${user}`);
+  els.signupForm.reset();
+  showToast(`Account created. Signed in as @${username}`);
+});
+
+els.signinForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const username = els.signinName.value.trim().toLowerCase();
+  const password = els.signinPassword.value.trim();
+  const user = appState.users[username];
+  if (!user || user.password !== password) return showToast('Invalid username or password.');
+
+  appState.activeUser = username;
+  saveState();
+  renderFriends();
+  els.signinForm.reset();
+  showToast(`Welcome back @${username}`);
+});
+
+els.signout.addEventListener('click', () => {
+  appState.activeUser = null;
+  saveState();
+  renderFriends();
+  renderMessages();
+  showToast('Signed out.');
 });
 
 els.friendForm.addEventListener('submit', (e) => {
   e.preventDefault();
   if (!appState.activeUser) return showToast('Set a profile first.');
-  const target = ensureUser(els.friendName.value);
+  const target = els.friendName.value.trim().toLowerCase();
   if (!target || target === appState.activeUser) return;
+  if (!appState.users[target]) return showToast('That user does not exist yet.');
 
   const me = appState.users[appState.activeUser];
   if (me.friends.includes(target)) return showToast('You are already friends.');

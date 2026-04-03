@@ -61,11 +61,12 @@ sections.forEach(id => {
 
 // ── Region tabs ───────────────────────────────────────────────
 const REGION_CENTERS = {
-  europe:   { lat: 54,    lng: 15,    zoom: 4 },
-  asia:     { lat: 30,    lng: 105,   zoom: 3 },
-  americas: { lat: 5,     lng: -75,   zoom: 3 },
-  africa:   { lat: 5,     lng: 20,    zoom: 3 },
-  oceania:  { lat: -25,   lng: 140,   zoom: 3 },
+  westcoast: { lat: 44.0,  lng: -122.5, zoom: 5 },
+  mountain:  { lat: 45.5,  lng: -109.0, zoom: 5 },
+  southwest: { lat: 36.5,  lng: -112.0, zoom: 5 },
+  southeast: { lat: 35.5,  lng: -83.0,  zoom: 5 },
+  northeast: { lat: 43.0,  lng: -73.5,  zoom: 5 },
+  midwest:   { lat: 41.5,  lng: -91.0,  zoom: 5 },
 };
 
 document.querySelectorAll('.region-tab').forEach(tab => {
@@ -123,51 +124,57 @@ statsObserver.observe(statsSection);
 
 // ── Search ────────────────────────────────────────────────────
 const PLACES = [
-  { name: 'Paris, France',              type: 'City',     region: 'Europe',   lat: 48.8566,  lng: 2.3522   },
-  { name: 'Tokyo, Japan',               type: 'City',     region: 'Asia',     lat: 35.6762,  lng: 139.6503 },
-  { name: 'New York City, USA',         type: 'City',     region: 'Americas', lat: 40.7128,  lng: -74.0060 },
-  { name: 'London, UK',                 type: 'City',     region: 'Europe',   lat: 51.5074,  lng: -0.1278  },
-  { name: 'Sydney, Australia',          type: 'City',     region: 'Oceania',  lat: -33.8688, lng: 151.2093 },
-  { name: 'Cape Town, South Africa',    type: 'City',     region: 'Africa',   lat: -33.9249, lng: 18.4241  },
-  { name: 'Rio de Janeiro, Brazil',     type: 'City',     region: 'Americas', lat: -22.9068, lng: -43.1729 },
-  { name: 'Barcelona, Spain',           type: 'City',     region: 'Europe',   lat: 41.3851,  lng: 2.1734   },
-  { name: 'Bali, Indonesia',            type: 'Island',   region: 'Asia',     lat: -8.3405,  lng: 115.0920 },
-  { name: 'Machu Picchu, Peru',         type: 'Landmark', region: 'Americas', lat: -13.1631, lng: -72.5450 },
-  { name: 'Santorini, Greece',          type: 'Island',   region: 'Europe',   lat: 36.3932,  lng: 25.4615  },
-  { name: 'Marrakech, Morocco',         type: 'City',     region: 'Africa',   lat: 31.6295,  lng: -7.9811  },
-  { name: 'Kyoto, Japan',               type: 'City',     region: 'Asia',     lat: 35.0116,  lng: 135.7681 },
-  { name: 'Cairo, Egypt',               type: 'City',     region: 'Africa',   lat: 30.0444,  lng: 31.2357  },
-  { name: 'Queenstown, New Zealand',    type: 'City',     region: 'Oceania',  lat: -45.0312, lng: 168.6626 },
-  { name: 'Great Barrier Reef',         type: 'Landmark', region: 'Oceania',  lat: -18.2871, lng: 147.6992 },
-  { name: 'Serengeti, Tanzania',        type: 'Park',     region: 'Africa',   lat: -2.3333,  lng: 34.8333  },
-  { name: 'Amazon Rainforest',          type: 'Region',   region: 'Americas', lat: -3.4653,  lng: -62.2159 },
-  { name: 'Himalayan Mountains',        type: 'Region',   region: 'Asia',     lat: 27.9881,  lng: 86.9250  },
-  { name: 'Northern Lights, Iceland',   type: 'Landmark', region: 'Europe',   lat: 64.9631,  lng: -19.0208 },
-  { name: 'Rome, Italy',                type: 'City',     region: 'Europe',   lat: 41.9028,  lng: 12.4964  },
-  { name: 'Amsterdam, Netherlands',     type: 'City',     region: 'Europe',   lat: 52.3676,  lng: 4.9041   },
-  { name: 'Prague, Czech Republic',     type: 'City',     region: 'Europe',   lat: 50.0755,  lng: 14.4378  },
-  { name: 'Vienna, Austria',            type: 'City',     region: 'Europe',   lat: 48.2082,  lng: 16.3738  },
-  { name: 'Dubai, UAE',                 type: 'City',     region: 'Asia',     lat: 25.2048,  lng: 55.2708  },
-  { name: 'Singapore',                  type: 'City',     region: 'Asia',     lat: 1.3521,   lng: 103.8198 },
-  { name: 'Bangkok, Thailand',          type: 'City',     region: 'Asia',     lat: 13.7563,  lng: 100.5018 },
-  { name: 'Mumbai, India',              type: 'City',     region: 'Asia',     lat: 19.0760,  lng: 72.8777  },
-  { name: 'Shanghai, China',            type: 'City',     region: 'Asia',     lat: 31.2304,  lng: 121.4737 },
-  { name: 'Mexico City, Mexico',        type: 'City',     region: 'Americas', lat: 19.4326,  lng: -99.1332 },
-  { name: 'Buenos Aires, Argentina',    type: 'City',     region: 'Americas', lat: -34.6037, lng: -58.3816 },
-  { name: 'Vancouver, Canada',          type: 'City',     region: 'Americas', lat: 49.2827,  lng: -123.1207},
-  { name: 'Nairobi, Kenya',             type: 'City',     region: 'Africa',   lat: -1.2921,  lng: 36.8219  },
-  { name: 'Lagos, Nigeria',             type: 'City',     region: 'Africa',   lat: 6.5244,   lng: 3.3792   },
-  { name: 'Melbourne, Australia',       type: 'City',     region: 'Oceania',  lat: -37.8136, lng: 144.9631 },
-  { name: 'Petra, Jordan',              type: 'Landmark', region: 'Asia',     lat: 30.3285,  lng: 35.4444  },
-  { name: 'Amalfi Coast, Italy',        type: 'Landmark', region: 'Europe',   lat: 40.6340,  lng: 14.6027  },
-  { name: 'Ha Long Bay, Vietnam',       type: 'Landmark', region: 'Asia',     lat: 20.9101,  lng: 107.1839 },
-  { name: 'Patagonia, Argentina',       type: 'Region',   region: 'Americas', lat: -51.6226, lng: -69.2181 },
-  { name: 'Maldives',                   type: 'Island',   region: 'Asia',     lat: 3.2028,   lng: 73.2207  },
-  { name: 'Zanzibar, Tanzania',         type: 'Island',   region: 'Africa',   lat: -6.1659,  lng: 39.2026  },
-  { name: 'Reykjavik, Iceland',         type: 'City',     region: 'Europe',   lat: 64.1265,  lng: -21.8174 },
-  { name: 'Lisbon, Portugal',           type: 'City',     region: 'Europe',   lat: 38.7223,  lng: -9.1393  },
-  { name: 'Istanbul, Turkey',           type: 'City',     region: 'Europe',   lat: 41.0082,  lng: 28.9784  },
-  { name: 'Havana, Cuba',               type: 'City',     region: 'Americas', lat: 23.1136,  lng: -82.3666 },
+  // West Coast
+  { name: 'Pacific Coast Highway (Hwy 1)',   type: 'Coastal',   region: 'West Coast',   lat: 35.70,  lng: -121.30 },
+  { name: 'Angeles Crest Highway',           type: 'Mountain',  region: 'West Coast',   lat: 34.25,  lng: -117.90 },
+  { name: 'North Cascades Highway (WA-20)',  type: 'Mountain',  region: 'West Coast',   lat: 48.50,  lng: -120.70 },
+  { name: 'Cascade Lakes Scenic Byway',      type: 'Scenic',    region: 'West Coast',   lat: 43.90,  lng: -121.70 },
+  { name: 'Rim of the World Drive',          type: 'Mountain',  region: 'West Coast',   lat: 34.17,  lng: -117.05 },
+  { name: 'Rogue-Umpqua Scenic Byway',       type: 'Scenic',    region: 'West Coast',   lat: 43.20,  lng: -122.90 },
+  { name: 'Hana Highway (HI-360)',           type: 'Coastal',   region: 'West Coast',   lat: 20.80,  lng: -156.20 },
+  { name: 'Seward Highway',                  type: 'Scenic',    region: 'West Coast',   lat: 60.40,  lng: -149.40 },
+  // Mountain West
+  { name: 'Beartooth Highway (US-212)',      type: 'Mountain',  region: 'Mountain West', lat: 45.03,  lng: -109.54 },
+  { name: 'Going-to-the-Sun Road',           type: 'Mountain',  region: 'Mountain West', lat: 48.70,  lng: -113.73 },
+  { name: 'Million Dollar Highway (US-550)', type: 'Mountain',  region: 'Mountain West', lat: 37.90,  lng: -107.73 },
+  { name: 'Trail Ridge Road',                type: 'Mountain',  region: 'Mountain West', lat: 40.43,  lng: -105.75 },
+  { name: 'Chief Joseph Scenic Byway',       type: 'Scenic',    region: 'Mountain West', lat: 44.70,  lng: -109.60 },
+  { name: 'Needles Highway',                 type: 'Mountain',  region: 'Mountain West', lat: 43.68,  lng: -103.54 },
+  { name: 'Iron Mountain Road',              type: 'Mountain',  region: 'Mountain West', lat: 43.85,  lng: -103.44 },
+  { name: 'Hells Canyon Scenic Byway',       type: 'Canyon',    region: 'Mountain West', lat: 45.50,  lng: -116.70 },
+  { name: 'Lolo Pass Road (US-12)',          type: 'Mountain',  region: 'Mountain West', lat: 46.60,  lng: -114.60 },
+  // Southwest
+  { name: 'Highway 12',                      type: 'Scenic',    region: 'Southwest',    lat: 37.77,  lng: -111.56 },
+  { name: 'Extraterrestrial Highway (NV-375)',type: 'Desert',   region: 'Southwest',    lat: 37.50,  lng: -115.37 },
+  { name: 'Oak Creek Canyon (AZ-89A)',       type: 'Canyon',    region: 'Southwest',    lat: 34.84,  lng: -111.76 },
+  { name: 'White Rim Road',                  type: 'Off-road',  region: 'Southwest',    lat: 38.18,  lng: -109.88 },
+  { name: 'Loneliest Road (US-50)',          type: 'Desert',    region: 'Southwest',    lat: 39.50,  lng: -117.00 },
+  { name: 'Historic Route 66',               type: 'Historic',  region: 'Southwest',    lat: 35.10,  lng: -106.60 },
+  { name: 'Big Bend Ranch Road',             type: 'Desert',    region: 'Southwest',    lat: 29.25,  lng: -103.25 },
+  { name: 'River Road (TX-170)',             type: 'Scenic',    region: 'Southwest',    lat: 29.50,  lng: -104.60 },
+  { name: 'Death Valley Scenic Loop',        type: 'Desert',    region: 'Southwest',    lat: 36.50,  lng: -117.13 },
+  { name: 'Geronimo Trail (NM-152)',         type: 'Mountain',  region: 'Southwest',    lat: 32.90,  lng: -107.60 },
+  // Southeast
+  { name: 'Tail of the Dragon (US-129)',     type: 'Technical', region: 'Southeast',    lat: 35.47,  lng: -83.98  },
+  { name: 'Blue Ridge Parkway',              type: 'Scenic',    region: 'Southeast',    lat: 36.08,  lng: -79.50  },
+  { name: 'Cherohala Skyway',                type: 'Scenic',    region: 'Southeast',    lat: 35.38,  lng: -84.20  },
+  { name: 'Moonshiner 28 (NC-28)',           type: 'Technical', region: 'Southeast',    lat: 35.27,  lng: -83.42  },
+  { name: 'Overseas Highway (US-1)',         type: 'Coastal',   region: 'Southeast',    lat: 24.70,  lng: -80.90  },
+  { name: 'Natchez Trace Parkway',           type: 'Historic',  region: 'Southeast',    lat: 34.70,  lng: -87.70  },
+  { name: 'Foothills Parkway',               type: 'Scenic',    region: 'Southeast',    lat: 35.65,  lng: -83.85  },
+  { name: 'Talimena Scenic Drive',           type: 'Scenic',    region: 'Southeast',    lat: 34.63,  lng: -94.85  },
+  // Northeast
+  { name: 'Kancamagus Highway (NH-112)',     type: 'Scenic',    region: 'Northeast',    lat: 44.05,  lng: -71.40  },
+  { name: 'Skyline Drive',                   type: 'Scenic',    region: 'Northeast',    lat: 38.50,  lng: -78.50  },
+  { name: 'Vermont Route 100',               type: 'Scenic',    region: 'Northeast',    lat: 43.90,  lng: -72.90  },
+  { name: 'Mohawk Trail (MA-2)',             type: 'Historic',  region: 'Northeast',    lat: 42.67,  lng: -73.00  },
+  { name: 'Acadia Loop Road',                type: 'Coastal',   region: 'Northeast',    lat: 44.32,  lng: -68.22  },
+  { name: 'Mount Washington Auto Road',      type: 'Mountain',  region: 'Northeast',    lat: 44.27,  lng: -71.30  },
+  // Midwest
+  { name: 'Ozark Highlands Scenic Byway',    type: 'Scenic',    region: 'Midwest',      lat: 35.75,  lng: -93.40  },
+  { name: 'Great River Road',                type: 'Scenic',    region: 'Midwest',      lat: 44.00,  lng: -91.50  },
+  { name: 'Loess Hills Parkway',             type: 'Scenic',    region: 'Midwest',      lat: 42.05,  lng: -96.05  },
+  { name: 'Tunnel of Trees (M-119)',         type: 'Scenic',    region: 'Midwest',      lat: 45.45,  lng: -85.00  },
 ];
 
 const pinIconSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -207,7 +214,7 @@ function renderResults(query) {
         <div class="search-result-name">${highlightMatch(place.name, q)}</div>
         <div class="search-result-type">${place.type} &middot; ${place.region}</div>
       </div>
-      <span class="search-result-action">Show on map</span>
+      <span class="search-result-action">Show on map →</span>
     `;
 
     const flyToPlace = () => {
@@ -500,20 +507,20 @@ const MODAL_CONTENT = {
   about: {
     title: 'About Atlas',
     body: `
-      <p>Atlas is a modern travel exploration platform built to help adventurers, explorers, and everyday travellers navigate the world with confidence.</p>
+      <p>Atlas is the definitive guide to America's best driving roads — built by enthusiasts, for enthusiasts. We map, rate, and document the roads that make driving worth doing.</p>
       <h4>Our Mission</h4>
-      <p>We believe that understanding geography enriches every journey. Whether you're planning a dream vacation, studying the world, or just curious about places, Atlas gives you the tools to explore freely.</p>
+      <p>There are thousands of incredible roads in America that most drivers will never discover. Atlas exists to change that. We believe the best drive of your life is still out there, and we're here to help you find it.</p>
       <h4>What We Build</h4>
       <ul>
-        <li>Interactive maps with global destination coverage</li>
-        <li>Smart search across millions of locations</li>
-        <li>Community-driven place discovery</li>
-        <li>Offline-first navigation tools</li>
-        <li>Privacy-respecting location services</li>
+        <li>1,200+ mapped and rated driving roads across all 50 states</li>
+        <li>Real-time road condition alerts and seasonal closure tracking</li>
+        <li>Elevation profiles and technical difficulty ratings</li>
+        <li>Community-driven reviews from 85,000+ active drivers</li>
+        <li>Offline-first maps that work in the deepest canyons</li>
       </ul>
-      <h4>Our Team</h4>
-      <p>Atlas is built by a small, passionate team of engineers, designers, and geographers distributed across five continents — because we practice what we preach.</p>
-      <p style="margin-top:1.5rem;color:var(--color-text-muted);font-size:0.9rem;">Founded in 2022 &middot; Headquartered in Lisbon, Portugal</p>
+      <h4>Our Community</h4>
+      <p>Atlas is powered by a community of sports car owners, motorcycle riders, classic car enthusiasts, and anyone who believes a great road is worth going out of your way for. Every review, rating, and road report comes from real drivers who've been there.</p>
+      <p style="margin-top:1.5rem;color:var(--color-text-muted);font-size:0.9rem;">Founded in 2022 &middot; Headquartered in Asheville, NC &middot; Near the Tail of the Dragon</p>
     `,
   },
   blog: {
@@ -521,24 +528,24 @@ const MODAL_CONTENT = {
     body: `
       <div class="modal-blog-list">
         <article class="modal-blog-post">
-          <span class="modal-blog-date">March 18, 2026</span>
-          <h4>The 10 Most Underrated Destinations of 2026</h4>
-          <p>We asked our community of 2.4 million travellers which places surprised them most. The answers will inspire your next trip.</p>
+          <span class="modal-blog-date">March 20, 2026</span>
+          <h4>The 10 Best Driving Roads in America for 2026</h4>
+          <p>We crunched 4.2 million community reviews to find the roads that consistently blow drivers away. Number 3 will surprise you.</p>
         </article>
         <article class="modal-blog-post">
-          <span class="modal-blog-date">February 28, 2026</span>
-          <h4>How We Improved Map Accuracy by 40%</h4>
-          <p>A deep dive into the data pipeline improvements that made Atlas maps more precise than ever — including how we handle remote regions.</p>
+          <span class="modal-blog-date">March 5, 2026</span>
+          <h4>Beartooth Highway: Everything You Need to Know</h4>
+          <p>Opening dates, road conditions, the best pullouts, and why Charles Kuralt called it "the most beautiful road in America."</p>
         </article>
         <article class="modal-blog-post">
-          <span class="modal-blog-date">February 10, 2026</span>
-          <h4>Offline Maps: A Guide to Travelling Without Data</h4>
-          <p>Everything you need to know about downloading regions, managing storage, and staying navigated in the world's most remote corners.</p>
+          <span class="modal-blog-date">February 18, 2026</span>
+          <h4>How to Drive the Tail of the Dragon Without Getting Caught Out</h4>
+          <p>318 curves in 11 miles. No guardrails on the inside. Here's how experienced drivers prepare — and what beginners get wrong.</p>
         </article>
         <article class="modal-blog-post">
-          <span class="modal-blog-date">January 25, 2026</span>
-          <h4>Atlas 3.0 — What's New</h4>
-          <p>A full rundown of everything in our biggest release yet: new map layers, improved search, community collections, and more.</p>
+          <span class="modal-blog-date">February 1, 2026</span>
+          <h4>Spring Road Season Preview: What's Opening in 2026</h4>
+          <p>Going-to-the-Sun, Trail Ridge Road, Beartooth — which high-altitude roads are opening early this year and which are running late.</p>
         </article>
       </div>
     `,

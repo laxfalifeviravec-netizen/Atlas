@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Atlas — Navigate Your World</title>
+  <title>Atlas — America's Driving Roads</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </head>
@@ -11,14 +11,15 @@
   <!-- Navigation -->
   <nav class="navbar" id="navbar">
     <div class="nav-container">
-      <a href="#" class="nav-logo">Atlas</a>
+      <a href="index.html" class="nav-logo">Atlas</a>
       <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
         <span></span><span></span><span></span>
       </button>
       <ul class="nav-links" id="navLinks">
         <li><a href="#features">Features</a></li>
-        <li><a href="#explore">Explore</a></li>
+        <li><a href="#explore">Explore Roads</a></li>
         <li><a href="#stats">Stats</a></li>
+        <li><a href="pricing.html">Pricing</a></li>
         <li><a href="#contact">Contact</a></li>
       </ul>
       <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
@@ -39,12 +40,25 @@
   <!-- Hero -->
   <section class="hero" id="hero">
     <div class="hero-content">
-      <span class="hero-badge">Discover the World</span>
-      <h1 class="hero-title">Navigate Your <span class="highlight">World</span> With Confidence</h1>
-      <p class="hero-subtitle">Atlas gives you the tools to explore, understand, and connect with places around the globe. Start your journey today.</p>
+      <span class="hero-badge">For Driving Enthusiasts</span>
+      <h1 class="hero-title">Find America's <span class="highlight">Best Driving Roads</span></h1>
+      <p class="hero-subtitle">Atlas maps over 1,200 legendary drives across all 50 states — from coastal cliffs to alpine passes. Your next great drive starts here.</p>
       <div class="hero-actions">
-        <a href="#explore" class="btn btn-primary">Start Exploring</a>
-        <a href="#features" class="btn btn-secondary">Learn More</a>
+        <a href="#explore" class="btn btn-primary">Explore Roads</a>
+        <a href="pricing.html" class="btn btn-secondary">View Plans</a>
+      </div>
+      <div class="hero-trust">
+        <div class="trust-item">
+          <strong>1,200+</strong><span>Roads Mapped</span>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-item">
+          <strong>85K</strong><span>Active Drivers</span>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-item">
+          <strong>50</strong><span>States</span>
+        </div>
       </div>
     </div>
     <div class="hero-visual">
@@ -59,6 +73,9 @@
           <div class="globe-dot dot-4"></div>
           <div class="globe-dot dot-5"></div>
         </div>
+        <div class="hero-road-label label-1">Tail of the Dragon</div>
+        <div class="hero-road-label label-2">Pacific Coast Hwy</div>
+        <div class="hero-road-label label-3">Beartooth Pass</div>
       </div>
     </div>
   </section>
@@ -67,48 +84,47 @@
   <section class="features" id="features">
     <div class="container">
       <div class="section-header">
-        <h2>Everything You Need</h2>
-        <p>Powerful tools for every explorer, from casual travellers to seasoned adventurers.</p>
+        <h2>Built for the Drive</h2>
+        <p>Every feature is designed for drivers who care about the journey, not just the destination.</p>
       </div>
       <div class="features-grid">
         <div class="feature-card" data-index="0">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
             </svg>
           </div>
-          <h3>Precise Location</h3>
-          <p>Pin-point accuracy with real-time coordinates and location history across all your devices.</p>
+          <h3>Road Ratings</h3>
+          <p>Community-sourced quality scores for every road — surface condition, twistiness, scenery, and traffic. Know what you're getting into before you leave the driveway.</p>
         </div>
         <div class="feature-card" data-index="1">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
             </svg>
           </div>
-          <h3>Global Coverage</h3>
-          <p>Explore every corner of the Earth with detailed maps covering 195 countries and territories.</p>
+          <h3>Elevation Profiles</h3>
+          <p>See every climb, descent, and hairpin before you arrive. Plan technical mountain drives with full visibility into gradient changes and challenging sections.</p>
         </div>
         <div class="feature-card" data-index="2">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
             </svg>
           </div>
-          <h3>Smart Navigation</h3>
-          <p>AI-powered route suggestions that adapt to traffic, weather, and your personal preferences.</p>
+          <h3>Road Conditions</h3>
+          <p>Real-time alerts for surface damage, seasonal closures, construction zones, and weather events. Never get caught out on a washed-out mountain pass.</p>
         </div>
         <div class="feature-card" data-index="3">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
             </svg>
           </div>
-          <h3>Community Maps</h3>
-          <p>Discover hidden gems and local favourites shared by a global community of explorers.</p>
+          <h3>Curated Guides</h3>
+          <p>Expert-written route guides for the best drives in every state — best time of year, recommended fuel stops, parking, and the must-stop lookouts.</p>
         </div>
         <div class="feature-card" data-index="4">
           <div class="feature-icon">
@@ -118,177 +134,221 @@
             </svg>
           </div>
           <h3>Offline Maps</h3>
-          <p>Download regions for offline use. Stay on track even when you're off the grid.</p>
+          <p>Download full road data before you head out. Atlas works perfectly in the most remote canyons and mountain passes where signal doesn't reach.</p>
         </div>
         <div class="feature-card" data-index="5">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
           </div>
-          <h3>Privacy First</h3>
-          <p>Your location data is encrypted end-to-end. We never sell or share your data.</p>
+          <h3>Community</h3>
+          <p>85,000+ enthusiasts rating roads, posting condition updates, and sharing drive reports from their latest adventures across the country.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Explore / Interactive Map -->
+  <!-- Explore Roads -->
   <section class="explore" id="explore">
     <div class="container">
       <div class="section-header">
-        <h2>Explore Destinations</h2>
-        <p>Click a region to discover destinations, then click any place to see it on the map.</p>
+        <h2>Explore by Region</h2>
+        <p>Select a region to browse iconic roads, then click any road to see it on the map.</p>
       </div>
       <div class="explore-wrapper">
         <div class="region-tabs">
-          <button class="region-tab active" data-region="europe">Europe</button>
-          <button class="region-tab" data-region="asia">Asia</button>
-          <button class="region-tab" data-region="americas">Americas</button>
-          <button class="region-tab" data-region="africa">Africa</button>
-          <button class="region-tab" data-region="oceania">Oceania</button>
+          <button class="region-tab active" data-region="westcoast">West Coast</button>
+          <button class="region-tab" data-region="mountain">Mountain West</button>
+          <button class="region-tab" data-region="southwest">Southwest</button>
+          <button class="region-tab" data-region="southeast">Southeast</button>
+          <button class="region-tab" data-region="northeast">Northeast</button>
+          <button class="region-tab" data-region="midwest">Midwest</button>
         </div>
         <div class="region-panels">
-          <div class="region-panel active" data-region="europe">
+
+          <!-- West Coast -->
+          <div class="region-panel active" data-region="westcoast">
             <div class="region-info">
-              <h3>Europe</h3>
-              <p>From the fjords of Norway to the ruins of Rome, Europe offers unparalleled diversity across 44 countries. Rich history, vibrant culture, and world-class cuisine await.</p>
+              <h3>West Coast</h3>
+              <p>From the dramatic sea cliffs of Big Sur to the volcanic summit roads of the Cascades, the West Coast delivers some of the most visceral driving in the country. Perfect pavement, unbeatable scenery.</p>
               <ul class="region-highlights">
-                <li>44 countries</li>
-                <li>743 million people</li>
-                <li>Top pick: Amalfi Coast, Italy</li>
+                <li>CA · OR · WA · AK · HI</li>
+                <li>340+ roads mapped</li>
+                <li>Best season: May–Oct</li>
               </ul>
             </div>
             <div class="region-places">
-              <div class="place-card" data-lat="48.8566" data-lng="2.3522" data-name="Paris, France" tabindex="0" role="button" aria-label="View Paris, France on map">
-                <div class="place-color" style="background: #4f8ef7"></div>
-                <div class="place-details"><strong>Paris, France</strong><span>City of Light</span></div>
+              <div class="place-card" data-lat="35.7" data-lng="-121.3" data-name="Pacific Coast Highway (Hwy 1)" tabindex="0" role="button">
+                <div class="place-color" style="background:#0ea5e9"></div>
+                <div class="place-details"><strong>Pacific Coast Highway</strong><span>Hwy 1, California — 656 mi</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card" data-lat="41.3851" data-lng="2.1734" data-name="Barcelona, Spain" tabindex="0" role="button" aria-label="View Barcelona, Spain on map">
-                <div class="place-color" style="background: #e74c3c"></div>
-                <div class="place-details"><strong>Barcelona, Spain</strong><span>Gaudi's Masterpiece</span></div>
+              <div class="place-card" data-lat="34.25" data-lng="-117.9" data-name="Angeles Crest Highway" tabindex="0" role="button">
+                <div class="place-color" style="background:#f97316"></div>
+                <div class="place-details"><strong>Angeles Crest Highway</strong><span>CA-2, California — 66 mi</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card" data-lat="36.3932" data-lng="25.4615" data-name="Santorini, Greece" tabindex="0" role="button" aria-label="View Santorini, Greece on map">
-                <div class="place-color" style="background: #2ecc71"></div>
-                <div class="place-details"><strong>Santorini, Greece</strong><span>Aegean Gem</span></div>
+              <div class="place-card" data-lat="48.5" data-lng="-120.7" data-name="North Cascades Highway" tabindex="0" role="button">
+                <div class="place-color" style="background:#10b981"></div>
+                <div class="place-details"><strong>North Cascades Highway</strong><span>WA-20, Washington — 140 mi</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
             </div>
           </div>
-          <div class="region-panel" data-region="asia">
+
+          <!-- Mountain West -->
+          <div class="region-panel" data-region="mountain">
             <div class="region-info">
-              <h3>Asia</h3>
-              <p>The world's largest continent is home to ancient temples, futuristic skylines, and some of the most breathtaking landscapes on the planet. Over 4.7 billion stories to discover.</p>
+              <h3>Mountain West</h3>
+              <p>Home to America's most technically demanding drives. Alpine passes, sheer drop-offs, and views stretching a hundred miles reward those who dare to climb above the treeline.</p>
               <ul class="region-highlights">
-                <li>48 countries</li>
-                <li>4.7 billion people</li>
-                <li>Top pick: Ha Long Bay, Vietnam</li>
+                <li>MT · WY · CO · ID · SD</li>
+                <li>280+ roads mapped</li>
+                <li>Best season: Jun–Sep</li>
               </ul>
             </div>
             <div class="region-places">
-              <div class="place-card" data-lat="35.6762" data-lng="139.6503" data-name="Tokyo, Japan" tabindex="0" role="button" aria-label="View Tokyo, Japan on map">
-                <div class="place-color" style="background: #e74c3c"></div>
-                <div class="place-details"><strong>Tokyo, Japan</strong><span>Neon &amp; Tradition</span></div>
+              <div class="place-card" data-lat="45.03" data-lng="-109.54" data-name="Beartooth Highway" tabindex="0" role="button">
+                <div class="place-color" style="background:#e74c3c"></div>
+                <div class="place-details"><strong>Beartooth Highway</strong><span>US-212, MT/WY — 68 mi · 10,947 ft peak</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card" data-lat="-8.3405" data-lng="115.0920" data-name="Bali, Indonesia" tabindex="0" role="button" aria-label="View Bali, Indonesia on map">
-                <div class="place-color" style="background: #f39c12"></div>
-                <div class="place-details"><strong>Bali, Indonesia</strong><span>Island of the Gods</span></div>
+              <div class="place-card" data-lat="48.70" data-lng="-113.73" data-name="Going-to-the-Sun Road" tabindex="0" role="button">
+                <div class="place-color" style="background:#9b59b6"></div>
+                <div class="place-details"><strong>Going-to-the-Sun Road</strong><span>Glacier NP, Montana — 50 mi</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card" data-lat="35.0116" data-lng="135.7681" data-name="Kyoto, Japan" tabindex="0" role="button" aria-label="View Kyoto, Japan on map">
-                <div class="place-color" style="background: #9b59b6"></div>
-                <div class="place-details"><strong>Kyoto, Japan</strong><span>Ancient Capital</span></div>
+              <div class="place-card" data-lat="37.9" data-lng="-107.73" data-name="Million Dollar Highway" tabindex="0" role="button">
+                <div class="place-color" style="background:#f39c12"></div>
+                <div class="place-details"><strong>Million Dollar Highway</strong><span>US-550, Colorado — 25 mi · No guardrails</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
             </div>
           </div>
-          <div class="region-panel" data-region="americas">
+
+          <!-- Southwest -->
+          <div class="region-panel" data-region="southwest">
             <div class="region-info">
-              <h3>Americas</h3>
-              <p>From the frozen tundra of Alaska to the rainforests of Patagonia, the Americas span nearly the full length of the globe with staggering natural wonder and cultural richness.</p>
+              <h3>Southwest</h3>
+              <p>Endless skies, canyon country, and the loneliest roads on earth. Highway 12 threads through Bryce, Grand Staircase, and Capitol Reef — arguably the most beautiful road in America.</p>
               <ul class="region-highlights">
-                <li>35 countries</li>
-                <li>1 billion people</li>
-                <li>Top pick: Patagonia, Argentina</li>
+                <li>UT · NV · AZ · NM · TX</li>
+                <li>310+ roads mapped</li>
+                <li>Best season: Mar–May, Sep–Nov</li>
               </ul>
             </div>
             <div class="region-places">
-              <div class="place-card" data-lat="-13.1631" data-lng="-72.5450" data-name="Machu Picchu, Peru" tabindex="0" role="button" aria-label="View Machu Picchu, Peru on map">
-                <div class="place-color" style="background: #27ae60"></div>
-                <div class="place-details"><strong>Machu Picchu, Peru</strong><span>Lost City of the Incas</span></div>
+              <div class="place-card" data-lat="37.77" data-lng="-111.56" data-name="Highway 12, Utah" tabindex="0" role="button">
+                <div class="place-color" style="background:#e67e22"></div>
+                <div class="place-details"><strong>Highway 12</strong><span>Utah — 124 mi · America's most scenic road</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card" data-lat="40.7128" data-lng="-74.0060" data-name="New York, USA" tabindex="0" role="button" aria-label="View New York, USA on map">
-                <div class="place-color" style="background: #3498db"></div>
-                <div class="place-details"><strong>New York, USA</strong><span>The Big Apple</span></div>
+              <div class="place-card" data-lat="37.50" data-lng="-115.37" data-name="Extraterrestrial Highway (NV-375)" tabindex="0" role="button">
+                <div class="place-color" style="background:#2ecc71"></div>
+                <div class="place-details"><strong>Extraterrestrial Highway</strong><span>NV-375, Nevada — 98 mi · Dead straight</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card" data-lat="-22.9068" data-lng="-43.1729" data-name="Rio de Janeiro, Brazil" tabindex="0" role="button" aria-label="View Rio de Janeiro, Brazil on map">
-                <div class="place-color" style="background: #e67e22"></div>
-                <div class="place-details"><strong>Rio de Janeiro, Brazil</strong><span>Marvelous City</span></div>
+              <div class="place-card" data-lat="34.84" data-lng="-111.76" data-name="Oak Creek Canyon (Hwy 89A)" tabindex="0" role="button">
+                <div class="place-color" style="background:#e74c3c"></div>
+                <div class="place-details"><strong>Oak Creek Canyon</strong><span>AZ-89A, Arizona — 14 mi · Switchback heaven</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
             </div>
           </div>
-          <div class="region-panel" data-region="africa">
+
+          <!-- Southeast -->
+          <div class="region-panel" data-region="southeast">
             <div class="region-info">
-              <h3>Africa</h3>
-              <p>The cradle of humanity, Africa is a continent of extraordinary diversity — from the Sahara's vast dunes to the Serengeti's teeming wildlife and the Nile's ancient monuments.</p>
+              <h3>Southeast</h3>
+              <p>The Tail of the Dragon is a pilgrimage for every driving enthusiast — 318 curves in 11 miles, zero intersections, zero distractions. Pair it with the Cherohala for the best driving weekend in America.</p>
               <ul class="region-highlights">
-                <li>54 countries</li>
-                <li>1.4 billion people</li>
-                <li>Top pick: Serengeti, Tanzania</li>
+                <li>NC · TN · VA · FL · MS</li>
+                <li>290+ roads mapped</li>
+                <li>Best season: Apr–Nov</li>
               </ul>
             </div>
             <div class="region-places">
-              <div class="place-card" data-lat="31.6295" data-lng="-7.9811" data-name="Marrakech, Morocco" tabindex="0" role="button" aria-label="View Marrakech, Morocco on map">
-                <div class="place-color" style="background: #f1c40f"></div>
-                <div class="place-details"><strong>Marrakech, Morocco</strong><span>Red City</span></div>
+              <div class="place-card" data-lat="35.47" data-lng="-83.98" data-name="Tail of the Dragon (US-129)" tabindex="0" role="button">
+                <div class="place-color" style="background:#e74c3c"></div>
+                <div class="place-details"><strong>Tail of the Dragon</strong><span>US-129, NC/TN — 11 mi · 318 curves</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card" data-lat="-33.9249" data-lng="18.4241" data-name="Cape Town, S. Africa" tabindex="0" role="button" aria-label="View Cape Town on map">
-                <div class="place-color" style="background: #16a085"></div>
-                <div class="place-details"><strong>Cape Town, S. Africa</strong><span>Mother City</span></div>
+              <div class="place-card" data-lat="36.08" data-lng="-79.5" data-name="Blue Ridge Parkway" tabindex="0" role="button">
+                <div class="place-color" style="background:#27ae60"></div>
+                <div class="place-details"><strong>Blue Ridge Parkway</strong><span>VA/NC — 469 mi · America's Favourite Drive</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card" data-lat="30.0444" data-lng="31.2357" data-name="Cairo, Egypt" tabindex="0" role="button" aria-label="View Cairo, Egypt on map">
-                <div class="place-color" style="background: #8e44ad"></div>
-                <div class="place-details"><strong>Cairo, Egypt</strong><span>City of a Thousand Minarets</span></div>
+              <div class="place-card" data-lat="35.38" data-lng="-84.2" data-name="Cherohala Skyway" tabindex="0" role="button">
+                <div class="place-color" style="background:#3498db"></div>
+                <div class="place-details"><strong>Cherohala Skyway</strong><span>TN/NC — 43 mi · Ridge-top cruising</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
             </div>
           </div>
-          <div class="region-panel" data-region="oceania">
+
+          <!-- Northeast -->
+          <div class="region-panel" data-region="northeast">
             <div class="region-info">
-              <h3>Oceania</h3>
-              <p>Spread across the Pacific, Oceania's islands offer some of the world's most pristine beaches, unique wildlife, and indigenous cultures found nowhere else on Earth.</p>
+              <h3>Northeast</h3>
+              <p>Blazing fall foliage lines the Kancamagus every October, turning a great drive into a bucket-list spectacle. Skyline Drive in Virginia is the crown jewel of the East — 105 miles of ridge-top perfection.</p>
               <ul class="region-highlights">
-                <li>14 countries</li>
-                <li>44 million people</li>
-                <li>Top pick: Great Barrier Reef, Australia</li>
+                <li>NH · MA · VT · ME · VA</li>
+                <li>195+ roads mapped</li>
+                <li>Best season: Sep–Oct</li>
               </ul>
             </div>
             <div class="region-places">
-              <div class="place-card" data-lat="-33.8688" data-lng="151.2093" data-name="Sydney, Australia" tabindex="0" role="button" aria-label="View Sydney, Australia on map">
-                <div class="place-color" style="background: #2980b9"></div>
-                <div class="place-details"><strong>Sydney, Australia</strong><span>Harbour City</span></div>
+              <div class="place-card" data-lat="44.05" data-lng="-71.4" data-name="Kancamagus Highway" tabindex="0" role="button">
+                <div class="place-color" style="background:#f1c40f"></div>
+                <div class="place-details"><strong>Kancamagus Highway</strong><span>NH-112, New Hampshire — 35 mi</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card" data-lat="-45.0312" data-lng="168.6626" data-name="Queenstown, NZ" tabindex="0" role="button" aria-label="View Queenstown, New Zealand on map">
-                <div class="place-color" style="background: #27ae60"></div>
-                <div class="place-details"><strong>Queenstown, NZ</strong><span>Adventure Capital</span></div>
+              <div class="place-card" data-lat="38.5" data-lng="-78.5" data-name="Skyline Drive" tabindex="0" role="button">
+                <div class="place-color" style="background:#8e44ad"></div>
+                <div class="place-details"><strong>Skyline Drive</strong><span>Shenandoah NP, Virginia — 105 mi</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card" data-lat="-16.5004" data-lng="-151.7415" data-name="Bora Bora, Fr. Polynesia" tabindex="0" role="button" aria-label="View Bora Bora on map">
-                <div class="place-color" style="background: #e74c3c"></div>
-                <div class="place-details"><strong>Bora Bora, Fr. Polynesia</strong><span>Pearl of the Pacific</span></div>
+              <div class="place-card" data-lat="43.9" data-lng="-72.9" data-name="Vermont Route 100" tabindex="0" role="button">
+                <div class="place-color" style="background:#16a085"></div>
+                <div class="place-details"><strong>Vermont Route 100</strong><span>VT-100, Vermont — 216 mi · Fall foliage</span></div>
                 <span class="place-map-hint">View on map →</span>
               </div>
             </div>
           </div>
+
+          <!-- Midwest -->
+          <div class="region-panel" data-region="midwest">
+            <div class="region-info">
+              <h3>Midwest</h3>
+              <p>Often overlooked but full of surprises. The Ozarks deliver genuine switchbacks and technical bends. The Great River Road traces the Mississippi for hundreds of miles through river bluffs and historic river towns.</p>
+              <ul class="region-highlights">
+                <li>WI · MN · IA · AR · MO</li>
+                <li>180+ roads mapped</li>
+                <li>Best season: May–Oct</li>
+              </ul>
+            </div>
+            <div class="region-places">
+              <div class="place-card" data-lat="35.75" data-lng="-93.4" data-name="Ozark Highlands Scenic Byway" tabindex="0" role="button">
+                <div class="place-color" style="background:#e67e22"></div>
+                <div class="place-details"><strong>Ozark Highlands Scenic Byway</strong><span>Arkansas — 165 mi · Real switchbacks</span></div>
+                <span class="place-map-hint">View on map →</span>
+              </div>
+              <div class="place-card" data-lat="44.0" data-lng="-91.5" data-name="Great River Road" tabindex="0" role="button">
+                <div class="place-color" style="background:#2980b9"></div>
+                <div class="place-details"><strong>Great River Road</strong><span>WI/MN — 250 mi · Mississippi bluffs</span></div>
+                <span class="place-map-hint">View on map →</span>
+              </div>
+              <div class="place-card" data-lat="42.05" data-lng="-96.05" data-name="Loess Hills Parkway" tabindex="0" role="button">
+                <div class="place-color" style="background:#27ae60"></div>
+                <div class="place-details"><strong>Loess Hills Parkway</strong><span>Iowa — 220 mi · Hidden gem</span></div>
+                <span class="place-map-hint">View on map →</span>
+              </div>
+            </div>
+          </div>
+
         </div>
         <!-- Interactive Map -->
         <div class="map-wrap">
@@ -303,20 +363,20 @@
     <div class="container">
       <div class="stats-grid">
         <div class="stat-item">
-          <span class="stat-number" data-target="195">0</span>
-          <span class="stat-label">Countries Covered</span>
+          <span class="stat-number" data-target="1200">0</span>
+          <span class="stat-label">Roads Mapped</span>
         </div>
         <div class="stat-item">
-          <span class="stat-number" data-target="2400000">0</span>
-          <span class="stat-label">Active Users</span>
+          <span class="stat-number" data-target="85000">0</span>
+          <span class="stat-label">Active Drivers</span>
         </div>
         <div class="stat-item">
-          <span class="stat-number" data-target="850000">0</span>
-          <span class="stat-label">Routes Mapped</span>
+          <span class="stat-number" data-target="4200000">0</span>
+          <span class="stat-label">Community Reviews</span>
         </div>
         <div class="stat-item">
-          <span class="stat-number" data-target="99">0</span>
-          <span class="stat-label">% Uptime</span>
+          <span class="stat-number" data-target="50">0</span>
+          <span class="stat-label">States Covered</span>
         </div>
       </div>
     </div>
@@ -326,12 +386,12 @@
   <section class="search-section" id="search">
     <div class="container">
       <div class="section-header">
-        <h2>Find Any Place</h2>
-        <p>Search our database of destinations worldwide, or use your current location.</p>
+        <h2>Find Your Next Drive</h2>
+        <p>Search by road name, state, or type — or use your location to discover what's nearby.</p>
       </div>
       <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search cities, landmarks, regions..." autocomplete="off" aria-label="Search places" />
-        <button class="search-btn locate-btn" id="locateBtn" aria-label="Use my current location" title="Use my location">
+        <input type="text" id="searchInput" placeholder="Search roads, highways, mountain passes..." autocomplete="off" aria-label="Search roads" />
+        <button class="search-btn locate-btn" id="locateBtn" aria-label="Use my current location" title="Find roads near me">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
             <circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/>
@@ -352,7 +412,7 @@
     <div class="container">
       <div class="section-header">
         <h2>Get In Touch</h2>
-        <p>Have a question or want to work with us? We'd love to hear from you.</p>
+        <p>Have a road to suggest, a bug to report, or want to partner with us? We'd love to hear from you.</p>
       </div>
       <form class="contact-form" id="contactForm" novalidate>
         <div class="form-row">
@@ -371,10 +431,10 @@
           <label for="subject">Subject</label>
           <select id="subject" name="subject">
             <option value="">Select a topic</option>
-            <option value="general">General Inquiry</option>
+            <option value="suggest">Suggest a Road</option>
             <option value="support">Technical Support</option>
-            <option value="partnership">Partnership</option>
-            <option value="feedback">Feedback</option>
+            <option value="partnership">Partnership / Press</option>
+            <option value="feedback">General Feedback</option>
           </select>
         </div>
         <div class="form-group">
@@ -398,15 +458,15 @@
     <div class="container">
       <div class="footer-grid">
         <div class="footer-brand">
-          <a href="#" class="nav-logo">Atlas</a>
-          <p>Navigate your world with confidence. Explore, discover, and connect with places across the globe.</p>
+          <a href="index.html" class="nav-logo">Atlas</a>
+          <p>The driving enthusiast's guide to America's best roads. Explore, plan, and relive your greatest drives.</p>
         </div>
         <div class="footer-links">
           <h4>Product</h4>
           <ul>
             <li><a href="#features">Features</a></li>
-            <li><a href="#explore">Explore</a></li>
-            <li><a href="#stats">Statistics</a></li>
+            <li><a href="#explore">Explore Roads</a></li>
+            <li><a href="pricing.html">Pricing</a></li>
           </ul>
         </div>
         <div class="footer-links">
@@ -428,7 +488,7 @@
       </div>
       <div class="footer-bottom">
         <p>&copy; 2026 Atlas. All rights reserved.</p>
-        <p>Built with care for explorers everywhere.</p>
+        <p>Drive responsibly. Respect the road and those who share it.</p>
       </div>
     </div>
   </footer>

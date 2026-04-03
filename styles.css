@@ -700,6 +700,60 @@ input.error, textarea.error, select.error {
 .nav-links a.active { color: var(--color-primary); }
 
 /* ============================================================
+   Hero trust bar + road labels
+   ============================================================ */
+.hero-trust {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border);
+}
+.trust-item { display: flex; flex-direction: column; gap: 0.1rem; }
+.trust-item strong {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  line-height: 1;
+}
+.trust-item span {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.trust-divider { width: 1px; height: 32px; background: var(--color-border); }
+
+.hero-road-label {
+  position: absolute;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+  animation: labelFloat 4s ease-in-out infinite;
+  pointer-events: none;
+}
+.label-1 { bottom: 14%; left: -20px; animation-delay: 0s; }
+.label-2 { top: 18%; right: -15px; animation-delay: 1.4s; }
+.label-3 { bottom: 38%; right: -10px; animation-delay: 2.8s; }
+@keyframes labelFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+@media (max-width: 768px) {
+  .hero-road-label { display: none; }
+  .hero-trust { gap: 1rem; }
+}
+
+/* ============================================================
    Search — locate button + result action
    ============================================================ */
 .search-box .locate-btn { border-right: 1px solid var(--color-border); }

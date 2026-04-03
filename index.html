@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Atlas</title>
+  <title>Atlas — Navigate Your World</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </head>
 <body>
   <!-- Navigation -->
@@ -132,12 +133,12 @@
     </div>
   </section>
 
-  <!-- Explore / Interactive Map Placeholder -->
+  <!-- Explore / Interactive Map -->
   <section class="explore" id="explore">
     <div class="container">
       <div class="section-header">
         <h2>Explore Destinations</h2>
-        <p>Click on a region to discover what's waiting for you.</p>
+        <p>Click a region to discover destinations, then click any place to see it on the map.</p>
       </div>
       <div class="explore-wrapper">
         <div class="region-tabs">
@@ -159,17 +160,20 @@
               </ul>
             </div>
             <div class="region-places">
-              <div class="place-card">
+              <div class="place-card" data-lat="48.8566" data-lng="2.3522" data-name="Paris, France" tabindex="0" role="button" aria-label="View Paris, France on map">
                 <div class="place-color" style="background: #4f8ef7"></div>
                 <div class="place-details"><strong>Paris, France</strong><span>City of Light</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card">
+              <div class="place-card" data-lat="41.3851" data-lng="2.1734" data-name="Barcelona, Spain" tabindex="0" role="button" aria-label="View Barcelona, Spain on map">
                 <div class="place-color" style="background: #e74c3c"></div>
                 <div class="place-details"><strong>Barcelona, Spain</strong><span>Gaudi's Masterpiece</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card">
+              <div class="place-card" data-lat="36.3932" data-lng="25.4615" data-name="Santorini, Greece" tabindex="0" role="button" aria-label="View Santorini, Greece on map">
                 <div class="place-color" style="background: #2ecc71"></div>
                 <div class="place-details"><strong>Santorini, Greece</strong><span>Aegean Gem</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
             </div>
           </div>
@@ -184,17 +188,20 @@
               </ul>
             </div>
             <div class="region-places">
-              <div class="place-card">
+              <div class="place-card" data-lat="35.6762" data-lng="139.6503" data-name="Tokyo, Japan" tabindex="0" role="button" aria-label="View Tokyo, Japan on map">
                 <div class="place-color" style="background: #e74c3c"></div>
-                <div class="place-details"><strong>Tokyo, Japan</strong><span>Neon & Tradition</span></div>
+                <div class="place-details"><strong>Tokyo, Japan</strong><span>Neon &amp; Tradition</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card">
+              <div class="place-card" data-lat="-8.3405" data-lng="115.0920" data-name="Bali, Indonesia" tabindex="0" role="button" aria-label="View Bali, Indonesia on map">
                 <div class="place-color" style="background: #f39c12"></div>
                 <div class="place-details"><strong>Bali, Indonesia</strong><span>Island of the Gods</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card">
+              <div class="place-card" data-lat="35.0116" data-lng="135.7681" data-name="Kyoto, Japan" tabindex="0" role="button" aria-label="View Kyoto, Japan on map">
                 <div class="place-color" style="background: #9b59b6"></div>
                 <div class="place-details"><strong>Kyoto, Japan</strong><span>Ancient Capital</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
             </div>
           </div>
@@ -209,17 +216,20 @@
               </ul>
             </div>
             <div class="region-places">
-              <div class="place-card">
+              <div class="place-card" data-lat="-13.1631" data-lng="-72.5450" data-name="Machu Picchu, Peru" tabindex="0" role="button" aria-label="View Machu Picchu, Peru on map">
                 <div class="place-color" style="background: #27ae60"></div>
                 <div class="place-details"><strong>Machu Picchu, Peru</strong><span>Lost City of the Incas</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card">
+              <div class="place-card" data-lat="40.7128" data-lng="-74.0060" data-name="New York, USA" tabindex="0" role="button" aria-label="View New York, USA on map">
                 <div class="place-color" style="background: #3498db"></div>
                 <div class="place-details"><strong>New York, USA</strong><span>The Big Apple</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card">
+              <div class="place-card" data-lat="-22.9068" data-lng="-43.1729" data-name="Rio de Janeiro, Brazil" tabindex="0" role="button" aria-label="View Rio de Janeiro, Brazil on map">
                 <div class="place-color" style="background: #e67e22"></div>
                 <div class="place-details"><strong>Rio de Janeiro, Brazil</strong><span>Marvelous City</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
             </div>
           </div>
@@ -234,17 +244,20 @@
               </ul>
             </div>
             <div class="region-places">
-              <div class="place-card">
+              <div class="place-card" data-lat="31.6295" data-lng="-7.9811" data-name="Marrakech, Morocco" tabindex="0" role="button" aria-label="View Marrakech, Morocco on map">
                 <div class="place-color" style="background: #f1c40f"></div>
                 <div class="place-details"><strong>Marrakech, Morocco</strong><span>Red City</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card">
+              <div class="place-card" data-lat="-33.9249" data-lng="18.4241" data-name="Cape Town, S. Africa" tabindex="0" role="button" aria-label="View Cape Town on map">
                 <div class="place-color" style="background: #16a085"></div>
                 <div class="place-details"><strong>Cape Town, S. Africa</strong><span>Mother City</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card">
+              <div class="place-card" data-lat="30.0444" data-lng="31.2357" data-name="Cairo, Egypt" tabindex="0" role="button" aria-label="View Cairo, Egypt on map">
                 <div class="place-color" style="background: #8e44ad"></div>
                 <div class="place-details"><strong>Cairo, Egypt</strong><span>City of a Thousand Minarets</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
             </div>
           </div>
@@ -259,20 +272,27 @@
               </ul>
             </div>
             <div class="region-places">
-              <div class="place-card">
+              <div class="place-card" data-lat="-33.8688" data-lng="151.2093" data-name="Sydney, Australia" tabindex="0" role="button" aria-label="View Sydney, Australia on map">
                 <div class="place-color" style="background: #2980b9"></div>
                 <div class="place-details"><strong>Sydney, Australia</strong><span>Harbour City</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card">
+              <div class="place-card" data-lat="-45.0312" data-lng="168.6626" data-name="Queenstown, NZ" tabindex="0" role="button" aria-label="View Queenstown, New Zealand on map">
                 <div class="place-color" style="background: #27ae60"></div>
                 <div class="place-details"><strong>Queenstown, NZ</strong><span>Adventure Capital</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
-              <div class="place-card">
+              <div class="place-card" data-lat="-16.5004" data-lng="-151.7415" data-name="Bora Bora, Fr. Polynesia" tabindex="0" role="button" aria-label="View Bora Bora on map">
                 <div class="place-color" style="background: #e74c3c"></div>
                 <div class="place-details"><strong>Bora Bora, Fr. Polynesia</strong><span>Pearl of the Pacific</span></div>
+                <span class="place-map-hint">View on map →</span>
               </div>
             </div>
           </div>
+        </div>
+        <!-- Interactive Map -->
+        <div class="map-wrap">
+          <div id="atlasMap"></div>
         </div>
       </div>
     </div>
@@ -307,11 +327,17 @@
     <div class="container">
       <div class="section-header">
         <h2>Find Any Place</h2>
-        <p>Search our database of millions of locations worldwide.</p>
+        <p>Search our database of destinations worldwide, or use your current location.</p>
       </div>
       <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search cities, landmarks, coordinates..." autocomplete="off" />
-        <button class="search-btn" id="searchBtn">
+        <input type="text" id="searchInput" placeholder="Search cities, landmarks, regions..." autocomplete="off" aria-label="Search places" />
+        <button class="search-btn locate-btn" id="locateBtn" aria-label="Use my current location" title="Use my location">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+            <circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/>
+          </svg>
+        </button>
+        <button class="search-btn" id="searchBtn" aria-label="Search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
@@ -387,16 +413,16 @@
           <h4>Company</h4>
           <ul>
             <li><a href="#contact">Contact</a></li>
-            <li><a href="#">About</a></li>
-            <li><a href="#">Blog</a></li>
+            <li><a href="#" data-modal="about">About</a></li>
+            <li><a href="#" data-modal="blog">Blog</a></li>
           </ul>
         </div>
         <div class="footer-links">
           <h4>Legal</h4>
           <ul>
-            <li><a href="#">Privacy Policy</a></li>
-            <li><a href="#">Terms of Service</a></li>
-            <li><a href="#">Cookie Policy</a></li>
+            <li><a href="#" data-modal="privacy">Privacy Policy</a></li>
+            <li><a href="#" data-modal="terms">Terms of Service</a></li>
+            <li><a href="#" data-modal="cookies">Cookie Policy</a></li>
           </ul>
         </div>
       </div>
@@ -407,6 +433,25 @@
     </div>
   </footer>
 
+  <!-- Modal -->
+  <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle"></h3>
+        <button class="modal-close" id="modalClose" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- Back to top -->
+  <button class="back-to-top" id="backToTop" aria-label="Back to top">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="18 15 12 9 6 15"/>
+    </svg>
+  </button>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN/WLI=" crossorigin=""></script>
   <script src="app.js"></script>
 </body>
 </html>

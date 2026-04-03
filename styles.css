@@ -693,3 +693,195 @@ input.error, textarea.error, select.error {
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .hero-actions .btn { width: 100%; justify-content: center; }
 }
+
+/* ============================================================
+   Active nav link
+   ============================================================ */
+.nav-links a.active { color: var(--color-primary); }
+
+/* ============================================================
+   Search — locate button + result action
+   ============================================================ */
+.search-box .locate-btn { border-right: 1px solid var(--color-border); }
+.search-result-text { flex: 1; }
+.search-result-action {
+  font-size: 0.78rem;
+  color: var(--color-primary);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.search-result-item:hover .search-result-action,
+.search-result-item:focus .search-result-action { opacity: 1; }
+.located-result { border-color: var(--color-success) !important; }
+
+/* Locate button loading spin */
+@keyframes locateSpin { to { transform: rotate(360deg); } }
+.locate-btn.locating svg { animation: locateSpin 0.8s linear infinite; }
+
+/* ============================================================
+   Map
+   ============================================================ */
+.map-wrap {
+  border-top: 1px solid var(--color-border);
+}
+#atlasMap {
+  height: 420px;
+  width: 100%;
+  z-index: 1;
+}
+
+/* Custom Leaflet marker */
+.atlas-marker {
+  background: none;
+  border: none;
+}
+.atlas-marker-inner {
+  width: 14px;
+  height: 14px;
+  background: var(--color-primary);
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(79,70,229,.5);
+  transition: transform 0.15s ease;
+}
+.atlas-marker:hover .atlas-marker-inner { transform: scale(1.4); }
+
+/* Leaflet popup style override */
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius-sm) !important;
+  box-shadow: var(--shadow-md) !important;
+  font-family: var(--font) !important;
+  font-size: 0.9rem !important;
+}
+.leaflet-popup-content { margin: 0.6rem 0.9rem !important; }
+
+/* Place card hover hint */
+.place-card { cursor: pointer; }
+.place-map-hint {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--color-primary);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.place-card:hover .place-map-hint,
+.place-card:focus .place-map-hint { opacity: 1; }
+
+/* ============================================================
+   Back to top
+   ============================================================ */
+.back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity var(--transition), transform var(--transition);
+  z-index: 900;
+}
+.back-to-top.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.back-to-top:hover { background: var(--color-primary-hover); transform: translateY(-2px); }
+.back-to-top svg { width: 20px; height: 20px; }
+
+/* ============================================================
+   Modal
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 2000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+.modal-overlay.open { opacity: 1; pointer-events: auto; }
+.modal {
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 640px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(16px) scale(0.98);
+  transition: transform 0.25s ease;
+  overflow: hidden;
+}
+.modal-overlay.open .modal { transform: translateY(0) scale(1); }
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 1.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.modal-header h3 { font-size: 1.3rem; font-weight: 700; }
+.modal-close {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition), color var(--transition);
+}
+.modal-close:hover { background: var(--color-bg-alt); color: var(--color-text); }
+.modal-body {
+  padding: 1.5rem 1.75rem 2rem;
+  overflow-y: auto;
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: var(--color-text-muted);
+}
+.modal-body h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 1.25rem 0 0.5rem;
+}
+.modal-body h4:first-child { margin-top: 0; }
+.modal-body p { margin-bottom: 0.75rem; }
+.modal-body ul { padding-left: 1.25rem; margin-bottom: 0.75rem; list-style: disc; }
+.modal-body ul li { margin-bottom: 0.3rem; }
+.modal-body a { color: var(--color-primary); text-decoration: underline; }
+
+/* Blog posts inside modal */
+.modal-blog-list { display: flex; flex-direction: column; gap: 1.5rem; }
+.modal-blog-post { border-bottom: 1px solid var(--color-border); padding-bottom: 1.5rem; }
+.modal-blog-post:last-child { border-bottom: none; padding-bottom: 0; }
+.modal-blog-date { font-size: 0.8rem; color: var(--color-primary); font-weight: 600; }
+.modal-blog-post h4 { margin: 0.35rem 0 0.5rem; color: var(--color-text); font-size: 1rem; }
+.modal-blog-post p { margin: 0; font-size: 0.9rem; }
+
+/* Cookie table */
+.modal-table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.88rem; }
+.modal-table th, .modal-table td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+.modal-table th { background: var(--color-bg-alt); color: var(--color-text); font-weight: 600; }
+
+@media (max-width: 768px) {
+  .back-to-top { bottom: 1.25rem; right: 1.25rem; }
+  #atlasMap { height: 300px; }
+}

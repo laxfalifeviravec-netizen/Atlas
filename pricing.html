@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atlas — Pricing Plans</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="pricing.css" />
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo">Atlas</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html#features">Features</a></li>
+        <li><a href="index.html#explore">Explore Roads</a></li>
+        <li><a href="index.html#stats">Stats</a></li>
+        <li><a href="pricing.html" class="active">Pricing</a></li>
+        <li><a href="index.html#contact">Contact</a></li>
+      </ul>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Pricing Hero -->
+  <section class="pricing-hero">
+    <div class="container">
+      <span class="hero-badge">Simple, Honest Pricing</span>
+      <h1>Choose Your Plan</h1>
+      <p>Start free and upgrade when you're ready. No hidden fees, no surprise charges — just great roads.</p>
+      <!-- Billing toggle -->
+      <div class="billing-toggle" id="billingToggle">
+        <span class="toggle-label" id="labelMonthly">Monthly</span>
+        <button class="toggle-switch" id="toggleSwitch" role="switch" aria-checked="false" aria-label="Toggle annual billing">
+          <span class="toggle-thumb"></span>
+        </button>
+        <span class="toggle-label" id="labelAnnual">Annual <span class="save-badge">Save 17%</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Cards -->
+  <section class="pricing-cards-section">
+    <div class="container">
+      <div class="pricing-cards">
+
+        <!-- Explorer (Free) -->
+        <div class="pricing-card">
+          <div class="plan-header">
+            <div class="plan-icon plan-icon--free">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+            </div>
+            <h2 class="plan-name">Explorer</h2>
+            <p class="plan-tagline">Get started for free</p>
+          </div>
+          <div class="plan-price">
+            <span class="price-amount">$0</span>
+            <span class="price-period">forever</span>
+          </div>
+          <a href="#" class="btn btn-secondary plan-cta">Get Started Free</a>
+          <ul class="plan-features">
+            <li class="feature-yes">Search &amp; discover roads</li>
+            <li class="feature-yes">Interactive map access</li>
+            <li class="feature-yes">Community ratings &amp; reviews</li>
+            <li class="feature-yes">Basic road information</li>
+            <li class="feature-limited"><span class="feature-limit">5</span> saved routes</li>
+            <li class="feature-no">Offline maps</li>
+            <li class="feature-no">Road condition alerts</li>
+            <li class="feature-no">Elevation profiles</li>
+            <li class="feature-no">Curated road guides</li>
+            <li class="feature-no">Drive history &amp; stats</li>
+            <li class="feature-no">Ad-free experience</li>
+          </ul>
+        </div>
+
+        <!-- Enthusiast (Pro) — recommended -->
+        <div class="pricing-card pricing-card--featured">
+          <div class="featured-badge">Most Popular</div>
+          <div class="plan-header">
+            <div class="plan-icon plan-icon--pro">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+              </svg>
+            </div>
+            <h2 class="plan-name">Enthusiast</h2>
+            <p class="plan-tagline">For the serious driver</p>
+          </div>
+          <div class="plan-price">
+            <span class="price-amount" data-monthly="8.99" data-annual="7.49">$8.99</span>
+            <span class="price-period">/month</span>
+          </div>
+          <p class="price-annual-note" id="proAnnualNote" style="display:none">Billed as <strong>$89.99/year</strong></p>
+          <a href="#" class="btn btn-primary plan-cta">Start 7-Day Free Trial</a>
+          <ul class="plan-features">
+            <li class="feature-yes">Everything in Explorer</li>
+            <li class="feature-yes">Unlimited saved routes</li>
+            <li class="feature-yes">Offline maps (full download)</li>
+            <li class="feature-yes">Road condition alerts</li>
+            <li class="feature-yes">Elevation profiles</li>
+            <li class="feature-yes">Turn-by-turn directions</li>
+            <li class="feature-yes">Ad-free experience</li>
+            <li class="feature-yes">Seasonal closure alerts</li>
+            <li class="feature-no">Curated expert guides</li>
+            <li class="feature-no">Real-time hazard alerts</li>
+            <li class="feature-no">Drive history &amp; stats</li>
+            <li class="feature-no">API access</li>
+          </ul>
+        </div>
+
+        <!-- Track Day (Elite) -->
+        <div class="pricing-card">
+          <div class="plan-header">
+            <div class="plan-icon plan-icon--elite">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <h2 class="plan-name">Track Day</h2>
+            <p class="plan-tagline">The full experience</p>
+          </div>
+          <div class="plan-price">
+            <span class="price-amount" data-monthly="19.99" data-annual="16.66">$19.99</span>
+            <span class="price-period">/month</span>
+          </div>
+          <p class="price-annual-note" id="eliteAnnualNote" style="display:none">Billed as <strong>$199.99/year</strong></p>
+          <a href="#" class="btn btn-secondary plan-cta">Start 7-Day Free Trial</a>
+          <ul class="plan-features">
+            <li class="feature-yes">Everything in Enthusiast</li>
+            <li class="feature-yes">Curated expert road guides</li>
+            <li class="feature-yes">Real-time hazard &amp; traffic alerts</li>
+            <li class="feature-yes">Full drive history &amp; stats</li>
+            <li class="feature-yes">Early access to new roads &amp; features</li>
+            <li class="feature-yes">Priority search &amp; route planning</li>
+            <li class="feature-yes">API access for integrations</li>
+            <li class="feature-yes">Private community forum</li>
+            <li class="feature-yes">Priority support (&lt;4 hr response)</li>
+            <li class="feature-yes">Annual printed road atlas</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature Comparison Table -->
+  <section class="comparison-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Full Feature Comparison</h2>
+        <p>See exactly what's included at every tier.</p>
+      </div>
+      <div class="comparison-wrap">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th class="feature-col">Feature</th>
+              <th>Explorer<br><span>Free</span></th>
+              <th class="featured-col">Enthusiast<br><span>$8.99/mo</span></th>
+              <th>Track Day<br><span>$19.99/mo</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="group-row"><td colspan="4">Road Discovery</td></tr>
+            <tr>
+              <td>Road search &amp; browse</td>
+              <td><span class="check">✓</span></td>
+              <td class="featured-col"><span class="check">✓</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Interactive map</td>
+              <td><span class="check">✓</span></td>
+              <td class="featured-col"><span class="check">✓</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Community ratings</td>
+              <td><span class="check">✓</span></td>
+              <td class="featured-col"><span class="check">✓</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Saved routes</td>
+              <td>5 max</td>
+              <td class="featured-col">Unlimited</td>
+              <td>Unlimited</td>
+            </tr>
+            <tr>
+              <td>Curated expert guides</td>
+              <td><span class="cross">—</span></td>
+              <td class="featured-col"><span class="cross">—</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+
+            <tr class="group-row"><td colspan="4">Navigation &amp; Conditions</td></tr>
+            <tr>
+              <td>Offline maps</td>
+              <td><span class="cross">—</span></td>
+              <td class="featured-col"><span class="check">✓</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Elevation profiles</td>
+              <td><span class="cross">—</span></td>
+              <td class="featured-col"><span class="check">✓</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Turn-by-turn directions</td>
+              <td><span class="cross">—</span></td>
+              <td class="featured-col"><span class="check">✓</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Road condition alerts</td>
+              <td><span class="cross">—</span></td>
+              <td class="featured-col"><span class="check">✓</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Seasonal closure alerts</td>
+              <td><span class="cross">—</span></td>
+              <td class="featured-col"><span class="check">✓</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Real-time hazard &amp; traffic alerts</td>
+              <td><span class="cross">—</span></td>
+              <td class="featured-col"><span class="cross">—</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+
+            <tr class="group-row"><td colspan="4">Experience</td></tr>
+            <tr>
+              <td>Ad-free</td>
+              <td><span class="cross">—</span></td>
+              <td class="featured-col"><span class="check">✓</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Drive history &amp; stats</td>
+              <td><span class="cross">—</span></td>
+              <td class="featured-col"><span class="cross">—</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Early access to new features</td>
+              <td><span class="cross">—</span></td>
+              <td class="featured-col"><span class="cross">—</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Private community forum</td>
+              <td><span class="cross">—</span></td>
+              <td class="featured-col"><span class="cross">—</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Annual printed road atlas</td>
+              <td><span class="cross">—</span></td>
+              <td class="featured-col"><span class="cross">—</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+
+            <tr class="group-row"><td colspan="4">Developer &amp; Support</td></tr>
+            <tr>
+              <td>API access</td>
+              <td><span class="cross">—</span></td>
+              <td class="featured-col"><span class="cross">—</span></td>
+              <td><span class="check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Support response time</td>
+              <td>Community</td>
+              <td class="featured-col">48 hours</td>
+              <td>&lt;4 hours</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Frequently Asked Questions</h2>
+        <p>Everything you need to know before you commit.</p>
+      </div>
+      <div class="faq-list" id="faqList">
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Can I cancel at any time?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Yes. You can cancel your subscription at any time from your account settings. You'll retain access until the end of your current billing period, and we won't charge you again after that. No cancellation fees, ever.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Is there a free trial for paid plans?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Both Enthusiast and Track Day start with a 7-day free trial. No credit card is required to start the trial — we only ask for payment details if you decide to continue after the trial ends.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            What's the difference between Enthusiast and Track Day?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Enthusiast covers everything a serious driver needs day-to-day: offline maps, elevation profiles, road condition alerts, and unlimited saved routes. Track Day adds the enthusiast-level extras: curated expert guides written by professional drivers, real-time hazard alerts, full drive history and statistics, API access, priority support, and our annual printed road atlas.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Can I switch plans later?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Absolutely. You can upgrade or downgrade your plan at any time. When upgrading, you'll be charged a prorated amount for the remainder of your billing cycle. When downgrading, the change takes effect at the start of your next billing period.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            What payment methods do you accept?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>We accept all major credit and debit cards (Visa, Mastercard, American Express, Discover), PayPal, and Apple Pay / Google Pay. All payments are processed securely through Stripe.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Do you offer discounts for groups or car clubs?
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Yes — we offer group pricing for car clubs, driving schools, and organisations with 10 or more members. Contact us at <a href="mailto:partners@atlas.app">partners@atlas.app</a> for a custom quote.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom CTA -->
+  <section class="pricing-cta-section">
+    <div class="container">
+      <div class="pricing-cta-box">
+        <h2>Ready to find your next great drive?</h2>
+        <p>Join 85,000 driving enthusiasts already exploring America's best roads with Atlas.</p>
+        <div class="pricing-cta-actions">
+          <a href="#" class="btn btn-primary">Start Free — No Card Needed</a>
+          <a href="index.html#explore" class="btn btn-secondary">Explore Roads First</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="nav-logo">Atlas</a>
+          <p>The driving enthusiast's guide to America's best roads. Explore, plan, and relive your greatest drives.</p>
+        </div>
+        <div class="footer-links">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="index.html#features">Features</a></li>
+            <li><a href="index.html#explore">Explore Roads</a></li>
+            <li><a href="pricing.html">Pricing</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="index.html#contact">Contact</a></li>
+            <li><a href="#" data-modal="about">About</a></li>
+            <li><a href="#" data-modal="blog">Blog</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="#" data-modal="privacy">Privacy Policy</a></li>
+            <li><a href="#" data-modal="terms">Terms of Service</a></li>
+            <li><a href="#" data-modal="cookies">Cookie Policy</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Atlas. All rights reserved.</p>
+        <p>Drive responsibly. Respect the road and those who share it.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal (shared) -->
+  <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle"></h3>
+        <button class="modal-close" id="modalClose" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- Back to top -->
+  <button class="back-to-top" id="backToTop" aria-label="Back to top">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="18 15 12 9 6 15"/>
+    </svg>
+  </button>
+
+  <script src="pricing.js"></script>
+</body>
+</html>

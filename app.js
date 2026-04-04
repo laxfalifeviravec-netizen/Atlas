@@ -4,7 +4,7 @@
 
 // ── Theme Toggle ──────────────────────────────────────────────
 const themeToggle = document.getElementById('themeToggle');
-const savedTheme = localStorage.getItem('atlas-theme') || 'light';
+const savedTheme = localStorage.getItem('atlas-theme') || 'dark';
 document.documentElement.setAttribute('data-theme', savedTheme);
 
 themeToggle.addEventListener('click', () => {

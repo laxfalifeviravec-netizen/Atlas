@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="map-page.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body class="map-page">
   <!-- Navigation -->
@@ -23,6 +24,13 @@
         <li><a href="pricing.html">Pricing</a></li>
         <li><a href="index.html#contact">Contact</a></li>
       </ul>
+      <div class="nav-auth">
+        <button class="btn btn-primary btn-sm" id="authBtn">Sign In</button>
+        <div class="user-menu hidden" id="userMenu">
+          <span class="user-email" id="userEmail"></span>
+          <button class="btn btn-secondary btn-sm" id="logoutBtn">Sign Out</button>
+        </div>
+      </div>
       <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
@@ -136,7 +144,54 @@
 
   </div>
 
+  <!-- Auth Modal -->
+  <div class="modal-overlay" id="authOverlay" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+    <div class="modal auth-modal">
+      <div class="modal-header">
+        <h3 id="authModalTitle">Welcome to Atlas</h3>
+        <button class="modal-close" id="authClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">Sign In</button>
+          <button class="auth-tab" data-tab="signup">Create Account</button>
+        </div>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="loginEmail">Email</label>
+            <input type="email" id="loginEmail" name="email" placeholder="your@email.com" required />
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" name="password" placeholder="••••••••" required />
+          </div>
+          <p class="auth-error" id="loginError"></p>
+          <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        </form>
+        <form id="signupForm" class="hidden">
+          <div class="form-group">
+            <label for="signupName">Full Name</label>
+            <input type="text" id="signupName" name="name" placeholder="Your name" required />
+          </div>
+          <div class="form-group">
+            <label for="signupEmail">Email</label>
+            <input type="email" id="signupEmail" name="email" placeholder="your@email.com" required />
+          </div>
+          <div class="form-group">
+            <label for="signupPassword">Password</label>
+            <input type="password" id="signupPassword" name="password" placeholder="Minimum 8 characters" required />
+          </div>
+          <p class="auth-error" id="signupError"></p>
+          <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN/WLI=" crossorigin=""></script>
+  <script src="config.js"></script>
+  <script src="db.js"></script>
   <script src="map.js"></script>
+  <script src="auth.js"></script>
 </body>
 </html>

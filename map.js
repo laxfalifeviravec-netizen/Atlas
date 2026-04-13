@@ -630,6 +630,16 @@ function makeMarkerIcon(color) {
 
 function buildPopupHTML(road) {
   const color = TYPE_COLORS[road.type] || '#888';
+  const rating = road.avgRating > 0
+    ? `<span class="road-popup-rating">★ ${parseFloat(road.avgRating).toFixed(1)} <em>(${road.reviewCount})</em></span>`
+    : '';
+  const saveBtn = road.id
+    ? `<button class="road-popup-save" data-road-id="${road.id}" onclick="handleSave(${road.id},this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg> Save
+       </button>`
+    : '';
   return `
     <div class="road-popup">
       <div class="road-popup-name">${road.name}</div>
@@ -638,13 +648,34 @@ function buildPopupHTML(road) {
         <span class="road-popup-badge" style="background:${color}">${road.type}</span>
         <span class="road-popup-badge" style="background:#374151">${road.region}</span>
       </div>
+      ${rating}
       <div class="road-popup-row">
         <span class="road-popup-stat"><strong>${road.length}</strong></span>
         <span class="road-popup-stat">${road.difficulty}</span>
         <span class="road-popup-stat">${road.bestSeason}</span>
       </div>
+      ${saveBtn}
     </div>
   `;
+}
+
+async function handleSave(roadId, btn) {
+  if (!window.__atlasUser) {
+    // Trigger auth modal
+    document.getElementById('authBtn') && document.getElementById('authBtn').click();
+    return;
+  }
+  try {
+    btn.disabled = true;
+    const saved = await toggleSave(window.__atlasUser.id, roadId);
+    btn.innerHTML = saved
+      ? `<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Saved`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Save`;
+  } catch (e) {
+    console.error('Save error:', e);
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 ROADS.forEach((road, i) => {
@@ -801,3 +832,58 @@ resetBtn.addEventListener('click', resetAll);
 
 // ── Initial render ─────────────────────────────────────────────
 renderList();
+
+// ── Supabase: load live road data if configured ────────────────
+(async () => {
+  // Skip if config.js has placeholder credentials
+  if (typeof db === 'undefined' || typeof SUPABASE_URL === 'undefined' || SUPABASE_URL.includes('YOUR_PROJECT_ID')) return;
+
+  try {
+    const liveRoads = await getRoads();
+    if (!liveRoads || !liveRoads.length) return;
+
+    // Clear existing static markers
+    Object.values(markersByIndex).forEach(m => fullMap.removeLayer(m));
+    Object.keys(markersByIndex).forEach(k => delete markersByIndex[k]);
+
+    // Re-populate ROADS with live data (normalise field names)
+    ROADS.length = 0;
+    liveRoads.forEach((r, i) => {
+      ROADS.push({
+        name:       r.name,
+        designation: r.designation || '',
+        state:      r.state,
+        region:     r.region,
+        type:       r.type,
+        length:     r.length_mi ? `${r.length_mi} mi` : '—',
+        difficulty: r.difficulty || '—',
+        bestSeason: r.best_season || '—',
+        highlight:  r.highlight || '',
+        lat:        r.lat,
+        lng:        r.lng,
+        id:         r.id,
+        avgRating:  r.avg_rating,
+        reviewCount: r.review_count,
+      });
+
+      const color = TYPE_COLORS[r.type] || '#888';
+      const marker = L.marker([r.lat, r.lng], { icon: makeMarkerIcon(color) })
+        .bindPopup(buildPopupHTML(ROADS[i]), { maxWidth: 260 })
+        .addTo(fullMap);
+
+      marker.on('click', () => highlightListItem(i));
+      markersByIndex[i] = marker;
+    });
+
+    renderList();
+  } catch (err) {
+    // Stay on static data silently
+    console.warn('Atlas: could not load roads from Supabase, using static data.', err);
+  }
+})();
+
+// ── Supabase: save road toggle ────────────────────────────────
+document.addEventListener('atlas:authchange', ({ detail: { user } }) => {
+  // Update save buttons if any popups are open (handled dynamically per popup)
+  window.__atlasUser = user;
+});

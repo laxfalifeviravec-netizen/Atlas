@@ -436,12 +436,12 @@ function validateForm() {
   return valid;
 }
 
-contactForm.addEventListener('submit', e => {
+contactForm.addEventListener('submit', async e => {
   e.preventDefault();
   if (!validateForm()) return;
 
   const btn = contactForm.querySelector('button[type="submit"]');
-  btn.textContent = 'Opening email…';
+  btn.textContent = 'Sending…';
   btn.disabled = true;
 
   const nameVal    = document.getElementById('name').value.trim();
@@ -450,18 +450,35 @@ contactForm.addEventListener('submit', e => {
   const subjectLabel = subjectEl.options[subjectEl.selectedIndex].text || 'General Inquiry';
   const messageVal = document.getElementById('message').value.trim();
 
-  const mailSubject = encodeURIComponent(`[Atlas] ${subjectLabel}`);
-  const mailBody    = encodeURIComponent(`From: ${nameVal} <${emailVal}>\n\n${messageVal}`);
+  try {
+    // Attempt to save to Supabase; fall back to mailto if config is placeholder
+    if (typeof db !== 'undefined' && !SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
+      await submitContact({
+        name:    nameVal,
+        email:   emailVal,
+        subject: subjectLabel,
+        message: messageVal,
+      });
+    } else {
+      // Fallback: open email client
+      const mailSubject = encodeURIComponent(`[Atlas] ${subjectLabel}`);
+      const mailBody    = encodeURIComponent(`From: ${nameVal} <${emailVal}>\n\n${messageVal}`);
+      window.location.href = `mailto:hello@atlas.app?subject=${mailSubject}&body=${mailBody}`;
+    }
 
-  window.location.href = `mailto:hello@atlas.app?subject=${mailSubject}&body=${mailBody}`;
-
-  setTimeout(() => {
     contactForm.reset();
-    btn.textContent = 'Send Message';
-    btn.disabled = false;
     document.getElementById('formSuccess').classList.add('visible');
     setTimeout(() => document.getElementById('formSuccess').classList.remove('visible'), 5000);
-  }, 600);
+  } catch (err) {
+    console.error('Contact form error:', err);
+    // Graceful fallback on DB error
+    const mailSubject = encodeURIComponent(`[Atlas] ${subjectLabel}`);
+    const mailBody    = encodeURIComponent(`From: ${nameVal} <${emailVal}>\n\n${messageVal}`);
+    window.location.href = `mailto:hello@atlas.app?subject=${mailSubject}&body=${mailBody}`;
+  } finally {
+    btn.textContent = 'Send Message';
+    btn.disabled = false;
+  }
 });
 
 ['name', 'email', 'message'].forEach(id => {

@@ -365,26 +365,24 @@ function openPopupAtLocation(lat, lng, name) {
     .openOn(atlasMap);
 }
 
+// Wire up place card clicks immediately — navigate to map.html
+document.querySelectorAll('.place-card').forEach(card => {
+  const lat  = card.dataset.lat;
+  const lng  = card.dataset.lng;
+  const name = card.dataset.name;
+  const activate = () => {
+    window.location.href = `map.html?road=${encodeURIComponent(name)}&lat=${lat}&lng=${lng}`;
+  };
+  card.addEventListener('click', activate);
+  card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') activate(); });
+});
+
 // Init map once the section is near the viewport (lazy init)
 const mapSection = document.getElementById('explore');
 const mapObserver = new IntersectionObserver(entries => {
   if (entries[0].isIntersecting) {
     initMap();
     mapObserver.disconnect();
-
-    // Wire up place card clicks — navigate to map.html focused on that road
-    document.querySelectorAll('.place-card').forEach(card => {
-      const lat  = card.dataset.lat;
-      const lng  = card.dataset.lng;
-      const name = card.dataset.name;
-
-      const activate = () => {
-        window.location.href = `map.html?road=${encodeURIComponent(name)}&lat=${lat}&lng=${lng}`;
-      };
-
-      card.addEventListener('click', activate);
-      card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') activate(); });
-    });
   }
 }, { threshold: 0.1 });
 mapObserver.observe(mapSection);

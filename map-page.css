@@ -4,18 +4,17 @@
 
 body.map-page {
   overflow: hidden;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
 /* ── Map layout ───────────────────────────────────────────── */
 .map-layout {
+  position: fixed;
+  top: var(--nav-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
-  flex: 1;
-  height: calc(100vh - var(--nav-height));
   overflow: hidden;
-  position: relative;
 }
 
 /* ── Sidebar ──────────────────────────────────────────────── */

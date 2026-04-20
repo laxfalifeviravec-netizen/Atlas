@@ -1055,6 +1055,159 @@ reportForm && reportForm.addEventListener('submit', async e => {
 
 // ── Supabase: save road toggle ────────────────────────────────
 document.addEventListener('atlas:authchange', ({ detail: { user } }) => {
-  // Update save buttons if any popups are open (handled dynamically per popup)
   window.__atlasUser = user;
+});
+
+// ── Submit a Road ──────────────────────────────────────────────
+const submitRoadBtn     = document.getElementById('submitRoadBtn');
+const submitRoadOverlay = document.getElementById('submitRoadOverlay');
+const submitRoadClose   = document.getElementById('submitRoadClose');
+const submitRoadForm    = document.getElementById('submitRoadForm');
+const submitRoadError   = document.getElementById('submitRoadError');
+const pickMapBtn        = document.getElementById('pickMapBtn');
+const mapPickHint       = document.getElementById('mapPickHint');
+const cancelPick        = document.getElementById('cancelPick');
+let   pickMarker        = null;
+let   pickingLocation   = false;
+
+submitRoadBtn.addEventListener('click', () => {
+  if (!window.__atlasUser) {
+    document.getElementById('authBtn').click();
+    return;
+  }
+  submitRoadOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+});
+
+function closeSubmitRoad() {
+  submitRoadOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+  submitRoadError.textContent = '';
+  stopPickingLocation();
+}
+
+submitRoadClose.addEventListener('click', closeSubmitRoad);
+submitRoadOverlay.addEventListener('click', e => { if (e.target === submitRoadOverlay) closeSubmitRoad(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && submitRoadOverlay.classList.contains('open')) closeSubmitRoad();
+});
+
+// ── Map pin placement ──────────────────────────────────────────
+function stopPickingLocation() {
+  pickingLocation = false;
+  mapPickHint.classList.remove('visible');
+  fullMap.getContainer().style.cursor = '';
+}
+
+pickMapBtn.addEventListener('click', () => {
+  pickingLocation = true;
+  submitRoadOverlay.classList.remove('open'); // hide modal so map is usable
+  mapPickHint.classList.add('visible');
+  fullMap.getContainer().style.cursor = 'crosshair';
+});
+
+cancelPick.addEventListener('click', () => {
+  stopPickingLocation();
+  submitRoadOverlay.classList.add('open');
+});
+
+fullMap.on('click', e => {
+  if (!pickingLocation) return;
+  stopPickingLocation();
+
+  const { lat, lng } = e.latlng;
+  document.getElementById('srLat').value = lat.toFixed(5);
+  document.getElementById('srLng').value = lng.toFixed(5);
+
+  if (pickMarker) fullMap.removeLayer(pickMarker);
+  pickMarker = L.marker([lat, lng], { icon: makeMarkerIcon('#ef4444') })
+    .addTo(fullMap)
+    .bindPopup('<strong>New road location</strong><br>Fill in the details →')
+    .openPopup();
+
+  submitRoadOverlay.classList.add('open');
+});
+
+// ── Form submit ────────────────────────────────────────────────
+submitRoadForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  submitRoadError.textContent = '';
+  if (!window.__atlasUser) return;
+
+  const lat = parseFloat(document.getElementById('srLat').value);
+  const lng = parseFloat(document.getElementById('srLng').value);
+  if (!lat || !lng) {
+    submitRoadError.textContent = 'Please set a location by clicking "Click map to place pin".';
+    return;
+  }
+
+  const btn = document.getElementById('submitRoadSubmit');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  const payload = {
+    name:        document.getElementById('srName').value.trim(),
+    designation: document.getElementById('srDesignation').value.trim(),
+    state:       document.getElementById('srState').value.trim(),
+    region:      document.getElementById('srRegion').value,
+    type:        document.getElementById('srType').value,
+    difficulty:  document.getElementById('srDifficulty').value || null,
+    lengthMi:    parseFloat(document.getElementById('srLength').value) || null,
+    bestSeason:  document.getElementById('srSeason').value.trim() || null,
+    highlight:   document.getElementById('srHighlight').value.trim() || null,
+    lat,
+    lng,
+    userId:      window.__atlasUser.id,
+  };
+
+  try {
+    const road = await submitRoad(payload);
+
+    // Normalise to ROADS format and add to map live
+    const newRoad = {
+      name:        road.name,
+      designation: road.designation || '',
+      state:       road.state,
+      region:      road.region,
+      type:        road.type,
+      length:      road.length_mi ? `${road.length_mi} mi` : '—',
+      difficulty:  road.difficulty || '—',
+      bestSeason:  road.best_season || '—',
+      highlight:   road.highlight || '',
+      lat:         road.lat,
+      lng:         road.lng,
+      id:          road.id,
+      avgRating:   0,
+      reviewCount: 0,
+      source:      'community',
+    };
+
+    const idx = ROADS.length;
+    ROADS.push(newRoad);
+
+    const color = TYPE_COLORS[road.type] || '#888';
+    const marker = L.marker([road.lat, road.lng], { icon: makeMarkerIcon(color) })
+      .bindPopup(buildPopupHTML(newRoad), { maxWidth: 280, maxHeight: 420 })
+      .addTo(fullMap);
+    marker.on('click', () => highlightListItem(idx));
+    attachPopupDataLoader(marker, newRoad);
+    markersByIndex[idx] = marker;
+
+    // Remove the preview pin
+    if (pickMarker) { fullMap.removeLayer(pickMarker); pickMarker = null; }
+
+    renderList();
+    closeSubmitRoad();
+    submitRoadForm.reset();
+
+    // Fly to new road and open its popup
+    flyToRoad(idx);
+
+  } catch (err) {
+    console.error('Road submit error:', err);
+    submitRoadError.textContent = err.message || 'Failed to submit. Please try again.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Add Road to Atlas';
+  }
 });

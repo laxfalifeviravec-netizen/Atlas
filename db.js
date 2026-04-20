@@ -134,6 +134,32 @@ async function getConditions(roadId) {
   return data;
 }
 
+// ── Community Road Submissions ────────────────────────────────
+
+async function submitRoad({ name, designation, state, region, type, lengthMi, difficulty, bestSeason, highlight, lat, lng, userId }) {
+  const { data, error } = await db
+    .from('roads')
+    .insert({
+      name,
+      designation:  designation || null,
+      state,
+      region,
+      type,
+      length_mi:    lengthMi   || null,
+      difficulty:   difficulty || null,
+      best_season:  bestSeason || null,
+      highlight:    highlight  || null,
+      lat:          parseFloat(lat),
+      lng:          parseFloat(lng),
+      source:       'community',
+      submitted_by: userId,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 async function reportCondition({ roadId, userId, conditionType, description }) {
   const { error } = await db
     .from('road_conditions')

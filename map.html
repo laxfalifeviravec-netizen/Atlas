@@ -115,6 +115,16 @@
         <div class="legend-item"><span class="legend-dot" style="background:#6b7280"></span>Off-road</div>
       </div>
 
+      <!-- Submit a road -->
+      <div class="sidebar-submit">
+        <button class="submit-road-btn" id="submitRoadBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Submit a Road
+        </button>
+      </div>
+
       <!-- Road list -->
       <div class="road-list" id="roadList">
         <!-- Populated by JS -->
@@ -141,6 +151,124 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- Map pick-location hint (shown when user is placing a pin) -->
+  <div class="map-pick-hint" id="mapPickHint">
+    <span>Click anywhere on the map to set the road location</span>
+    <button id="cancelPick">Cancel</button>
+  </div>
+
+  <!-- Submit a Road Modal -->
+  <div class="modal-overlay" id="submitRoadOverlay" role="dialog" aria-modal="true">
+    <div class="modal submit-road-modal">
+      <div class="modal-header">
+        <h3>Submit a Road</h3>
+        <button class="modal-close" id="submitRoadClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="submit-road-intro">Found a great drive that isn't on Atlas yet? Add it for the whole community.</p>
+        <form id="submitRoadForm" novalidate>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="srName">Road name <span class="req">*</span></label>
+              <input type="text" id="srName" name="name" placeholder="e.g. Tail of the Dragon" required />
+            </div>
+            <div class="form-group">
+              <label for="srDesignation">Highway / designation</label>
+              <input type="text" id="srDesignation" name="designation" placeholder="e.g. US-129" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="srState">State <span class="req">*</span></label>
+              <input type="text" id="srState" name="state" placeholder="e.g. North Carolina" required />
+            </div>
+            <div class="form-group">
+              <label for="srRegion">Region <span class="req">*</span></label>
+              <select id="srRegion" name="region" required>
+                <option value="">Select…</option>
+                <option value="West Coast">West Coast</option>
+                <option value="Mountain West">Mountain West</option>
+                <option value="Southwest">Southwest</option>
+                <option value="Southeast">Southeast</option>
+                <option value="Northeast">Northeast</option>
+                <option value="Midwest">Midwest</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="srType">Road type <span class="req">*</span></label>
+              <select id="srType" name="type" required>
+                <option value="">Select…</option>
+                <option value="Mountain">Mountain</option>
+                <option value="Coastal">Coastal</option>
+                <option value="Technical">Technical</option>
+                <option value="Scenic">Scenic</option>
+                <option value="Desert">Desert</option>
+                <option value="Historic">Historic</option>
+                <option value="Canyon">Canyon</option>
+                <option value="Off-road">Off-road</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="srDifficulty">Difficulty</label>
+              <select id="srDifficulty" name="difficulty">
+                <option value="">Select…</option>
+                <option value="Easy">Easy</option>
+                <option value="Moderate">Moderate</option>
+                <option value="Challenging">Challenging</option>
+                <option value="Expert">Expert</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="srLength">Length (miles)</label>
+              <input type="number" id="srLength" name="length" placeholder="e.g. 11" min="0" step="0.1" />
+            </div>
+            <div class="form-group">
+              <label for="srSeason">Best season</label>
+              <input type="text" id="srSeason" name="season" placeholder="e.g. Apr–Oct" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="srHighlight">What makes it special?</label>
+            <textarea id="srHighlight" name="highlight" rows="2" placeholder="One sentence that captures why drivers love this road…"></textarea>
+          </div>
+
+          <!-- Location picker -->
+          <div class="location-picker">
+            <div class="location-picker-header">
+              <label>Location <span class="req">*</span></label>
+              <button type="button" class="pick-map-btn" id="pickMapBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                  <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+                </svg>
+                Click map to place pin
+              </button>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <input type="number" id="srLat" name="lat" placeholder="Latitude e.g. 35.47" step="0.00001" required />
+              </div>
+              <div class="form-group">
+                <input type="number" id="srLng" name="lng" placeholder="Longitude e.g. -83.98" step="0.00001" required />
+              </div>
+            </div>
+          </div>
+
+          <p class="auth-error" id="submitRoadError"></p>
+          <button type="submit" class="btn btn-primary btn-full" id="submitRoadSubmit">Add Road to Atlas</button>
+        </form>
+      </div>
+    </div>
   </div>
 
   <!-- Condition Report Modal -->

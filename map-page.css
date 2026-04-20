@@ -467,6 +467,128 @@ body.map-page {
   box-shadow: 0 2px 12px rgba(0,0,0,.5), 0 0 12px currentColor;
 }
 
+/* ── Submit a Road ────────────────────────────────────────── */
+.sidebar-submit {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.submit-road-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: var(--font-display, var(--font));
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  background: var(--color-primary-light, rgba(var(--color-primary-rgb, 251,113,133),0.08));
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  justify-content: center;
+}
+.submit-road-btn:hover {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* Submit road modal */
+.submit-road-modal { max-width: 520px; }
+.submit-road-intro {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.req { color: var(--color-primary); font-weight: 700; }
+
+/* Location picker block */
+.location-picker {
+  margin-top: 0.25rem;
+  padding: 0.75rem;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+.location-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+.location-picker-header label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+.pick-map-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--font-display, var(--font));
+  letter-spacing: 0.04em;
+  color: var(--color-primary);
+  background: none;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.pick-map-btn:hover {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* Map pick-location hint overlay */
+.map-pick-hint {
+  display: none;
+  position: fixed;
+  top: calc(var(--nav-height) + 1rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: var(--color-bg);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius);
+  padding: 0.6rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  box-shadow: var(--shadow-lg);
+  align-items: center;
+  gap: 0.9rem;
+  white-space: nowrap;
+}
+.map-pick-hint.active { display: flex; }
+.map-pick-hint button {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+  font-family: var(--font-display, var(--font));
+  letter-spacing: 0.04em;
+  transition: background var(--transition);
+}
+.map-pick-hint button:hover { background: var(--color-bg-alt); }
+
 /* ── Responsive ───────────────────────────────────────────── */
 @media (max-width: 1024px) {
   .map-sidebar {

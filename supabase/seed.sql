@@ -40,7 +40,7 @@ values
  25.0, 'Expert', 'May–Oct', 'Hairpins with no guardrails above 11,000-ft alpine passes', 37.80, -107.70),
 
 ('Chief Joseph Scenic Highway', 'WY-296', 'Wyoming', 'Mountain West', 'Scenic',
- 46.0, 'Moderate', 'May–Oct', 'Breathtaking views into the Clark's Fork canyon', 44.65, -109.58),
+ 46.0, 'Moderate', 'May–Oct', 'Breathtaking views into the Clark''s Fork canyon', 44.65, -109.58),
 
 ('Logan Canyon Scenic Byway', 'US-89', 'Utah', 'Mountain West', 'Scenic',
  41.0, 'Easy', 'May–Oct', 'Limestone walls, fly-fishing streams, and fall color', 41.80, -111.50),

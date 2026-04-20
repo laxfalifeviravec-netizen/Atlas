@@ -235,10 +235,11 @@ body.map-page {
   flex: 1;
   position: relative;
   overflow: hidden;
+  min-height: 0;
 }
 #fullMap {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
 }
 
 /* Floating toggle button (shows on mobile) */

@@ -11,4 +11,6 @@ const SUPABASE_KEY  = 'sb_publishable_CMC-kVTb1Mb_Y2NfjP-LmQ_8xt9ywA4';
 
 // Supabase JS v2 is loaded via CDN in each HTML page.
 // This file just exposes the initialised client as `db`.
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const db = (typeof supabase !== 'undefined')
+  ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;

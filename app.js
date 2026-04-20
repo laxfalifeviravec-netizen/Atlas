@@ -372,16 +372,14 @@ const mapObserver = new IntersectionObserver(entries => {
     initMap();
     mapObserver.disconnect();
 
-    // Wire up place card clicks after map is ready
+    // Wire up place card clicks — navigate to map.html focused on that road
     document.querySelectorAll('.place-card').forEach(card => {
-      const lat = parseFloat(card.dataset.lat);
-      const lng = parseFloat(card.dataset.lng);
+      const lat  = card.dataset.lat;
+      const lng  = card.dataset.lng;
       const name = card.dataset.name;
 
       const activate = () => {
-        atlasMap.flyTo([lat, lng], 10, { duration: 1.2 });
-        openPopupAtLocation(lat, lng, name);
-        document.querySelector('.map-wrap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        window.location.href = `map.html?road=${encodeURIComponent(name)}&lat=${lat}&lng=${lng}`;
       };
 
       card.addEventListener('click', activate);

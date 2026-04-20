@@ -359,6 +359,88 @@ body.map-page {
 }
 .road-popup-save:hover { background: #e5e7eb; }
 
+/* Weather widget */
+.road-popup-weather {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: #555;
+  padding: 0.45rem 0;
+  border-top: 1px solid #eee;
+  margin-top: 0.4rem;
+}
+.weather-temp {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111;
+  margin-right: 0.2rem;
+}
+[data-theme="dark"] .weather-temp { color: #f0eff4; }
+.weather-desc { color: #444; }
+[data-theme="dark"] .weather-desc { color: #aaa; }
+.weather-wind { color: #666; margin-left: auto; }
+.weather-loading, .weather-na { color: #999; font-style: italic; font-size: 0.75rem; }
+
+/* Road alerts section */
+.road-popup-alerts {
+  padding: 0.45rem 0 0;
+  border-top: 1px solid #eee;
+  margin-top: 0.1rem;
+}
+.alerts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+.alerts-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #888;
+}
+.road-popup-report {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #ef4444;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+.road-popup-report:hover { text-decoration: underline; }
+.alerts-list { display: flex; flex-wrap: wrap; gap: 0.3rem; min-height: 1.4rem; }
+.alerts-loading, .alerts-none { font-size: 0.75rem; color: #999; font-style: italic; }
+.alert-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  color: #fff;
+}
+.alert-tag.alert-snow, .alert-tag.alert-ice { background: #0ea5e9; }
+.alert-tag.alert-construction               { background: #f59e0b; color: #111; }
+.alert-tag.alert-flooding                   { background: #3b82f6; }
+.alert-tag.alert-rockslide                  { background: #78716c; }
+.alert-tag.alert-closure                    { background: #ef4444; }
+.alert-tag.alert-clear                      { background: #22c55e; }
+
+/* Report condition modal */
+.report-modal { max-width: 420px; }
+.report-road-name {
+  font-family: var(--font-display, var(--font));
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-primary);
+  margin: 0 0 1.25rem;
+}
+
 /* Override Leaflet popup styling */
 .leaflet-popup-content-wrapper {
   border-radius: 4px !important;

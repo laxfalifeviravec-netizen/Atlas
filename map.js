@@ -628,6 +628,30 @@ function makeMarkerIcon(color) {
   });
 }
 
+// ── Weather (Open-Meteo, no API key) ──────────────────────────
+const WMO_CODES = {
+  0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast',
+  45:'Fog', 48:'Icy fog',
+  51:'Light drizzle', 53:'Drizzle', 55:'Heavy drizzle',
+  61:'Light rain', 63:'Rain', 65:'Heavy rain',
+  71:'Light snow', 73:'Snow', 75:'Heavy snow', 77:'Snow grains',
+  80:'Rain showers', 81:'Heavy showers', 82:'Violent showers',
+  85:'Snow showers', 86:'Heavy snow showers',
+  95:'Thunderstorm', 96:'Thunderstorm + hail', 99:'Thunderstorm + heavy hail',
+};
+
+const CONDITION_ICONS = {
+  Snow:'❄️', Ice:'🧊', Construction:'🚧', Flooding:'🌊',
+  Rockslide:'⛰️', Closure:'🚫', Clear:'✅',
+};
+
+async function fetchWeather(lat, lng) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,wind_speed_10m,precipitation&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('weather fetch failed');
+  return res.json();
+}
+
 function buildPopupHTML(road) {
   const color = TYPE_COLORS[road.type] || '#888';
   const rating = road.avgRating > 0
@@ -639,6 +663,9 @@ function buildPopupHTML(road) {
           <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
         </svg> Save
        </button>`
+    : '';
+  const reportBtn = road.id
+    ? `<button class="road-popup-report" onclick="openReportCondition(${road.id}, '${road.name.replace(/'/g,"\\'")}')">+ Report condition</button>`
     : '';
   return `
     <div class="road-popup">
@@ -654,9 +681,70 @@ function buildPopupHTML(road) {
         <span class="road-popup-stat">${road.difficulty}</span>
         <span class="road-popup-stat">${road.bestSeason}</span>
       </div>
+      <div class="road-popup-weather" data-lat="${road.lat}" data-lng="${road.lng}">
+        <span class="weather-loading">Loading weather…</span>
+      </div>
+      <div class="road-popup-alerts">
+        <div class="alerts-row">
+          <span class="alerts-label">Road alerts</span>
+          ${reportBtn}
+        </div>
+        <div class="alerts-list" data-road-id="${road.id || ''}">
+          <span class="alerts-loading">Checking…</span>
+        </div>
+      </div>
       ${saveBtn}
     </div>
   `;
+}
+
+// Populate weather + conditions after popup opens
+function attachPopupDataLoader(marker, road) {
+  marker.on('popupopen', async () => {
+    const popup   = marker.getPopup();
+    const el      = popup.getElement();
+    if (!el) return;
+
+    const weatherEl    = el.querySelector('.road-popup-weather');
+    const alertsEl     = el.querySelector('.alerts-list');
+
+    // Weather
+    if (weatherEl) {
+      try {
+        const data = await fetchWeather(road.lat, road.lng);
+        const c    = data.current;
+        const desc = WMO_CODES[c.weather_code] || 'Unknown';
+        const precip = c.precipitation > 0 ? ` &middot; ${c.precipitation}" precip` : '';
+        weatherEl.innerHTML = `
+          <span class="weather-temp">${Math.round(c.temperature_2m)}°F</span>
+          <span class="weather-desc">${desc}</span>
+          <span class="weather-wind">💨 ${Math.round(c.wind_speed_10m)} mph${precip}</span>
+        `;
+      } catch {
+        weatherEl.innerHTML = '<span class="weather-na">Weather unavailable</span>';
+      }
+      popup.update();
+    }
+
+    // Road conditions from Supabase
+    if (alertsEl) {
+      try {
+        const conds = (road.id && typeof getConditions === 'function')
+          ? await getConditions(road.id)
+          : [];
+        if (!conds.length) {
+          alertsEl.innerHTML = '<span class="alerts-none">No active alerts</span>';
+        } else {
+          alertsEl.innerHTML = conds.map(c =>
+            `<span class="alert-tag alert-${c.condition_type.toLowerCase()}">${CONDITION_ICONS[c.condition_type] || ''} ${c.condition_type}</span>`
+          ).join('');
+        }
+      } catch {
+        alertsEl.innerHTML = '<span class="alerts-none">No active alerts</span>';
+      }
+      popup.update();
+    }
+  });
 }
 
 async function handleSave(roadId, btn) {
@@ -681,13 +769,11 @@ async function handleSave(roadId, btn) {
 ROADS.forEach((road, i) => {
   const color = TYPE_COLORS[road.type] || '#888';
   const marker = L.marker([road.lat, road.lng], { icon: makeMarkerIcon(color) })
-    .bindPopup(buildPopupHTML(road), { maxWidth: 260 })
+    .bindPopup(buildPopupHTML(road), { maxWidth: 280, maxHeight: 420 })
     .addTo(fullMap);
 
-  marker.on('click', () => {
-    highlightListItem(i);
-  });
-
+  marker.on('click', () => highlightListItem(i));
+  attachPopupDataLoader(marker, road);
   markersByIndex[i] = marker;
 });
 
@@ -833,6 +919,88 @@ resetBtn.addEventListener('click', resetAll);
 // ── Initial render ─────────────────────────────────────────────
 renderList();
 
+// ── Deep-link: fly to road from URL params ─────────────────────
+(function handleURLParams() {
+  const params = new URLSearchParams(window.location.search);
+  const roadParam = params.get('road');
+  const lat = parseFloat(params.get('lat'));
+  const lng = parseFloat(params.get('lng'));
+  if (!roadParam && !lat) return;
+
+  // Find matching road index
+  const idx = ROADS.findIndex(r =>
+    r.name.toLowerCase() === decodeURIComponent(roadParam || '').toLowerCase()
+  );
+
+  setTimeout(() => {
+    if (idx !== -1) {
+      flyToRoad(idx);
+    } else if (lat && lng) {
+      fullMap.flyTo([lat, lng], 9, { duration: 1.2 });
+    }
+  }, 400);
+})();
+
+// ── Condition Report Modal ─────────────────────────────────────
+const reportOverlay  = document.getElementById('reportOverlay');
+const reportRoadName = document.getElementById('reportRoadName');
+const reportForm     = document.getElementById('reportForm');
+const reportClose    = document.getElementById('reportClose');
+const reportError    = document.getElementById('reportError');
+let   reportingRoadId = null;
+
+function openReportCondition(roadId, roadName) {
+  if (!window.__atlasUser) {
+    document.getElementById('authBtn') && document.getElementById('authBtn').click();
+    return;
+  }
+  reportingRoadId = roadId;
+  if (reportRoadName) reportRoadName.textContent = roadName;
+  if (reportOverlay) {
+    reportOverlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+reportClose && reportClose.addEventListener('click', () => {
+  reportOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+  reportForm && reportForm.reset();
+  if (reportError) reportError.textContent = '';
+});
+
+reportOverlay && reportOverlay.addEventListener('click', e => {
+  if (e.target === reportOverlay) reportClose.click();
+});
+
+reportForm && reportForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!reportingRoadId || !window.__atlasUser) return;
+  const btn = reportForm.querySelector('button[type="submit"]');
+  const conditionType = reportForm.querySelector('[name="condition_type"]').value;
+  const description   = reportForm.querySelector('[name="description"]').value.trim();
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+  try {
+    await reportCondition({
+      roadId:        reportingRoadId,
+      userId:        window.__atlasUser.id,
+      conditionType,
+      description,
+    });
+    reportOverlay.classList.remove('open');
+    document.body.style.overflow = '';
+    reportForm.reset();
+    // Close any open popups so user sees the update when they reopen
+    fullMap.closePopup();
+  } catch (err) {
+    if (reportError) reportError.textContent = 'Failed to submit. Please try again.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Submit Report';
+  }
+});
+
 // ── Supabase: load live road data if configured ────────────────
 (async () => {
   // Skip if config.js has placeholder credentials
@@ -868,10 +1036,11 @@ renderList();
 
       const color = TYPE_COLORS[r.type] || '#888';
       const marker = L.marker([r.lat, r.lng], { icon: makeMarkerIcon(color) })
-        .bindPopup(buildPopupHTML(ROADS[i]), { maxWidth: 260 })
+        .bindPopup(buildPopupHTML(ROADS[i]), { maxWidth: 280, maxHeight: 420 })
         .addTo(fullMap);
 
       marker.on('click', () => highlightListItem(i));
+      attachPopupDataLoader(marker, ROADS[i]);
       markersByIndex[i] = marker;
     });
 

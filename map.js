@@ -799,8 +799,107 @@ let searchQuery   = '';
 let regionFilter  = '';
 let typeFilter    = '';
 
+// ── Near Me & Directions ───────────────────────────────────────
+let userLat = null, userLng = null;
+let userMarker  = null;
+let routeLayer  = null;
+let nearMeActive = false;
+
+const nearMeBtn  = document.getElementById('nearMeBtn');
+const routePanel = document.getElementById('routePanel');
+const closeRoute = document.getElementById('closeRoute');
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 3958.8;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+nearMeBtn.addEventListener('click', () => {
+  if (nearMeActive) {
+    // Toggle off
+    nearMeActive = false;
+    nearMeBtn.classList.remove('active');
+    if (userMarker) { fullMap.removeLayer(userMarker); userMarker = null; }
+    if (routeLayer) { fullMap.removeLayer(routeLayer); routeLayer = null; }
+    routePanel.classList.remove('open');
+    userLat = userLng = null;
+    renderList();
+    return;
+  }
+  nearMeBtn.textContent = 'Locating…';
+  nearMeBtn.disabled = true;
+  navigator.geolocation.getCurrentPosition(pos => {
+    userLat = pos.coords.latitude;
+    userLng = pos.coords.longitude;
+    nearMeActive = true;
+    nearMeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Near Me`;
+    nearMeBtn.disabled = false;
+    nearMeBtn.classList.add('active');
+
+    // User location marker
+    if (userMarker) fullMap.removeLayer(userMarker);
+    const userIcon = L.divIcon({
+      className: 'user-location-marker',
+      html: '<div class="user-location-pulse"></div><div class="user-location-dot"></div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+    });
+    userMarker = L.marker([userLat, userLng], { icon: userIcon, zIndexOffset: 1000 }).addTo(fullMap);
+    fullMap.flyTo([userLat, userLng], 7, { duration: 1.5 });
+    renderList();
+  }, () => {
+    nearMeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Near Me`;
+    nearMeBtn.disabled = false;
+    alert('Location access denied. Please allow location in your browser settings.');
+  }, { timeout: 10000 });
+});
+
+async function getDirections(idx, e) {
+  e.stopPropagation();
+  if (!userLat || !userLng) return;
+  const road = ROADS[idx];
+
+  document.getElementById('routeDestName').textContent = road.name;
+  document.getElementById('routeDist').textContent = '…';
+  document.getElementById('routeTime').textContent = '…';
+  document.getElementById('openGMaps').href =
+    `https://www.google.com/maps/dir/${userLat},${userLng}/${road.lat},${road.lng}`;
+  routePanel.classList.add('open');
+
+  if (routeLayer) { fullMap.removeLayer(routeLayer); routeLayer = null; }
+
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${road.lng},${road.lat}?overview=full&geometries=geojson`;
+    const data = await (await fetch(url)).json();
+    if (data.code !== 'Ok' || !data.routes.length) throw new Error();
+
+    const route  = data.routes[0];
+    const distMi = (route.distance / 1609.34).toFixed(1);
+    const mins   = Math.round(route.duration / 60);
+    const hrs    = Math.floor(mins / 60);
+    document.getElementById('routeDist').textContent = `${distMi} mi`;
+    document.getElementById('routeTime').textContent = hrs > 0 ? `${hrs}h ${mins % 60}m` : `${mins} min`;
+
+    const coords = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+    routeLayer = L.polyline(coords, { color: '#ef4444', weight: 5, opacity: 0.85 }).addTo(fullMap);
+    fullMap.fitBounds(routeLayer.getBounds(), { padding: [70, 70] });
+  } catch {
+    document.getElementById('routeDist').textContent = 'N/A';
+    document.getElementById('routeTime').textContent = 'N/A';
+  }
+}
+
+closeRoute.addEventListener('click', () => {
+  routePanel.classList.remove('open');
+  if (routeLayer) { fullMap.removeLayer(routeLayer); routeLayer = null; }
+});
+
 function renderList() {
-  const results = ROADS
+  let results = ROADS
     .map((road, idx) => ({ road, idx }))
     .filter(({ road }) => {
       const matchSearch = !searchQuery ||
@@ -813,15 +912,19 @@ function renderList() {
       return matchSearch && matchRegion && matchType;
     });
 
-  // Show/hide reset button
+  // When Near Me is active, attach distance and sort nearest first
+  if (nearMeActive && userLat !== null) {
+    results = results
+      .map(r => ({ ...r, dist: haversine(userLat, userLng, r.road.lat, r.road.lng) }))
+      .sort((a, b) => a.dist - b.dist);
+  }
+
   const hasFilter = searchQuery || regionFilter || typeFilter;
   resetBtn.style.display = hasFilter ? 'block' : 'none';
 
-  // Update counts
   roadCount.textContent = `${results.length} road${results.length !== 1 ? 's' : ''}`;
   visibleCount.textContent = `${results.length} road${results.length !== 1 ? 's' : ''} shown`;
 
-  // Fade out markers not in results
   const visibleIdx = new Set(results.map(r => r.idx));
   Object.entries(markersByIndex).forEach(([i, marker]) => {
     const el = marker.getElement();
@@ -834,20 +937,37 @@ function renderList() {
   }
 
   roadList.innerHTML = '';
-  results.forEach(({ road, idx }) => {
+  results.forEach(({ road, idx, dist }) => {
     const color = TYPE_COLORS[road.type] || '#888';
-    const item = document.createElement('div');
+    const item  = document.createElement('div');
     item.className = 'road-item';
     item.dataset.idx = idx;
+
+    const distHTML = (nearMeActive && dist != null)
+      ? `<div class="road-item-dist">${dist < 10 ? dist.toFixed(1) : Math.round(dist)} mi away</div>`
+      : '';
+    const dirBtn = (nearMeActive && dist != null)
+      ? `<button class="road-item-dir-btn">Directions</button>`
+      : '';
+
     item.innerHTML = `
       <div class="road-type-dot" style="background:${color};color:${color}"></div>
       <div class="road-item-info">
         <div class="road-item-name">${road.name}</div>
         <div class="road-item-meta">${road.designation} &middot; ${road.state}</div>
       </div>
-      <div class="road-item-length">${road.length}</div>
+      <div class="road-item-actions">
+        <div class="road-item-length">${road.length}</div>
+        ${distHTML}
+        ${dirBtn}
+      </div>
     `;
+
     item.addEventListener('click', () => flyToRoad(idx));
+    if (nearMeActive) {
+      const btn = item.querySelector('.road-item-dir-btn');
+      if (btn) btn.addEventListener('click', e => getDirections(idx, e));
+    }
     roadList.appendChild(item);
   });
 }

@@ -115,13 +115,19 @@
         <div class="legend-item"><span class="legend-dot" style="background:#6b7280"></span>Off-road</div>
       </div>
 
-      <!-- Submit a road -->
+      <!-- Submit a road + Near Me -->
       <div class="sidebar-submit">
         <button class="submit-road-btn" id="submitRoadBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
           Submit a Road
+        </button>
+        <button class="near-me-btn" id="nearMeBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15">
+            <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+          </svg>
+          Near Me
         </button>
       </div>
 
@@ -134,6 +140,32 @@
     <!-- Map -->
     <div class="map-main">
       <div id="fullMap"></div>
+
+      <!-- Route info panel -->
+      <div class="route-panel" id="routePanel">
+        <div class="route-panel-header">
+          <div class="route-panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            <span id="routeDestName">Route</span>
+          </div>
+          <button class="route-panel-close" id="closeRoute">&times;</button>
+        </div>
+        <div class="route-stats">
+          <div class="route-stat">
+            <span class="route-stat-val" id="routeDist">—</span>
+            <span class="route-stat-label">to road</span>
+          </div>
+          <div class="route-stat-sep"></div>
+          <div class="route-stat">
+            <span class="route-stat-val" id="routeTime">—</span>
+            <span class="route-stat-label">drive time</span>
+          </div>
+          <a class="route-gmaps-btn" id="openGMaps" href="#" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+            Google Maps
+          </a>
+        </div>
+      </div>
 
       <!-- Floating controls -->
       <button class="map-sidebar-toggle" id="sidebarToggle" aria-label="Toggle road list">

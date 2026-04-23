@@ -1215,14 +1215,14 @@ document.addEventListener('keydown', e => {
 // ── Map pin placement ──────────────────────────────────────────
 function stopPickingLocation() {
   pickingLocation = false;
-  mapPickHint.classList.remove('visible');
+  mapPickHint.classList.remove('active');
   fullMap.getContainer().style.cursor = '';
 }
 
 pickMapBtn.addEventListener('click', () => {
   pickingLocation = true;
   submitRoadOverlay.classList.remove('open'); // hide modal so map is usable
-  mapPickHint.classList.add('visible');
+  mapPickHint.classList.add('active');
   fullMap.getContainer().style.cursor = 'crosshair';
 });
 

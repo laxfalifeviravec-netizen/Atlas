@@ -818,25 +818,49 @@ function haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
+const NEAR_ME_ICON_HTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>`;
+
+function setNearMeError(msg) {
+  const existing = document.getElementById('nearMeErrorMsg');
+  if (existing) existing.remove();
+  if (!msg) return;
+  const el = document.createElement('p');
+  el.id = 'nearMeErrorMsg';
+  el.style.cssText = 'margin:0;padding:6px 12px;font-size:12px;color:#f87171;background:rgba(239,68,68,.08);border-radius:6px;';
+  el.textContent = msg;
+  nearMeBtn.parentNode.insertAdjacentElement('afterend', el);
+}
+
 nearMeBtn.addEventListener('click', () => {
   if (nearMeActive) {
     // Toggle off
     nearMeActive = false;
     nearMeBtn.classList.remove('active');
+    nearMeBtn.innerHTML = `${NEAR_ME_ICON_HTML} Near Me`;
     if (userMarker) { fullMap.removeLayer(userMarker); userMarker = null; }
     if (routeLayer) { fullMap.removeLayer(routeLayer); routeLayer = null; }
     routePanel.classList.remove('open');
     userLat = userLng = null;
+    setNearMeError(null);
     renderList();
     return;
   }
-  nearMeBtn.textContent = 'Locating…';
+
+  setNearMeError(null);
+
+  if (!navigator.geolocation) {
+    setNearMeError('Geolocation is not supported by your browser.');
+    return;
+  }
+
+  nearMeBtn.innerHTML = 'Locating…';
   nearMeBtn.disabled = true;
+
   navigator.geolocation.getCurrentPosition(pos => {
     userLat = pos.coords.latitude;
     userLng = pos.coords.longitude;
     nearMeActive = true;
-    nearMeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Near Me`;
+    nearMeBtn.innerHTML = `${NEAR_ME_ICON_HTML} Near Me`;
     nearMeBtn.disabled = false;
     nearMeBtn.classList.add('active');
 
@@ -851,11 +875,16 @@ nearMeBtn.addEventListener('click', () => {
     userMarker = L.marker([userLat, userLng], { icon: userIcon, zIndexOffset: 1000 }).addTo(fullMap);
     fullMap.flyTo([userLat, userLng], 7, { duration: 1.5 });
     renderList();
-  }, () => {
-    nearMeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Near Me`;
+  }, err => {
+    nearMeBtn.innerHTML = `${NEAR_ME_ICON_HTML} Near Me`;
     nearMeBtn.disabled = false;
-    alert('Location access denied. Please allow location in your browser settings.');
-  }, { timeout: 10000 });
+    const msg = err.code === 1
+      ? 'Location access denied — allow location in browser settings.'
+      : err.code === 2
+      ? 'Location unavailable. Try again or check your connection.'
+      : 'Location timed out. Try again.';
+    setNearMeError(msg);
+  }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
 });
 
 async function getDirections(idx, e) {
@@ -1191,10 +1220,6 @@ let   pickMarker        = null;
 let   pickingLocation   = false;
 
 submitRoadBtn.addEventListener('click', () => {
-  if (!window.__atlasUser) {
-    document.getElementById('authBtn').click();
-    return;
-  }
   submitRoadOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 });
@@ -1252,7 +1277,15 @@ fullMap.on('click', e => {
 submitRoadForm.addEventListener('submit', async e => {
   e.preventDefault();
   submitRoadError.textContent = '';
-  if (!window.__atlasUser) return;
+  if (!window.__atlasUser) {
+    submitRoadError.innerHTML = 'You must be signed in. <u style="cursor:pointer">Click to sign in →</u>';
+    submitRoadError.style.cursor = 'pointer';
+    submitRoadError.onclick = () => {
+      closeSubmitRoad();
+      document.getElementById('authBtn').click();
+    };
+    return;
+  }
 
   const lat = parseFloat(document.getElementById('srLat').value);
   const lng = parseFloat(document.getElementById('srLng').value);

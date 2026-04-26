@@ -272,3 +272,199 @@ new IntersectionObserver(entries => {
 
 // Boot feed
 initFeed();
+
+/* ============================================================
+   Part 3: Create post, post detail + comments
+   ============================================================ */
+
+// ── Open create-post modal ─────────────────────────────────────
+const createPostBtn    = document.getElementById('createPostBtn');
+const createPostBtnAlt = document.getElementById('createPostBtnAlt');
+const createPostForm   = document.getElementById('createPostForm');
+const createPostError  = document.getElementById('createPostError');
+const postCaption      = document.getElementById('postCaption');
+const captionCount     = document.getElementById('captionCount');
+const postRoadTag      = document.getElementById('postRoadTag');
+const roadSuggestions  = document.getElementById('roadSuggestions');
+const postRoadId       = document.getElementById('postRoadId');
+const postGroupTag     = document.getElementById('postGroupTag');
+
+function openCreatePost() {
+  requireAuth(() => openModal('createPostOverlay'));
+}
+createPostBtn?.addEventListener('click', openCreatePost);
+createPostBtnAlt?.addEventListener('click', openCreatePost);
+
+// Caption character count
+postCaption?.addEventListener('input', () => {
+  captionCount.textContent = postCaption.value.length;
+});
+
+// ── Image preview ──────────────────────────────────────────────
+setupImagePreview('postImageFile', 'postImagePreview', 'uploadPlaceholder');
+setupImagePreview('carImageFile',  'carImagePreview',  'carUploadPlaceholder');
+
+function setupImagePreview(inputId, previewId, placeholderId) {
+  const input  = document.getElementById(inputId);
+  const img    = document.getElementById(previewId);
+  const hint   = document.getElementById(placeholderId);
+  if (!input) return;
+  input.addEventListener('change', () => {
+    const file = input.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    img.src = url;
+    img.classList.remove('hidden');
+    if (hint) hint.style.display = 'none';
+  });
+}
+
+// ── Road autocomplete ──────────────────────────────────────────
+let roadSearchTimer = null;
+postRoadTag?.addEventListener('input', () => {
+  clearTimeout(roadSearchTimer);
+  const q = postRoadTag.value.trim();
+  postRoadId.value = '';
+  if (q.length < 2) { roadSuggestions.classList.remove('open'); return; }
+  roadSearchTimer = setTimeout(() => searchRoadsForTag(q), 250);
+});
+
+async function searchRoadsForTag(q) {
+  try {
+    const results = await communitySearchRoads(q);
+    if (!results.length) { roadSuggestions.classList.remove('open'); return; }
+    roadSuggestions.innerHTML = results.slice(0, 6).map(r =>
+      `<div class="road-suggestion-item" data-id="${r.id}" data-name="${escHtml(r.name)}">
+         ${escHtml(r.name)} <span style="color:var(--color-text-muted);font-size:0.72rem">· ${escHtml(r.state)}</span>
+       </div>`
+    ).join('');
+    roadSuggestions.classList.add('open');
+    roadSuggestions.querySelectorAll('.road-suggestion-item').forEach(item => {
+      item.addEventListener('click', () => {
+        postRoadTag.value  = item.dataset.name;
+        postRoadId.value   = item.dataset.id;
+        roadSuggestions.classList.remove('open');
+      });
+    });
+  } catch { roadSuggestions.classList.remove('open'); }
+}
+document.addEventListener('click', e => {
+  if (!roadSuggestions?.contains(e.target) && e.target !== postRoadTag)
+    roadSuggestions?.classList.remove('open');
+});
+
+// ── Create post submit ─────────────────────────────────────────
+createPostForm?.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!currentUser) { openAuthModal(); return; }
+  createPostError.textContent = '';
+
+  const caption = postCaption?.value.trim();
+  const file    = document.getElementById('postImageFile')?.files[0];
+  if (!caption && !file) {
+    createPostError.textContent = 'Add a photo or caption before posting.';
+    return;
+  }
+
+  const btn = document.getElementById('createPostSubmit');
+  btn.disabled = true; btn.textContent = 'Posting…';
+
+  try {
+    let imageUrl = null;
+    if (file) imageUrl = await communityUploadMedia(file, `posts/${currentUser.id}`);
+
+    const post = await communityCreatePost({
+      userId:   currentUser.id,
+      caption,
+      imageUrl,
+      roadId:   postRoadId?.value ? parseInt(postRoadId.value) : null,
+      groupId:  postGroupTag?.value ? parseInt(postGroupTag.value) : null,
+    });
+
+    post.profiles = {
+      full_name: currentUser.user_metadata?.full_name || '',
+      username:  currentUser.email,
+    };
+
+    const card = buildPostCard(post);
+    postFeed.prepend(card);
+    closeModal('createPostOverlay');
+    createPostForm.reset();
+    captionCount.textContent = '0';
+    document.getElementById('postImagePreview')?.classList.add('hidden');
+    document.getElementById('uploadPlaceholder') && (document.getElementById('uploadPlaceholder').style.display = '');
+  } catch (err) {
+    createPostError.textContent = err.message || 'Failed to post. Try again.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Share Post';
+  }
+});
+
+// ── Post detail + comments ─────────────────────────────────────
+let detailPostId = null;
+
+function openPostDetail(post, authorName) {
+  detailPostId = post.id;
+  document.getElementById('postDetailTitle').textContent = `${authorName}'s post`;
+
+  const imgWrap = document.querySelector('.post-detail-image-wrap');
+  const img     = document.getElementById('postDetailImage');
+  if (post.image_url) {
+    img.src = post.image_url;
+    imgWrap.style.display = '';
+  } else {
+    imgWrap.style.display = 'none';
+  }
+
+  const info = document.getElementById('postDetailInfo');
+  info.innerHTML = `
+    <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.3rem">${escHtml(authorName)}</div>
+    ${post.caption ? `<p style="font-size:0.85rem;line-height:1.5;color:var(--color-text)">${escHtml(post.caption)}</p>` : ''}
+    <div style="font-size:0.72rem;color:var(--color-text-muted);margin-top:0.4rem">${timeAgo(post.created_at)}</div>
+  `;
+
+  loadComments(post.id);
+  openModal('postDetailOverlay');
+}
+
+async function loadComments(postId) {
+  const container = document.getElementById('postDetailComments');
+  container.innerHTML = '<div class="feed-loading"><div class="feed-loading-spin"></div></div>';
+  try {
+    const comments = await communityGetComments(postId);
+    if (!comments.length) {
+      container.innerHTML = '<p style="font-size:0.8rem;color:var(--color-text-muted);text-align:center;padding:1rem">No comments yet</p>';
+      return;
+    }
+    container.innerHTML = '';
+    comments.forEach(c => {
+      const name = c.profiles?.full_name || c.profiles?.username || 'Driver';
+      const div  = document.createElement('div');
+      div.className = 'comment-item';
+      div.innerHTML = `
+        <div class="comment-avatar">${getInitials(name, '')}</div>
+        <div class="comment-body">
+          <div class="comment-name">${escHtml(name)}</div>
+          <div class="comment-text">${escHtml(c.body)}</div>
+          <div class="comment-time">${timeAgo(c.created_at)}</div>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  } catch {
+    container.innerHTML = '<p style="font-size:0.8rem;color:var(--color-text-muted);text-align:center;padding:1rem">Could not load comments.</p>';
+  }
+}
+
+document.getElementById('commentForm')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!currentUser) { openAuthModal(); return; }
+  const input = document.getElementById('commentInput');
+  const body  = input?.value.trim();
+  if (!body || !detailPostId) return;
+  input.value = '';
+  try {
+    await communityAddComment({ postId: detailPostId, userId: currentUser.id, body });
+    loadComments(detailPostId);
+  } catch { /* silent */ }
+});

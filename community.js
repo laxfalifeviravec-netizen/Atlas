@@ -127,3 +127,148 @@ function timeAgo(ts) {
 function loadMyGroups()     { /* Part 4 */ }
 function loadGarage()       { /* Part 5 */ }
 function loadSidebarGarage(){ /* Part 5 */ }
+
+/* ============================================================
+   Part 2: Feed — load posts, render cards, infinite scroll
+   ============================================================ */
+
+const postFeed    = document.getElementById('postFeed');
+let   feedPage    = 0;
+const PAGE_SIZE   = 10;
+let   feedLoading = false;
+let   feedDone    = false;
+let   likedPostIds = new Set();
+
+async function initFeed() {
+  feedPage    = 0;
+  feedDone    = false;
+  postFeed.innerHTML = '<div class="feed-loading"><div class="feed-loading-spin"></div>Loading posts…</div>';
+  await loadMorePosts(true);
+}
+
+async function loadMorePosts(reset = false) {
+  if (feedLoading || feedDone) return;
+  feedLoading = true;
+
+  try {
+    const posts = await communityGetPosts({ limit: PAGE_SIZE, offset: feedPage * PAGE_SIZE });
+    if (reset) postFeed.innerHTML = '';
+    if (!posts.length) {
+      feedDone = true;
+      if (reset) postFeed.innerHTML = '<p class="comm-empty">No posts yet — be the first to share!</p>';
+      return;
+    }
+
+    // Fetch which posts current user has liked
+    if (currentUser && posts.length) {
+      const ids = posts.map(p => p.id);
+      const liked = await communityGetLikedIds(currentUser.id, ids);
+      liked.forEach(id => likedPostIds.add(id));
+    }
+
+    posts.forEach(post => {
+      const card = buildPostCard(post);
+      postFeed.appendChild(card);
+    });
+    feedPage++;
+    if (posts.length < PAGE_SIZE) feedDone = true;
+  } catch (err) {
+    console.error('Feed load error:', err);
+    if (reset) postFeed.innerHTML = '<p class="comm-empty">Could not load posts. Check your Supabase setup.</p>';
+  } finally {
+    feedLoading = false;
+  }
+}
+
+function buildPostCard(post) {
+  const profile  = post.profiles || {};
+  const name     = profile.full_name || profile.username || 'Driver';
+  const initials = getInitials(profile.full_name || profile.username, '');
+  const liked    = likedPostIds.has(post.id);
+  const road     = post.roads;
+
+  const card = document.createElement('article');
+  card.className   = 'post-card';
+  card.dataset.id  = post.id;
+
+  card.innerHTML = `
+    <div class="post-header">
+      <div class="post-avatar">${initials}</div>
+      <div class="post-user">
+        <div class="post-username">${escHtml(name)}</div>
+        <div class="post-time">${timeAgo(post.created_at)}</div>
+      </div>
+      ${road ? `<span class="post-road-tag" title="${escHtml(road.name)}">${escHtml(road.designation || road.name)}</span>` : ''}
+    </div>
+    ${post.image_url
+      ? `<img class="post-image" src="${escHtml(post.image_url)}" alt="post photo" loading="lazy" />`
+      : ''}
+    ${post.caption
+      ? `<p class="post-caption">${escHtml(post.caption)}</p>`
+      : ''}
+    <div class="post-actions">
+      <button class="post-action-btn like-btn${liked ? ' liked' : ''}" data-id="${post.id}">
+        <svg viewBox="0 0 24 24" fill="${liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+        <span class="like-count">${post.like_count || 0}</span>
+      </button>
+      <button class="post-action-btn comment-btn" data-id="${post.id}" data-name="${escHtml(name)}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        Comments
+      </button>
+    </div>
+  `;
+
+  card.querySelector('.post-image')?.addEventListener('click', () => openPostDetail(post, name));
+  card.querySelector('.like-btn').addEventListener('click',    e => handleLike(e, post));
+  card.querySelector('.comment-btn').addEventListener('click', () => openPostDetail(post, name));
+
+  return card;
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+async function handleLike(e, post) {
+  if (!currentUser) { openAuthModal(); return; }
+  const btn      = e.currentTarget;
+  const liked    = btn.classList.contains('liked');
+  const countEl  = btn.querySelector('.like-count');
+  const svg      = btn.querySelector('svg');
+
+  // Optimistic update
+  btn.classList.toggle('liked', !liked);
+  svg.setAttribute('fill', !liked ? 'currentColor' : 'none');
+  countEl.textContent = parseInt(countEl.textContent) + (!liked ? 1 : -1);
+
+  try {
+    if (liked) {
+      await communityUnlikePost(post.id, currentUser.id);
+      likedPostIds.delete(post.id);
+    } else {
+      await communityLikePost(post.id, currentUser.id);
+      likedPostIds.add(post.id);
+    }
+  } catch {
+    // Revert on failure
+    btn.classList.toggle('liked', liked);
+    svg.setAttribute('fill', liked ? 'currentColor' : 'none');
+    countEl.textContent = parseInt(countEl.textContent) + (liked ? 1 : -1);
+  }
+}
+
+// Infinite scroll sentinel
+const sentinel = document.getElementById('feedSentinel');
+new IntersectionObserver(entries => {
+  if (entries[0].isIntersecting) loadMorePosts();
+}, { threshold: 0 }).observe(sentinel);
+
+// Boot feed
+initFeed();

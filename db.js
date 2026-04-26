@@ -476,3 +476,74 @@ async function communityGetFollowingPosts(followerId, { limit = 10, offset = 0 }
   if (error) throw error;
   return data;
 }
+
+// ── Events ────────────────────────────────────────────────────
+
+async function eventsGetUpcoming({ limit = 20 } = {}) {
+  const { data, error } = await db
+    .from('events')
+    .select('*, driving_groups(name), roads(name, state), profiles!created_by(full_name, username)')
+    .gte('event_date', new Date().toISOString().slice(0, 10))
+    .order('event_date', { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return data;
+}
+
+async function eventsGetByGroup(groupId) {
+  const { data, error } = await db
+    .from('events')
+    .select('*, roads(name, state), profiles!created_by(full_name, username)')
+    .eq('group_id', groupId)
+    .gte('event_date', new Date().toISOString().slice(0, 10))
+    .order('event_date', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+async function eventsCreate({ groupId, createdBy, title, description, roadId, eventDate, meetLocation, meetLat, meetLng }) {
+  const { data, error } = await db
+    .from('events')
+    .insert({
+      group_id:      groupId || null,
+      created_by:    createdBy,
+      title,
+      description:   description || null,
+      road_id:       roadId || null,
+      event_date:    eventDate,
+      meet_location: meetLocation || null,
+      meet_lat:      meetLat || null,
+      meet_lng:      meetLng || null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function eventsRsvp(eventId, userId, status = 'going') {
+  const { error } = await db
+    .from('event_rsvps')
+    .upsert({ event_id: eventId, user_id: userId, status }, { onConflict: 'event_id,user_id' });
+  if (error) throw error;
+}
+
+async function eventsGetRsvps(eventId) {
+  const { data, error } = await db
+    .from('event_rsvps')
+    .select('*, profiles(full_name, username)')
+    .eq('event_id', eventId)
+    .eq('status', 'going');
+  if (error) return [];
+  return data;
+}
+
+async function eventsGetUserRsvp(eventId, userId) {
+  const { data } = await db
+    .from('event_rsvps')
+    .select('status')
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  return data?.status || null;
+}

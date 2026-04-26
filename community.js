@@ -848,3 +848,182 @@ addCarForm?.addEventListener('submit', async e => {
     btn.disabled = false; btn.textContent = 'Add to Garage';
   }
 });
+
+/* ============================================================
+   Part 6: Events
+   ============================================================ */
+
+// ── Load & render events list ──────────────────────────────────
+async function initEvents() {
+  const list = document.getElementById('eventsList');
+  if (!list) return;
+  list.innerHTML = '<div class="feed-loading"><div class="feed-loading-spin"></div> Loading…</div>';
+  try {
+    const events = await eventsGetUpcoming();
+    if (!events.length) {
+      list.innerHTML = '<p class="comm-empty">No upcoming events. Be the first to create one!</p>';
+      return;
+    }
+    list.innerHTML = '';
+    for (const ev of events) {
+      const card = await buildEventCard(ev);
+      list.appendChild(card);
+    }
+  } catch {
+    list.innerHTML = '<p class="comm-empty">Could not load events.</p>';
+  }
+}
+
+async function buildEventCard(ev) {
+  const card = document.createElement('div');
+  card.className = 'event-card';
+
+  const date    = new Date(ev.event_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  const group   = ev.driving_groups?.name || '';
+  const road    = ev.roads ? `${ev.roads.name}${ev.roads.state ? ', ' + ev.roads.state : ''}` : '';
+  const creator = ev.profiles?.full_name || ev.profiles?.username || 'Driver';
+
+  let rsvpStatus = null;
+  if (currentUser) {
+    try { rsvpStatus = await eventsGetUserRsvp(ev.id, currentUser.id); } catch { /* ignore */ }
+  }
+
+  card.innerHTML = `
+    <div class="event-date-badge">
+      <span class="event-month">${new Date(ev.event_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' })}</span>
+      <span class="event-day">${new Date(ev.event_date + 'T00:00:00').getDate()}</span>
+    </div>
+    <div class="event-body">
+      <div class="event-title">${escHtml(ev.title)}</div>
+      ${group  ? `<div class="event-meta-item"><span>Group:</span> ${escHtml(group)}</div>` : ''}
+      ${road   ? `<div class="event-meta-item"><span>Road:</span> ${escHtml(road)}</div>` : ''}
+      ${ev.meet_location ? `<div class="event-meta-item"><span>Meet:</span> ${escHtml(ev.meet_location)}</div>` : ''}
+      ${ev.description ? `<p class="event-desc">${escHtml(ev.description)}</p>` : ''}
+      <div class="event-meta-item" style="color:var(--color-text-muted);font-size:0.72rem">By ${escHtml(creator)} · ${date}</div>
+    </div>
+    <div class="event-actions">
+      <button class="event-rsvp-btn ${rsvpStatus === 'going' ? 'going' : ''}" data-ev="${ev.id}">
+        ${rsvpStatus === 'going' ? '✓ Going' : 'RSVP'}
+      </button>
+    </div>
+  `;
+
+  card.querySelector('.event-rsvp-btn')?.addEventListener('click', async function () {
+    if (!currentUser) { openAuthModal(); return; }
+    const btn = this;
+    const isGoing = btn.classList.contains('going');
+    btn.disabled = true;
+    try {
+      await eventsRsvp(ev.id, currentUser.id, isGoing ? 'not_going' : 'going');
+      btn.classList.toggle('going', !isGoing);
+      btn.textContent = !isGoing ? '✓ Going' : 'RSVP';
+    } catch { /* silent */ } finally {
+      btn.disabled = false;
+    }
+  });
+
+  return card;
+}
+
+// ── Tab activation ─────────────────────────────────────────────
+let eventsLoaded = false;
+document.querySelectorAll('.comm-tab').forEach(tab => {
+  if (tab.dataset.tab === 'events') {
+    tab.addEventListener('click', () => {
+      if (!eventsLoaded) { eventsLoaded = true; initEvents(); }
+    });
+  }
+});
+
+// ── Create event modal ─────────────────────────────────────────
+document.getElementById('createEventBtn')?.addEventListener('click', () => {
+  requireAuth(() => {
+    populateEventGroupSelector();
+    openModal('createEventOverlay');
+  });
+});
+document.getElementById('createEventClose')?.addEventListener('click', () => closeModal('createEventOverlay'));
+document.getElementById('createEventOverlay')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('createEventOverlay')) closeModal('createEventOverlay');
+});
+
+async function populateEventGroupSelector() {
+  const sel = document.getElementById('eventGroup');
+  if (!sel || !currentUser) return;
+  sel.innerHTML = '<option value="">Open event (no group)</option>';
+  try {
+    const { data } = await db.from('group_members')
+      .select('driving_groups(id, name)')
+      .eq('user_id', currentUser.id);
+    (data || []).forEach(r => {
+      if (!r.driving_groups) return;
+      const opt = document.createElement('option');
+      opt.value = r.driving_groups.id;
+      opt.textContent = r.driving_groups.name;
+      sel.appendChild(opt);
+    });
+  } catch { /* silent */ }
+}
+
+// Road autocomplete for event form
+let eventRoadId = null;
+const eventRoadInput = document.getElementById('eventRoad');
+const eventRoadSugg  = document.getElementById('eventRoadSuggestions');
+
+let eventRoadDebounce = null;
+eventRoadInput?.addEventListener('input', () => {
+  eventRoadId = null;
+  document.getElementById('eventRoadId').value = '';
+  clearTimeout(eventRoadDebounce);
+  const q = eventRoadInput.value.trim();
+  if (q.length < 2) { eventRoadSugg.innerHTML = ''; return; }
+  eventRoadDebounce = setTimeout(async () => {
+    const results = await communitySearchRoads(q);
+    eventRoadSugg.innerHTML = '';
+    results.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'road-suggestion-item';
+      item.textContent = `${r.name}${r.state ? ', ' + r.state : ''}`;
+      item.addEventListener('click', () => {
+        eventRoadInput.value = item.textContent;
+        eventRoadId = r.id;
+        document.getElementById('eventRoadId').value = r.id;
+        eventRoadSugg.innerHTML = '';
+      });
+      eventRoadSugg.appendChild(item);
+    });
+  }, 300);
+});
+
+document.getElementById('createEventForm')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const { data: { user } } = await db.auth.getSession().then(r => r);
+  const sessionUser = (await db.auth.getSession()).data.session?.user;
+  if (!sessionUser) { openAuthModal(); return; }
+
+  const errEl = document.getElementById('eventError');
+  errEl.textContent = '';
+  const btn  = e.target.querySelector('[type=submit]');
+  btn.disabled = true; btn.textContent = 'Creating…';
+
+  try {
+    await eventsCreate({
+      groupId:      document.getElementById('eventGroup')?.value || null,
+      createdBy:    sessionUser.id,
+      title:        document.getElementById('eventTitle').value.trim(),
+      description:  document.getElementById('eventDesc')?.value.trim() || null,
+      roadId:       eventRoadId || null,
+      eventDate:    document.getElementById('eventDate').value,
+      meetLocation: document.getElementById('eventLocation')?.value.trim() || null,
+    });
+    closeModal('createEventOverlay');
+    e.target.reset();
+    eventRoadId = null;
+    eventsLoaded = false;
+    initEvents();
+  } catch (err) {
+    errEl.textContent = err.message || 'Failed to create event.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create Event';
+  }
+});

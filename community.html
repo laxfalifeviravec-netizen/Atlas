@@ -81,6 +81,14 @@
       </svg>
       Garage
     </button>
+    <button class="comm-tab" data-tab="events">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      Events
+    </button>
   </div>
 
   <!-- Main layout -->
@@ -160,6 +168,17 @@
         </div>
         <div class="garage-grid" id="garageGrid">
           <p class="comm-empty">Sign in to manage your garage.</p>
+        </div>
+      </div>
+
+      <!-- Events panel -->
+      <div class="comm-panel" id="panelEvents">
+        <div class="panel-toolbar">
+          <h2 class="panel-title">Upcoming Events</h2>
+          <button class="btn btn-primary btn-sm" id="createEventBtn">+ Create Event</button>
+        </div>
+        <div class="events-list" id="eventsList">
+          <div class="feed-loading"><div class="feed-loading-spin"></div> Loading…</div>
         </div>
       </div>
 
@@ -401,6 +420,50 @@
           </div>
           <p class="auth-error" id="signupError"></p>
           <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Create Event Modal ═══════════════════════════════════ -->
+  <div class="modal-overlay" id="createEventOverlay" role="dialog" aria-modal="true">
+    <div class="modal comm-modal">
+      <div class="modal-header">
+        <h3>Create Event</h3>
+        <button class="modal-close" id="createEventClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="createEventForm">
+          <div class="form-group">
+            <label for="eventTitle">Event Title *</label>
+            <input type="text" id="eventTitle" placeholder="Mountain pass cruise…" required maxlength="120" />
+          </div>
+          <div class="form-group">
+            <label for="eventDate">Date *</label>
+            <input type="date" id="eventDate" required />
+          </div>
+          <div class="form-group">
+            <label for="eventGroup">Group (optional)</label>
+            <select id="eventGroup">
+              <option value="">Open event (no group)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="eventRoad">Road</label>
+            <input type="text" id="eventRoad" placeholder="Search a road…" autocomplete="off" maxlength="80" />
+            <div class="road-suggestions" id="eventRoadSuggestions"></div>
+            <input type="hidden" id="eventRoadId" />
+          </div>
+          <div class="form-group">
+            <label for="eventLocation">Meet-up Location</label>
+            <input type="text" id="eventLocation" placeholder="Parking lot at trailhead…" maxlength="200" />
+          </div>
+          <div class="form-group">
+            <label for="eventDesc">Description</label>
+            <textarea id="eventDesc" rows="3" placeholder="Details, what to bring, skill level…" maxlength="600"></textarea>
+          </div>
+          <p class="auth-error" id="eventError"></p>
+          <button type="submit" class="btn btn-primary btn-full">Create Event</button>
         </form>
       </div>
     </div>

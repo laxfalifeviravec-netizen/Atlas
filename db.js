@@ -332,3 +332,34 @@ async function communityUploadMedia(file, folder) {
   const { data: { publicUrl } } = db.storage.from('community-media').getPublicUrl(data.path);
   return publicUrl;
 }
+
+// ── Profile ───────────────────────────────────────────────────
+
+async function profileGetUser(userId) {
+  const { data, error } = await db
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function profileGetPosts(userId) {
+  const { data, error } = await db
+    .from('posts')
+    .select('*, roads(name, designation, state, lat, lng)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+async function profileGetGroups(userId) {
+  const { data, error } = await db
+    .from('group_members')
+    .select('driving_groups(*)')
+    .eq('user_id', userId);
+  if (error) throw error;
+  return data.map(r => r.driving_groups).filter(Boolean);
+}

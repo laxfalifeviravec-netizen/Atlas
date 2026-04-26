@@ -468,3 +468,181 @@ document.getElementById('commentForm')?.addEventListener('submit', async e => {
     loadComments(detailPostId);
   } catch { /* silent */ }
 });
+
+/* ============================================================
+   Part 4: Driving Groups
+   ============================================================ */
+
+const groupsGrid    = document.getElementById('groupsGrid');
+const discoverEl    = document.getElementById('discoverGroups');
+const myGroupsList  = document.getElementById('myGroupsList');
+const createGroupBtn  = document.getElementById('createGroupBtn');
+const createGroupForm = document.getElementById('createGroupForm');
+const createGroupErr  = document.getElementById('createGroupError');
+
+let joinedGroupIds = new Set();
+
+createGroupBtn?.addEventListener('click', () => requireAuth(() => openModal('createGroupOverlay')));
+
+async function initGroups() {
+  groupsGrid.innerHTML = '<div class="feed-loading"><div class="feed-loading-spin"></div>Loading…</div>';
+  try {
+    const groups = await communityGetGroups();
+
+    if (currentUser) {
+      const joined = await communityGetJoinedGroupIds(currentUser.id);
+      joined.forEach(id => joinedGroupIds.add(id));
+      populateGroupSelector(groups.filter(g => joinedGroupIds.has(g.id)));
+    }
+
+    groupsGrid.innerHTML = '';
+    if (!groups.length) {
+      groupsGrid.innerHTML = '<p class="comm-empty">No groups yet — create the first one!</p>';
+    } else {
+      groups.forEach(g => groupsGrid.appendChild(buildGroupCard(g)));
+    }
+
+    // Discover sidebar (top 5)
+    if (discoverEl) {
+      discoverEl.innerHTML = '';
+      groups.slice(0, 5).forEach(g => {
+        const div = document.createElement('div');
+        div.className = 'discover-group-item';
+        div.innerHTML = `
+          <div>
+            <div class="discover-group-name">${escHtml(g.name)}</div>
+            <div class="discover-group-count">${g.member_count} member${g.member_count !== 1 ? 's' : ''}</div>
+          </div>
+          <button class="group-join-btn${joinedGroupIds.has(g.id) ? ' joined' : ''}" data-gid="${g.id}">
+            ${joinedGroupIds.has(g.id) ? 'Joined' : 'Join'}
+          </button>
+        `;
+        div.querySelector('.group-join-btn').addEventListener('click', e => handleJoin(e, g));
+        discoverEl.appendChild(div);
+      });
+    }
+  } catch (err) {
+    groupsGrid.innerHTML = '<p class="comm-empty">Could not load groups.</p>';
+    console.error(err);
+  }
+}
+
+function buildGroupCard(group) {
+  const initials = group.name.slice(0, 2).toUpperCase();
+  const joined   = joinedGroupIds.has(group.id);
+  const card     = document.createElement('div');
+  card.className = 'group-card';
+  card.dataset.gid = group.id;
+  card.innerHTML = `
+    <div class="group-banner">${initials}</div>
+    <div class="group-body">
+      <div class="group-name">${escHtml(group.name)}</div>
+      <div class="group-desc">${escHtml(group.description || 'No description')}</div>
+      <div class="group-meta">
+        <span>${group.member_count} member${group.member_count !== 1 ? 's' : ''}</span>
+        ${group.region ? `<span>${escHtml(group.region)}</span>` : ''}
+      </div>
+    </div>
+    <div style="padding:0 1rem 1rem">
+      <button class="group-join-btn${joined ? ' joined' : ''}" style="width:100%">
+        ${joined ? 'Joined ✓' : 'Join Group'}
+      </button>
+    </div>
+  `;
+  card.querySelector('.group-join-btn').addEventListener('click', e => handleJoin(e, group));
+  return card;
+}
+
+async function handleJoin(e, group) {
+  if (!currentUser) { openAuthModal(); return; }
+  const btn    = e.currentTarget;
+  const joined = joinedGroupIds.has(group.id);
+  btn.disabled = true;
+  try {
+    if (joined) {
+      await communityLeaveGroup(group.id, currentUser.id);
+      joinedGroupIds.delete(group.id);
+      btn.textContent = 'Join Group';
+      btn.classList.remove('joined');
+      document.querySelectorAll(`[data-gid="${group.id}"] .group-join-btn`).forEach(b => {
+        b.textContent = 'Join Group'; b.classList.remove('joined');
+      });
+    } else {
+      await communityJoinGroup(group.id, currentUser.id);
+      joinedGroupIds.add(group.id);
+      btn.textContent = 'Joined ✓';
+      btn.classList.add('joined');
+      document.querySelectorAll(`[data-gid="${group.id}"] .group-join-btn`).forEach(b => {
+        b.textContent = 'Joined ✓'; b.classList.add('joined');
+      });
+    }
+    loadMyGroups();
+  } catch (err) {
+    console.error('Join error:', err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// My groups sidebar list
+async function loadMyGroups() {
+  if (!currentUser || !myGroupsList) return;
+  try {
+    const all    = await communityGetGroups();
+    const joined = all.filter(g => joinedGroupIds.has(g.id));
+    if (!joined.length) {
+      myGroupsList.innerHTML = '<p class="comm-empty-sm">No groups yet</p>';
+      return;
+    }
+    myGroupsList.innerHTML = joined.map(g =>
+      `<div class="sidebar-group-item">
+         <div class="sidebar-group-dot"></div>
+         <span>${escHtml(g.name)}</span>
+       </div>`
+    ).join('');
+  } catch { /* silent */ }
+}
+
+function populateGroupSelector(joinedGroups) {
+  if (!postGroupTag) return;
+  postGroupTag.innerHTML = '<option value="">— Public post —</option>';
+  joinedGroups.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g.id;
+    opt.textContent = g.name;
+    postGroupTag.appendChild(opt);
+  });
+}
+
+// Create group submit
+createGroupForm?.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!currentUser) { openAuthModal(); return; }
+  createGroupErr.textContent = '';
+
+  const name = document.getElementById('groupName')?.value.trim();
+  if (!name) { createGroupErr.textContent = 'Group name is required.'; return; }
+
+  const btn = createGroupForm.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = 'Creating…';
+
+  try {
+    const group = await communityCreateGroup({
+      name,
+      description: document.getElementById('groupDesc')?.value.trim() || null,
+      region:      document.getElementById('groupRegion')?.value || null,
+      createdBy:   currentUser.id,
+    });
+    joinedGroupIds.add(group.id);
+    closeModal('createGroupOverlay');
+    createGroupForm.reset();
+    initGroups();
+  } catch (err) {
+    createGroupErr.textContent = err.message || 'Failed to create group.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create Group';
+  }
+});
+
+// Boot groups
+initGroups();

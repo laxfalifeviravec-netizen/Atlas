@@ -646,3 +646,128 @@ createGroupForm?.addEventListener('submit', async e => {
 
 // Boot groups
 initGroups();
+
+/* ============================================================
+   Part 5: Garage
+   ============================================================ */
+
+const garageGrid   = document.getElementById('garageGrid');
+const addCarBtn    = document.getElementById('addCarBtn');
+const sidebarAddCarBtn = document.getElementById('sidebarAddCarBtn');
+const addCarForm   = document.getElementById('addCarForm');
+const addCarError  = document.getElementById('addCarError');
+
+addCarBtn?.addEventListener('click',        () => requireAuth(() => openModal('addCarOverlay')));
+sidebarAddCarBtn?.addEventListener('click', () => requireAuth(() => openModal('addCarOverlay')));
+
+async function loadGarage() {
+  if (!currentUser || !garageGrid) return;
+  garageGrid.innerHTML = '<div class="feed-loading"><div class="feed-loading-spin"></div>Loading…</div>';
+  try {
+    const cars = await communityGetGarage(currentUser.id);
+    garageGrid.innerHTML = '';
+    if (!cars.length) {
+      garageGrid.innerHTML = '<p class="comm-empty">Your garage is empty.<br>Add your first car!</p>';
+      return;
+    }
+    cars.forEach(car => garageGrid.appendChild(buildCarCard(car)));
+  } catch {
+    garageGrid.innerHTML = '<p class="comm-empty">Could not load garage.</p>';
+  }
+}
+
+async function loadSidebarGarage() {
+  const sidebarEl = document.getElementById('sidebarGarage');
+  if (!currentUser || !sidebarEl) return;
+  try {
+    const cars = await communityGetGarage(currentUser.id);
+    if (!cars.length) { sidebarEl.innerHTML = '<p class="comm-empty-sm">No cars yet</p>'; return; }
+    sidebarEl.innerHTML = '';
+    cars.slice(0, 3).forEach(car => {
+      const div = document.createElement('div');
+      div.className = 'sidebar-car-item';
+      div.innerHTML = `
+        ${car.image_url
+          ? `<img class="sidebar-car-thumb" src="${escHtml(car.image_url)}" alt="car" />`
+          : `<div class="sidebar-car-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-3"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>`}
+        <div class="sidebar-car-name">${car.year ? car.year + ' ' : ''}${escHtml(car.make)} ${escHtml(car.model)}</div>
+      `;
+      sidebarEl.appendChild(div);
+    });
+  } catch { /* silent */ }
+}
+
+function buildCarCard(car) {
+  const card = document.createElement('div');
+  card.className = 'car-card';
+  card.innerHTML = `
+    ${car.image_url
+      ? `<img class="car-image" src="${escHtml(car.image_url)}" alt="car photo" loading="lazy" />`
+      : `<div class="car-image-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-3"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>`}
+    <div class="car-body">
+      <div class="car-title">${car.year ? car.year + ' ' : ''}${escHtml(car.make)} ${escHtml(car.model)}${car.trim_level ? ' ' + escHtml(car.trim_level) : ''}</div>
+      ${car.color ? `<div class="car-color-badge">● ${escHtml(car.color)}</div>` : ''}
+      ${car.mods  ? `<div class="car-mods">${escHtml(car.mods)}</div>` : ''}
+    </div>
+    <div class="car-footer">
+      ${car.is_primary ? '<span class="car-primary-badge">Primary</span>' : '<span></span>'}
+      <button class="car-delete-btn" data-cid="${car.id}">Remove</button>
+    </div>
+  `;
+  card.querySelector('.car-delete-btn').addEventListener('click', () => handleDeleteCar(car.id));
+  return card;
+}
+
+async function handleDeleteCar(carId) {
+  if (!currentUser) return;
+  if (!confirm('Remove this car from your garage?')) return;
+  try {
+    await communityDeleteCar(carId);
+    loadGarage();
+    loadSidebarGarage();
+  } catch { /* silent */ }
+}
+
+addCarForm?.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!currentUser) { openAuthModal(); return; }
+  addCarError.textContent = '';
+
+  const make = document.getElementById('carMake')?.value.trim();
+  const model = document.getElementById('carModel')?.value.trim();
+  if (!make || !model) {
+    addCarError.textContent = 'Make and model are required.'; return;
+  }
+
+  const btn = addCarForm.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = 'Adding…';
+
+  try {
+    const file = document.getElementById('carImageFile')?.files[0];
+    let imageUrl = null;
+    if (file) imageUrl = await communityUploadMedia(file, `garage/${currentUser.id}`);
+
+    await communityAddCar({
+      userId:    currentUser.id,
+      year:      parseInt(document.getElementById('carYear')?.value) || null,
+      make,
+      model,
+      trimLevel: document.getElementById('carTrim')?.value.trim() || null,
+      color:     document.getElementById('carColor')?.value.trim() || null,
+      mods:      document.getElementById('carMods')?.value.trim() || null,
+      imageUrl,
+      isPrimary: document.getElementById('carPrimary')?.checked || false,
+    });
+
+    closeModal('addCarOverlay');
+    addCarForm.reset();
+    document.getElementById('carImagePreview')?.classList.add('hidden');
+    document.getElementById('carUploadPlaceholder') && (document.getElementById('carUploadPlaceholder').style.display = '');
+    loadGarage();
+    loadSidebarGarage();
+  } catch (err) {
+    addCarError.textContent = err.message || 'Failed to add car.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Add to Garage';
+  }
+});

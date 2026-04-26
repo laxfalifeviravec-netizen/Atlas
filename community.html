@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atlas — Community</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="community.css" />
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo">Atlas</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html#features">Features</a></li>
+        <li><a href="index.html#explore">Explore</a></li>
+        <li><a href="map.html">All Roads</a></li>
+        <li><a href="community.html" class="active">Community</a></li>
+        <li><a href="pricing.html">Pricing</a></li>
+        <li><a href="index.html#contact">Contact</a></li>
+      </ul>
+      <div class="nav-auth">
+        <button class="btn btn-primary btn-sm" id="authBtn">Sign In</button>
+        <div class="user-menu hidden" id="userMenu">
+          <span class="user-email" id="userEmail"></span>
+          <button class="btn btn-secondary btn-sm" id="logoutBtn">Sign Out</button>
+        </div>
+      </div>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Page header -->
+  <header class="comm-hero">
+    <div class="comm-hero-inner">
+      <h1 class="comm-hero-title">Community</h1>
+      <p class="comm-hero-sub">Share your drives · show your builds · find your crew</p>
+    </div>
+  </header>
+
+  <!-- Tab bar -->
+  <div class="comm-tabbar">
+    <button class="comm-tab active" data-tab="feed">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+      </svg>
+      Feed
+    </button>
+    <button class="comm-tab" data-tab="groups">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      Groups
+    </button>
+    <button class="comm-tab" data-tab="garage">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+        <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-3"/>
+        <circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>
+      </svg>
+      Garage
+    </button>
+  </div>
+
+  <!-- Main layout -->
+  <div class="comm-layout">
+
+    <!-- Left sidebar -->
+    <aside class="comm-sidebar-left">
+      <div class="comm-profile-card" id="commProfileCard">
+        <div class="cpc-avatar" id="cpcAvatar"></div>
+        <div class="cpc-name" id="cpcName">Sign in to post</div>
+        <div class="cpc-meta" id="cpcMeta"></div>
+      </div>
+      <div class="comm-sidebar-section">
+        <div class="comm-sidebar-title">My Groups</div>
+        <div id="myGroupsList"><p class="comm-empty-sm">No groups yet</p></div>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="comm-main">
+
+      <!-- Feed panel -->
+      <div class="comm-panel active" id="panelFeed">
+        <div class="create-post-bar" id="createPostBar">
+          <div class="cpa-avatar" id="cpaAvatar"></div>
+          <button class="create-post-input-btn" id="createPostBtn">
+            Share a drive, photo, or build…
+          </button>
+          <button class="btn btn-primary btn-sm" id="createPostBtnAlt" style="flex-shrink:0">Post</button>
+        </div>
+        <div class="post-feed" id="postFeed">
+          <div class="feed-loading">
+            <div class="feed-loading-spin"></div>
+            Loading posts…
+          </div>
+        </div>
+        <div class="feed-sentinel" id="feedSentinel"></div>
+      </div>
+
+      <!-- Groups panel -->
+      <div class="comm-panel" id="panelGroups">
+        <div class="panel-toolbar">
+          <h2 class="panel-title">Driving Groups</h2>
+          <button class="btn btn-primary btn-sm" id="createGroupBtn">+ New Group</button>
+        </div>
+        <div class="groups-grid" id="groupsGrid">
+          <div class="feed-loading"><div class="feed-loading-spin"></div> Loading…</div>
+        </div>
+      </div>
+
+      <!-- Garage panel -->
+      <div class="comm-panel" id="panelGarage">
+        <div class="panel-toolbar">
+          <h2 class="panel-title">My Garage</h2>
+          <button class="btn btn-primary btn-sm" id="addCarBtn">+ Add Car</button>
+        </div>
+        <div class="garage-grid" id="garageGrid">
+          <p class="comm-empty">Sign in to manage your garage.</p>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Right sidebar -->
+    <aside class="comm-sidebar-right">
+      <div class="comm-sidebar-section">
+        <div class="comm-sidebar-title">Discover Groups</div>
+        <div id="discoverGroups"><p class="comm-empty-sm">Loading…</p></div>
+      </div>
+      <div class="comm-sidebar-section" id="sidebarGarageSection">
+        <div class="comm-sidebar-title">My Garage</div>
+        <div id="sidebarGarage"><p class="comm-empty-sm">No cars yet</p></div>
+        <button class="comm-sidebar-link" id="sidebarAddCarBtn">+ Add your car</button>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- ═══ Create Post Modal ════════════════════════════════════ -->
+  <div class="modal-overlay" id="createPostOverlay" role="dialog" aria-modal="true">
+    <div class="modal comm-modal">
+      <div class="modal-header">
+        <h3>Share a Post</h3>
+        <button class="modal-close" id="createPostClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="createPostForm" novalidate>
+          <!-- Image upload -->
+          <div class="upload-zone" id="uploadZone">
+            <input type="file" id="postImageFile" accept="image/*" class="upload-input" />
+            <div class="upload-placeholder" id="uploadPlaceholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <span>Click to add a photo</span>
+              <span class="upload-hint">JPG, PNG, WEBP — max 10 MB</span>
+            </div>
+            <img id="postImagePreview" class="upload-preview hidden" alt="preview" />
+          </div>
+
+          <!-- Caption -->
+          <div class="form-group" style="margin-top:1rem">
+            <textarea id="postCaption" name="caption" rows="3"
+              placeholder="What's the story? Road taken, mods done, trip recap…" maxlength="500"></textarea>
+            <div class="char-count"><span id="captionCount">0</span>/500</div>
+          </div>
+
+          <!-- Road tag (optional) -->
+          <div class="form-group">
+            <label for="postRoadTag">Tag a road <span style="font-weight:400;color:var(--color-text-muted)">(optional)</span></label>
+            <input type="text" id="postRoadTag" placeholder="Search roads…" autocomplete="off" />
+            <div class="road-suggestions" id="roadSuggestions"></div>
+            <input type="hidden" id="postRoadId" />
+          </div>
+
+          <!-- Group tag (optional) -->
+          <div class="form-group">
+            <label for="postGroupTag">Post to group <span style="font-weight:400;color:var(--color-text-muted)">(optional)</span></label>
+            <select id="postGroupTag">
+              <option value="">— Public post —</option>
+            </select>
+          </div>
+
+          <p class="auth-error" id="createPostError"></p>
+          <button type="submit" class="btn btn-primary btn-full" id="createPostSubmit">Share Post</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Post Detail Modal (comments) ════════════════════════ -->
+  <div class="modal-overlay" id="postDetailOverlay" role="dialog" aria-modal="true">
+    <div class="modal post-detail-modal">
+      <div class="modal-header">
+        <h3 id="postDetailTitle">Post</h3>
+        <button class="modal-close" id="postDetailClose">&times;</button>
+      </div>
+      <div class="modal-body post-detail-body">
+        <div class="post-detail-image-wrap">
+          <img id="postDetailImage" src="" alt="" />
+        </div>
+        <div class="post-detail-side">
+          <div class="post-detail-info" id="postDetailInfo"></div>
+          <div class="post-detail-comments" id="postDetailComments">
+            <div class="feed-loading"><div class="feed-loading-spin"></div></div>
+          </div>
+          <form class="comment-form" id="commentForm">
+            <input type="text" id="commentInput" placeholder="Add a comment…" maxlength="300" autocomplete="off" />
+            <button type="submit" class="comment-submit-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Create Group Modal ═══════════════════════════════════ -->
+  <div class="modal-overlay" id="createGroupOverlay" role="dialog" aria-modal="true">
+    <div class="modal comm-modal">
+      <div class="modal-header">
+        <h3>Create a Driving Group</h3>
+        <button class="modal-close" id="createGroupClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="createGroupForm" novalidate>
+          <div class="form-group">
+            <label for="groupName">Group name <span class="req">*</span></label>
+            <input type="text" id="groupName" placeholder="e.g. Pacific Coast Runners" maxlength="60" required />
+          </div>
+          <div class="form-group">
+            <label for="groupDesc">Description</label>
+            <textarea id="groupDesc" rows="3" placeholder="What is this group about?" maxlength="300"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="groupRegion">Region</label>
+            <select id="groupRegion">
+              <option value="">— Any region —</option>
+              <option value="West Coast">West Coast</option>
+              <option value="Mountain West">Mountain West</option>
+              <option value="Southwest">Southwest</option>
+              <option value="Southeast">Southeast</option>
+              <option value="Northeast">Northeast</option>
+              <option value="Midwest">Midwest</option>
+            </select>
+          </div>
+          <p class="auth-error" id="createGroupError"></p>
+          <button type="submit" class="btn btn-primary btn-full">Create Group</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Add Car Modal ════════════════════════════════════════ -->
+  <div class="modal-overlay" id="addCarOverlay" role="dialog" aria-modal="true">
+    <div class="modal comm-modal">
+      <div class="modal-header">
+        <h3>Add to Garage</h3>
+        <button class="modal-close" id="addCarClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="addCarForm" novalidate>
+          <!-- Car photo -->
+          <div class="upload-zone upload-zone-sm" id="carUploadZone">
+            <input type="file" id="carImageFile" accept="image/*" class="upload-input" />
+            <div class="upload-placeholder" id="carUploadPlaceholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <span>Add a photo</span>
+            </div>
+            <img id="carImagePreview" class="upload-preview hidden" alt="preview" />
+          </div>
+
+          <div class="form-row" style="margin-top:1rem">
+            <div class="form-group">
+              <label for="carYear">Year</label>
+              <input type="number" id="carYear" placeholder="2021" min="1886" max="2030" />
+            </div>
+            <div class="form-group">
+              <label for="carMake">Make <span class="req">*</span></label>
+              <input type="text" id="carMake" placeholder="Toyota" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="carModel">Model <span class="req">*</span></label>
+              <input type="text" id="carModel" placeholder="Supra" required />
+            </div>
+            <div class="form-group">
+              <label for="carTrim">Trim</label>
+              <input type="text" id="carTrim" placeholder="GR" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="carColor">Color</label>
+              <input type="text" id="carColor" placeholder="Phantom Gray" />
+            </div>
+            <div class="form-group" style="align-items:center;justify-content:flex-end;display:flex;gap:0.5rem;padding-top:1.4rem">
+              <input type="checkbox" id="carPrimary" style="width:16px;height:16px;accent-color:var(--color-primary)" />
+              <label for="carPrimary" style="margin:0;cursor:pointer">Primary car</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="carMods">Modifications</label>
+            <textarea id="carMods" rows="3" placeholder="List your mods — intake, exhaust, tune, coilovers…" maxlength="600"></textarea>
+          </div>
+          <p class="auth-error" id="addCarError"></p>
+          <button type="submit" class="btn btn-primary btn-full">Add to Garage</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Auth Modal ════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="authOverlay" role="dialog" aria-modal="true">
+    <div class="modal auth-modal">
+      <div class="modal-header">
+        <h3 id="authModalTitle">Welcome to Atlas</h3>
+        <button class="modal-close" id="authClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">Sign In</button>
+          <button class="auth-tab" data-tab="signup">Create Account</button>
+        </div>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="loginEmail">Email</label>
+            <input type="email" id="loginEmail" name="email" placeholder="your@email.com" required />
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" name="password" placeholder="••••••••" required />
+          </div>
+          <p class="auth-error" id="loginError"></p>
+          <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        </form>
+        <form id="signupForm" class="hidden">
+          <div class="form-group">
+            <label for="signupName">Full Name</label>
+            <input type="text" id="signupName" name="name" placeholder="Your name" required />
+          </div>
+          <div class="form-group">
+            <label for="signupEmail">Email</label>
+            <input type="email" id="signupEmail" name="email" placeholder="your@email.com" required />
+          </div>
+          <div class="form-group">
+            <label for="signupPassword">Password</label>
+            <input type="password" id="signupPassword" name="password" placeholder="Minimum 8 characters" required />
+          </div>
+          <p class="auth-error" id="signupError"></p>
+          <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="db.js"></script>
+  <script src="community.js"></script>
+  <script src="auth.js"></script>
+</body>
+</html>

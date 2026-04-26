@@ -138,6 +138,47 @@ const PAGE_SIZE   = 10;
 let   feedLoading = false;
 let   feedDone    = false;
 let   likedPostIds = new Set();
+let   feedFilter  = { road: '', region: '' };
+
+// ── Search / filter bar ────────────────────────────────────────
+const feedSearchInput  = document.getElementById('feedSearch');
+const feedSearchClear  = document.getElementById('feedSearchClear');
+const feedRegionFilter = document.getElementById('feedRegionFilter');
+
+communityGetRegions().then(regions => {
+  regions.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r;
+    opt.textContent = r;
+    feedRegionFilter.appendChild(opt);
+  });
+}).catch(() => {});
+
+let searchDebounce = null;
+feedSearchInput?.addEventListener('input', () => {
+  feedFilter.road = feedSearchInput.value.trim();
+  feedSearchClear?.classList.toggle('hidden', !feedFilter.road);
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => resetAndReload(), 400);
+});
+feedSearchClear?.addEventListener('click', () => {
+  feedSearchInput.value = '';
+  feedFilter.road = '';
+  feedSearchClear.classList.add('hidden');
+  resetAndReload();
+});
+feedRegionFilter?.addEventListener('change', () => {
+  feedFilter.region = feedRegionFilter.value;
+  resetAndReload();
+});
+
+function resetAndReload() {
+  feedPage = 0;
+  feedDone = false;
+  likedPostIds = new Set();
+  postFeed.innerHTML = '<div class="feed-loading"><div class="feed-loading-spin"></div>Loading posts…</div>';
+  loadMorePosts(true);
+}
 
 async function initFeed() {
   feedPage    = 0;
@@ -151,11 +192,21 @@ async function loadMorePosts(reset = false) {
   feedLoading = true;
 
   try {
-    const posts = await communityGetPosts({ limit: PAGE_SIZE, offset: feedPage * PAGE_SIZE });
+    const posts = await communityGetPosts({
+      limit:  PAGE_SIZE,
+      offset: feedPage * PAGE_SIZE,
+      road:   feedFilter.road,
+      region: feedFilter.region,
+    });
     if (reset) postFeed.innerHTML = '';
     if (!posts.length) {
       feedDone = true;
-      if (reset) postFeed.innerHTML = '<p class="comm-empty">No posts yet — be the first to share!</p>';
+      if (reset) {
+        const msg = (feedFilter.road || feedFilter.region)
+          ? 'No posts found for that filter.'
+          : 'No posts yet — be the first to share!';
+        postFeed.innerHTML = `<p class="comm-empty">${msg}</p>`;
+      }
       return;
     }
 

@@ -188,14 +188,33 @@ async function reportCondition({ roadId, userId, conditionType, description }) {
 
 // ── Community: Posts ──────────────────────────────────────────
 
-async function communityGetPosts({ limit = 10, offset = 0 } = {}) {
-  const { data, error } = await db
+async function communityGetPosts({ limit = 10, offset = 0, road = '', region = '' } = {}) {
+  let query = db
     .from('posts')
-    .select('*, profiles(full_name, username, avatar_url), roads(name, designation, state, lat, lng)')
+    .select('*, profiles(full_name, username, avatar_url), roads(name, designation, state, lat, lng, region)')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
+
+  if (road)   query = query.ilike('roads.name', `%${road}%`);
+  if (region) query = query.eq('roads.region', region);
+
+  const { data, error } = await query;
   if (error) throw error;
+
+  // When filtering by road/region, Supabase returns all posts but with null roads
+  // for non-matching rows — filter those out client-side
+  if (road || region) return data.filter(p => p.roads);
   return data;
+}
+
+async function communityGetRegions() {
+  const { data, error } = await db
+    .from('roads')
+    .select('region')
+    .not('region', 'is', null)
+    .order('region');
+  if (error) return [];
+  return [...new Set(data.map(r => r.region))].filter(Boolean);
 }
 
 async function communityCreatePost({ userId, caption, imageUrl, roadId, groupId }) {

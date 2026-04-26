@@ -111,6 +111,21 @@
           </button>
           <button class="btn btn-primary btn-sm" id="createPostBtnAlt" style="flex-shrink:0">Post</button>
         </div>
+
+        <!-- Search / filter bar -->
+        <div class="feed-filter-bar">
+          <div class="feed-search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" class="feed-search-icon">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="feedSearch" class="feed-search-input" placeholder="Search by road name…" maxlength="80" autocomplete="off" />
+            <button class="feed-search-clear hidden" id="feedSearchClear" aria-label="Clear search">&times;</button>
+          </div>
+          <select id="feedRegionFilter" class="feed-region-select">
+            <option value="">All regions</option>
+          </select>
+        </div>
+
         <div class="post-feed" id="postFeed">
           <div class="feed-loading">
             <div class="feed-loading-spin"></div>

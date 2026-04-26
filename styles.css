@@ -1052,3 +1052,50 @@ input.error, textarea.error, select.error {
   display: block;
 }
 .auth-success p { margin: 0; }
+
+/* ── Mobile Bottom Nav ─────────────────────────────────────── */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-bg-alt);
+  border-top: 1px solid var(--color-border);
+  z-index: 100;
+  padding: env(safe-area-inset-bottom) 0 0;
+}
+.mobile-bottom-nav-inner {
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+  height: 56px;
+}
+.mbn-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-decoration: none;
+  color: var(--color-text-muted);
+  font-size: 0.58rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: color var(--transition);
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mbn-item:hover,
+.mbn-item.active { color: var(--color-primary); }
+.mbn-item svg { flex-shrink: 0; }
+
+@media (max-width: 640px) {
+  .mobile-bottom-nav { display: block; }
+  body { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
+}

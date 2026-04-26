@@ -137,27 +137,41 @@ async function getConditions(roadId) {
 // ── Community Road Submissions ────────────────────────────────
 
 async function submitRoad({ name, designation, state, region, type, lengthMi, difficulty, bestSeason, highlight, lat, lng, userId }) {
+  const base = {
+    name,
+    designation:  designation || null,
+    state,
+    region,
+    type,
+    length_mi:    lengthMi   || null,
+    difficulty:   difficulty || null,
+    best_season:  bestSeason || null,
+    highlight:    highlight  || null,
+    lat:          parseFloat(lat),
+    lng:          parseFloat(lng),
+  };
+
+  // Try with community columns first (requires add_community_roads.sql migration)
   const { data, error } = await db
     .from('roads')
-    .insert({
-      name,
-      designation:  designation || null,
-      state,
-      region,
-      type,
-      length_mi:    lengthMi   || null,
-      difficulty:   difficulty || null,
-      best_season:  bestSeason || null,
-      highlight:    highlight  || null,
-      lat:          parseFloat(lat),
-      lng:          parseFloat(lng),
-      source:       'community',
-      submitted_by: userId,
-    })
+    .insert({ ...base, source: 'community', submitted_by: userId })
     .select()
     .single();
-  if (error) throw error;
-  return data;
+
+  if (!error) return data;
+
+  // If column doesn't exist yet, fall back to insert without community columns
+  if (error.code === '42703' || error.message?.includes('column')) {
+    const { data: data2, error: error2 } = await db
+      .from('roads')
+      .insert(base)
+      .select()
+      .single();
+    if (error2) throw new Error(error2.message);
+    return data2;
+  }
+
+  throw new Error(error.message);
 }
 
 async function reportCondition({ roadId, userId, conditionType, description }) {

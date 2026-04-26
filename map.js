@@ -902,9 +902,13 @@ async function getDirections(idx, e) {
   if (routeLayer) { fullMap.removeLayer(routeLayer); routeLayer = null; }
 
   try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 9000);
     const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${road.lng},${road.lat}?overview=full&geometries=geojson`;
-    const data = await (await fetch(url)).json();
-    if (data.code !== 'Ok' || !data.routes.length) throw new Error();
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timer);
+    const data = await res.json();
+    if (data.code !== 'Ok' || !data.routes.length) throw new Error('no route');
 
     const route  = data.routes[0];
     const distMi = (route.distance / 1609.34).toFixed(1);
@@ -917,8 +921,10 @@ async function getDirections(idx, e) {
     routeLayer = L.polyline(coords, { color: '#ef4444', weight: 5, opacity: 0.85 }).addTo(fullMap);
     fullMap.fitBounds(routeLayer.getBounds(), { padding: [70, 70] });
   } catch {
-    document.getElementById('routeDist').textContent = 'N/A';
-    document.getElementById('routeTime').textContent = 'N/A';
+    // Show straight-line distance as fallback; Google Maps link is still usable
+    const asMiles = haversine(userLat, userLng, road.lat, road.lng);
+    document.getElementById('routeDist').textContent = `~${Math.round(asMiles)} mi`;
+    document.getElementById('routeTime').textContent = 'See Maps ↗';
   }
 }
 
@@ -1071,26 +1077,30 @@ resetBtn.addEventListener('click', resetAll);
 renderList();
 
 // ── Deep-link: fly to road from URL params ─────────────────────
-(function handleURLParams() {
+let _pendingURLRoad = null;
+(function parseURLParams() {
   const params = new URLSearchParams(window.location.search);
   const roadParam = params.get('road');
   const lat = parseFloat(params.get('lat'));
   const lng = parseFloat(params.get('lng'));
-  if (!roadParam && !lat) return;
-
-  // Find matching road index
-  const idx = ROADS.findIndex(r =>
-    r.name.toLowerCase() === decodeURIComponent(roadParam || '').toLowerCase()
-  );
-
-  setTimeout(() => {
-    if (idx !== -1) {
-      flyToRoad(idx);
-    } else if (lat && lng) {
-      fullMap.flyTo([lat, lng], 9, { duration: 1.2 });
-    }
-  }, 400);
+  if (!roadParam && isNaN(lat)) return;
+  _pendingURLRoad = { name: decodeURIComponent(roadParam || ''), lat, lng };
 })();
+
+function resolveURLRoad() {
+  if (!_pendingURLRoad) return;
+  const { name, lat, lng } = _pendingURLRoad;
+  _pendingURLRoad = null;
+  const idx = ROADS.findIndex(r => r.name.toLowerCase() === name.toLowerCase());
+  if (idx !== -1) {
+    flyToRoad(idx);
+  } else if (!isNaN(lat) && !isNaN(lng)) {
+    fullMap.flyTo([lat, lng], 9, { duration: 1.2 });
+  }
+}
+
+// Fallback: run with static data if Supabase hasn't resolved in 1.5s
+setTimeout(() => { if (_pendingURLRoad) resolveURLRoad(); }, 1500);
 
 // ── Condition Report Modal ─────────────────────────────────────
 const reportOverlay  = document.getElementById('reportOverlay');
@@ -1196,6 +1206,7 @@ reportForm && reportForm.addEventListener('submit', async e => {
     });
 
     renderList();
+    resolveURLRoad(); // resolve deep-link now that live data is ready
   } catch (err) {
     // Stay on static data silently
     console.warn('Atlas: could not load roads from Supabase, using static data.', err);
@@ -1277,7 +1288,20 @@ fullMap.on('click', e => {
 submitRoadForm.addEventListener('submit', async e => {
   e.preventDefault();
   submitRoadError.textContent = '';
-  if (!window.__atlasUser) {
+  submitRoadError.onclick = null;
+  submitRoadError.style.cursor = '';
+
+  // Resolve user — avoid race condition by querying Supabase directly if needed
+  let user = window.__atlasUser;
+  if (!user && db) {
+    try {
+      const { data: { session } } = await db.auth.getSession();
+      user = session?.user ?? null;
+      if (user) window.__atlasUser = user;
+    } catch { /* continue to auth prompt */ }
+  }
+
+  if (!user) {
     submitRoadError.innerHTML = 'You must be signed in. <u style="cursor:pointer">Click to sign in →</u>';
     submitRoadError.style.cursor = 'pointer';
     submitRoadError.onclick = () => {
@@ -1310,7 +1334,7 @@ submitRoadForm.addEventListener('submit', async e => {
     highlight:   document.getElementById('srHighlight').value.trim() || null,
     lat,
     lng,
-    userId:      window.__atlasUser.id,
+    userId:      user.id,
   };
 
   try {

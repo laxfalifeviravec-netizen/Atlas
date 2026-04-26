@@ -191,7 +191,7 @@ async function reportCondition({ roadId, userId, conditionType, description }) {
 async function communityGetPosts({ limit = 10, offset = 0 } = {}) {
   const { data, error } = await db
     .from('posts')
-    .select('*, profiles(full_name, username, avatar_url), roads(name, designation, state)')
+    .select('*, profiles(full_name, username, avatar_url), roads(name, designation, state, lat, lng)')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
   if (error) throw error;

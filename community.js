@@ -191,14 +191,15 @@ function buildPostCard(post) {
   card.className   = 'post-card';
   card.dataset.id  = post.id;
 
+  const profileUrl = `profile.html?id=${post.user_id}`;
   card.innerHTML = `
     <div class="post-header">
-      <div class="post-avatar">${initials}</div>
+      <a class="post-avatar" href="${profileUrl}">${initials}</a>
       <div class="post-user">
-        <div class="post-username">${escHtml(name)}</div>
+        <a class="post-username" href="${profileUrl}">${escHtml(name)}</a>
         <div class="post-time">${timeAgo(post.created_at)}</div>
       </div>
-      ${road ? `<span class="post-road-tag" title="${escHtml(road.name)}">${escHtml(road.designation || road.name)}</span>` : ''}
+      ${road ? `<a class="post-road-tag" href="map.html?road=${encodeURIComponent(road.name)}&lat=${road.lat || ''}&lng=${road.lng || ''}" title="${escHtml(road.name)}">${escHtml(road.designation || road.name)}</a>` : ''}
     </div>
     ${post.image_url
       ? `<img class="post-image" src="${escHtml(post.image_url)}" alt="post photo" loading="lazy" />`
@@ -418,8 +419,8 @@ function openPostDetail(post, authorName) {
 
   const info = document.getElementById('postDetailInfo');
   info.innerHTML = `
-    <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.3rem">${escHtml(authorName)}</div>
-    ${post.caption ? `<p style="font-size:0.85rem;line-height:1.5;color:var(--color-text)">${escHtml(post.caption)}</p>` : ''}
+    <a href="profile.html?id=${post.user_id}" style="font-weight:700;font-size:0.9rem;margin-bottom:0.3rem;display:block;color:var(--color-text);text-decoration:none">${escHtml(authorName)}</a>
+    ${post.caption ? `<p style="font-size:0.85rem;line-height:1.5;color:var(--color-text);margin-top:0.3rem">${escHtml(post.caption)}</p>` : ''}
     <div style="font-size:0.72rem;color:var(--color-text-muted);margin-top:0.4rem">${timeAgo(post.created_at)}</div>
   `;
 

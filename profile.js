@@ -70,16 +70,58 @@ document.addEventListener('atlas:authchange', ({ detail: { user } }) => {
   if (profileId) renderOwnControls();
 });
 
-function renderOwnControls() {
+async function renderOwnControls() {
   const isOwn = viewerUser && profileData && viewerUser.id === profileId;
   document.getElementById('avatarEditBtn')?.classList.toggle('hidden', !isOwn);
   const actionsEl = document.getElementById('profileActions');
   if (!actionsEl) return;
   if (isOwn) {
     actionsEl.innerHTML = `<button class="profile-edit-btn" id="editProfileBtn">Edit Profile</button>`;
+  } else if (viewerUser && profileId) {
+    let following = false;
+    try { following = await isFollowing(viewerUser.id, profileId); } catch { /* ignore */ }
+    actionsEl.innerHTML = `
+      <button class="profile-follow-btn${following ? ' following' : ''}" id="followBtn">
+        ${following ? 'Following' : 'Follow'}
+      </button>
+    `;
+    document.getElementById('followBtn')?.addEventListener('click', handleFollowToggle);
   } else {
     actionsEl.innerHTML = '';
   }
+}
+
+async function handleFollowToggle() {
+  if (!viewerUser) { openModal('authOverlay'); return; }
+  const btn = document.getElementById('followBtn');
+  if (!btn) return;
+  const currently = btn.classList.contains('following');
+  btn.disabled = true;
+  try {
+    if (currently) {
+      await unfollowUser(viewerUser.id, profileId);
+      btn.textContent = 'Follow';
+      btn.classList.remove('following');
+    } else {
+      await followUser(viewerUser.id, profileId);
+      btn.textContent = 'Following';
+      btn.classList.add('following');
+    }
+    loadFollowStats();
+  } catch { /* silent */ } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadFollowStats() {
+  try {
+    const [followers, following] = await Promise.all([
+      getFollowerCount(profileId),
+      getFollowingCount(profileId),
+    ]);
+    updateStat('followers', followers);
+    updateStat('following', following);
+  } catch { /* silent */ }
 }
 
 // ── Lightbox (post detail) ────────────────────────────────────────
@@ -168,6 +210,7 @@ async function init() {
   loadPostsGrid();
   loadProfileGarage();
   loadProfileGroups();
+  loadFollowStats();
 }
 
 function renderHeader(profile) {
@@ -288,7 +331,7 @@ async function loadProfileGroups() {
 }
 
 // ── Stat counters ─────────────────────────────────────────────────
-const statValues = { posts: '—', cars: '—', groups: '—' };
+const statValues = { posts: '—', followers: '—', following: '—', cars: '—', groups: '—' };
 function updateStat(key, val) {
   statValues[key] = val;
   const statsEl = document.getElementById('profileStats');

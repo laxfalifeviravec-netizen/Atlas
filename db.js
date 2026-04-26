@@ -414,3 +414,65 @@ async function notificationsUnreadCount(userId) {
   if (error) return 0;
   return count;
 }
+
+// ── Follows ───────────────────────────────────────────────────
+
+async function followUser(followerId, followingId) {
+  const { error } = await db
+    .from('follows')
+    .insert({ follower_id: followerId, following_id: followingId });
+  if (error) throw error;
+}
+
+async function unfollowUser(followerId, followingId) {
+  const { error } = await db
+    .from('follows')
+    .delete()
+    .eq('follower_id', followerId)
+    .eq('following_id', followingId);
+  if (error) throw error;
+}
+
+async function isFollowing(followerId, followingId) {
+  const { data } = await db
+    .from('follows')
+    .select('follower_id')
+    .eq('follower_id', followerId)
+    .eq('following_id', followingId)
+    .maybeSingle();
+  return !!data;
+}
+
+async function getFollowerCount(userId) {
+  const { count } = await db
+    .from('follows')
+    .select('follower_id', { count: 'exact', head: true })
+    .eq('following_id', userId);
+  return count || 0;
+}
+
+async function getFollowingCount(userId) {
+  const { count } = await db
+    .from('follows')
+    .select('following_id', { count: 'exact', head: true })
+    .eq('follower_id', userId);
+  return count || 0;
+}
+
+async function communityGetFollowingPosts(followerId, { limit = 10, offset = 0 } = {}) {
+  // Get posts from people the user follows
+  const { data: followData } = await db
+    .from('follows')
+    .select('following_id')
+    .eq('follower_id', followerId);
+  if (!followData?.length) return [];
+  const ids = followData.map(r => r.following_id);
+  const { data, error } = await db
+    .from('posts')
+    .select('*, profiles(full_name, username, avatar_url), roads(name, designation, state, lat, lng, region)')
+    .in('user_id', ids)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (error) throw error;
+  return data;
+}

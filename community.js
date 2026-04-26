@@ -139,6 +139,23 @@ let   feedLoading = false;
 let   feedDone    = false;
 let   likedPostIds = new Set();
 let   feedFilter  = { road: '', region: '' };
+let   feedMode    = 'all'; // 'all' | 'following'
+
+// ── Feed mode toggle ───────────────────────────────────────────
+document.getElementById('feedModeAll')?.addEventListener('click', () => {
+  if (feedMode === 'all') return;
+  feedMode = 'all';
+  document.getElementById('feedModeAll')?.classList.add('active');
+  document.getElementById('feedModeFollowing')?.classList.remove('active');
+  resetAndReload();
+});
+document.getElementById('feedModeFollowing')?.addEventListener('click', () => {
+  if (feedMode === 'following') return;
+  feedMode = 'following';
+  document.getElementById('feedModeFollowing')?.classList.add('active');
+  document.getElementById('feedModeAll')?.classList.remove('active');
+  resetAndReload();
+});
 
 // ── Search / filter bar ────────────────────────────────────────
 const feedSearchInput  = document.getElementById('feedSearch');
@@ -192,19 +209,27 @@ async function loadMorePosts(reset = false) {
   feedLoading = true;
 
   try {
-    const posts = await communityGetPosts({
-      limit:  PAGE_SIZE,
-      offset: feedPage * PAGE_SIZE,
-      road:   feedFilter.road,
-      region: feedFilter.region,
-    });
+    let posts;
+    if (feedMode === 'following' && currentUser) {
+      posts = await communityGetFollowingPosts(currentUser.id, {
+        limit:  PAGE_SIZE,
+        offset: feedPage * PAGE_SIZE,
+      });
+    } else {
+      posts = await communityGetPosts({
+        limit:  PAGE_SIZE,
+        offset: feedPage * PAGE_SIZE,
+        road:   feedFilter.road,
+        region: feedFilter.region,
+      });
+    }
     if (reset) postFeed.innerHTML = '';
     if (!posts.length) {
       feedDone = true;
       if (reset) {
-        const msg = (feedFilter.road || feedFilter.region)
-          ? 'No posts found for that filter.'
-          : 'No posts yet — be the first to share!';
+        let msg = 'No posts yet — be the first to share!';
+        if (feedMode === 'following') msg = 'No posts from people you follow yet.';
+        else if (feedFilter.road || feedFilter.region) msg = 'No posts found for that filter.';
         postFeed.innerHTML = `<p class="comm-empty">${msg}</p>`;
       }
       return;

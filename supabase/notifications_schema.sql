@@ -9,8 +9,8 @@ create table if not exists notifications (
   user_id    uuid references auth.users not null,   -- recipient
   actor_id   uuid references auth.users,             -- who triggered it
   type       text not null,                          -- 'like' | 'comment' | 'group_join'
-  post_id    uuid references posts(id)    on delete cascade,
-  group_id   uuid references driving_groups(id) on delete cascade,
+  post_id    bigint references posts(id)          on delete cascade,
+  group_id   bigint references driving_groups(id) on delete cascade,
   read       boolean not null default false,
   created_at timestamptz not null default now()
 );

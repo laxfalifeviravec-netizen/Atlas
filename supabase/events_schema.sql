@@ -5,11 +5,11 @@
 
 create table if not exists events (
   id          uuid primary key default gen_random_uuid(),
-  group_id    uuid references driving_groups(id) on delete cascade,
-  created_by  uuid references auth.users not null,
-  title       text not null,
+  group_id    bigint  references driving_groups(id) on delete cascade,
+  created_by  uuid    references auth.users not null,
+  title       text    not null,
   description text,
-  road_id     uuid references roads(id) on delete set null,
+  road_id     integer references roads(id) on delete set null,
   event_date  date not null,
   meet_lat    float,
   meet_lng    float,

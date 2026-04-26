@@ -185,3 +185,150 @@ async function reportCondition({ roadId, userId, conditionType, description }) {
     });
   if (error) throw error;
 }
+
+// ── Community: Posts ──────────────────────────────────────────
+
+async function communityGetPosts({ limit = 10, offset = 0 } = {}) {
+  const { data, error } = await db
+    .from('posts')
+    .select('*, profiles(full_name, username, avatar_url), roads(name, designation, state)')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (error) throw error;
+  return data;
+}
+
+async function communityCreatePost({ userId, caption, imageUrl, roadId, groupId }) {
+  const { data, error } = await db
+    .from('posts')
+    .insert({ user_id: userId, caption: caption || null, image_url: imageUrl, road_id: roadId, group_id: groupId })
+    .select('*, profiles(full_name, username, avatar_url), roads(name, designation, state)')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function communityLikePost(postId, userId) {
+  const { error } = await db.from('post_likes').insert({ post_id: postId, user_id: userId });
+  if (error) throw error;
+}
+
+async function communityUnlikePost(postId, userId) {
+  const { error } = await db.from('post_likes').delete().eq('post_id', postId).eq('user_id', userId);
+  if (error) throw error;
+}
+
+async function communityGetLikedIds(userId, postIds) {
+  if (!postIds.length) return [];
+  const { data, error } = await db
+    .from('post_likes')
+    .select('post_id')
+    .eq('user_id', userId)
+    .in('post_id', postIds);
+  if (error) return [];
+  return data.map(r => r.post_id);
+}
+
+async function communityGetComments(postId) {
+  const { data, error } = await db
+    .from('post_comments')
+    .select('*, profiles(full_name, username)')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+async function communityAddComment({ postId, userId, body }) {
+  const { error } = await db
+    .from('post_comments')
+    .insert({ post_id: postId, user_id: userId, body });
+  if (error) throw error;
+}
+
+async function communitySearchRoads(query) {
+  const { data, error } = await db
+    .from('roads')
+    .select('id, name, designation, state')
+    .ilike('name', `%${query}%`)
+    .limit(8);
+  if (error) return [];
+  return data;
+}
+
+// ── Community: Groups ─────────────────────────────────────────
+
+async function communityGetGroups() {
+  const { data, error } = await db
+    .from('driving_groups')
+    .select('*')
+    .order('member_count', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+async function communityCreateGroup({ name, description, region, createdBy }) {
+  const { data, error } = await db
+    .from('driving_groups')
+    .insert({ name, description, region, created_by: createdBy })
+    .select()
+    .single();
+  if (error) throw error;
+  // Auto-join as admin
+  await db.from('group_members').insert({ group_id: data.id, user_id: createdBy, role: 'admin' });
+  return data;
+}
+
+async function communityJoinGroup(groupId, userId) {
+  const { error } = await db.from('group_members').insert({ group_id: groupId, user_id: userId });
+  if (error) throw error;
+}
+
+async function communityLeaveGroup(groupId, userId) {
+  const { error } = await db.from('group_members').delete().eq('group_id', groupId).eq('user_id', userId);
+  if (error) throw error;
+}
+
+async function communityGetJoinedGroupIds(userId) {
+  const { data, error } = await db.from('group_members').select('group_id').eq('user_id', userId);
+  if (error) return [];
+  return data.map(r => r.group_id);
+}
+
+// ── Community: Garage ─────────────────────────────────────────
+
+async function communityGetGarage(userId) {
+  const { data, error } = await db
+    .from('garages')
+    .select('*')
+    .eq('user_id', userId)
+    .order('is_primary', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+async function communityAddCar({ userId, year, make, model, trimLevel, color, mods, imageUrl, isPrimary }) {
+  const { error } = await db.from('garages').insert({
+    user_id: userId, year, make, model,
+    trim_level: trimLevel, color, mods,
+    image_url: imageUrl, is_primary: isPrimary,
+  });
+  if (error) throw error;
+}
+
+async function communityDeleteCar(carId) {
+  const { error } = await db.from('garages').delete().eq('id', carId);
+  if (error) throw error;
+}
+
+// ── Community: Storage upload ──────────────────────────────────
+
+async function communityUploadMedia(file, folder) {
+  const ext  = file.name.split('.').pop();
+  const path = `${folder}/${Date.now()}.${ext}`;
+  const { data, error } = await db.storage.from('community-media').upload(path, file, { upsert: false });
+  if (error) throw new Error('Image upload failed: ' + error.message);
+  const { data: { publicUrl } } = db.storage.from('community-media').getPublicUrl(data.path);
+  return publicUrl;
+}

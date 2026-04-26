@@ -63,6 +63,34 @@ document.querySelectorAll('.comm-tab').forEach(tab => {
   });
 });
 
+// ── Avatar upload ─────────────────────────────────────────────────
+const avatarFileInput = document.createElement('input');
+avatarFileInput.type   = 'file';
+avatarFileInput.accept = 'image/*';
+avatarFileInput.style.display = 'none';
+document.body.appendChild(avatarFileInput);
+
+document.getElementById('avatarEditBtn')?.addEventListener('click', () => {
+  avatarFileInput.click();
+});
+
+avatarFileInput.addEventListener('change', async () => {
+  const file = avatarFileInput.files?.[0];
+  if (!file || !viewerUser) return;
+  avatarFileInput.value = '';
+  const avatarEl = document.getElementById('profileAvatar');
+  const origContent = avatarEl?.innerHTML;
+  if (avatarEl) avatarEl.textContent = '…';
+  try {
+    const url = await uploadAvatar(viewerUser.id, file);
+    if (avatarEl) {
+      avatarEl.innerHTML = `<img src="${url}?t=${Date.now()}" alt="avatar" />`;
+    }
+  } catch {
+    if (avatarEl && origContent) avatarEl.innerHTML = origContent;
+  }
+});
+
 // ── Auth ─────────────────────────────────────────────────────────
 document.addEventListener('atlas:authchange', ({ detail: { user } }) => {
   viewerUser = user;
@@ -216,11 +244,16 @@ async function init() {
 function renderHeader(profile) {
   const name     = profile.full_name || profile.username || 'Atlas Driver';
   const initials = getInitials(name);
+  const avatarEl = document.getElementById('profileAvatar');
 
   document.title = `Atlas — ${name}`;
-  document.getElementById('profileAvatar').textContent = initials;
-  document.getElementById('profileName').textContent   = name;
-  document.getElementById('profileMeta').textContent   =
+  if (profile.avatar_url && avatarEl) {
+    avatarEl.innerHTML = `<img src="${escHtml(profile.avatar_url)}" alt="avatar" />`;
+  } else if (avatarEl) {
+    avatarEl.textContent = initials;
+  }
+  document.getElementById('profileName').textContent = name;
+  document.getElementById('profileMeta').textContent =
     `Member since ${new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
 }
 

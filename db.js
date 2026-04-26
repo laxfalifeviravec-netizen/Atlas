@@ -547,3 +547,22 @@ async function eventsGetUserRsvp(eventId, userId) {
     .maybeSingle();
   return data?.status || null;
 }
+
+// ── Avatar upload ─────────────────────────────────────────────
+
+async function uploadAvatar(userId, file) {
+  const ext  = file.name.split('.').pop();
+  const path = `avatars/${userId}.${ext}`;
+  const { data, error } = await db.storage
+    .from('community-media')
+    .upload(path, file, { upsert: true });
+  if (error) throw new Error('Upload failed: ' + error.message);
+  const { data: { publicUrl } } = db.storage.from('community-media').getPublicUrl(data.path);
+  // Save to profiles table
+  const { error: updateErr } = await db
+    .from('profiles')
+    .update({ avatar_url: publicUrl })
+    .eq('id', userId);
+  if (updateErr) throw new Error(updateErr.message);
+  return publicUrl;
+}

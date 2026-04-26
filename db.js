@@ -382,3 +382,35 @@ async function profileGetGroups(userId) {
   if (error) throw error;
   return data.map(r => r.driving_groups).filter(Boolean);
 }
+
+// ── Notifications ─────────────────────────────────────────────
+
+async function notificationsGet(userId, { limit = 20 } = {}) {
+  const { data, error } = await db
+    .from('notifications')
+    .select('*, actor:actor_id(full_name, username), posts(caption, image_url), driving_groups(name)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data;
+}
+
+async function notificationsMarkRead(userId) {
+  const { error } = await db
+    .from('notifications')
+    .update({ read: true })
+    .eq('user_id', userId)
+    .eq('read', false);
+  if (error) throw error;
+}
+
+async function notificationsUnreadCount(userId) {
+  const { count, error } = await db
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('read', false);
+  if (error) return 0;
+  return count;
+}

@@ -4,7 +4,7 @@
 
 // ── Theme Toggle ──────────────────────────────────────────────
 const themeToggle = document.getElementById('themeToggle');
-const savedTheme = localStorage.getItem('atlas-theme') || 'light';
+const savedTheme = localStorage.getItem('atlas-theme') || 'dark';
 document.documentElement.setAttribute('data-theme', savedTheme);
 
 themeToggle.addEventListener('click', () => {
@@ -82,7 +82,7 @@ document.querySelectorAll('.region-tab').forEach(tab => {
 
     // Fly map to region centre
     const c = REGION_CENTERS[region];
-    if (c && atlasMap) atlasMap.flyTo([c.lat, c.lng], c.zoom, { duration: 1.2 });
+    if (c && atlasMap) atlasMap.flyTo({ center: [c.lng, c.lat], zoom: c.zoom, duration: 1200 });
   });
 });
 
@@ -221,7 +221,7 @@ function renderResults(query) {
       if (atlasMap) {
         document.getElementById('explore').scrollIntoView({ behavior: 'smooth' });
         setTimeout(() => {
-          atlasMap.flyTo([place.lat, place.lng], 10, { duration: 1.5 });
+          atlasMap.flyTo({ center: [place.lng, place.lat], zoom: 10, duration: 1500 });
           openPopupAtLocation(place.lat, place.lng, place.name);
         }, 600);
       }
@@ -283,11 +283,11 @@ locateBtn.addEventListener('click', () => {
       if (atlasMap) {
         document.getElementById('explore').scrollIntoView({ behavior: 'smooth' });
         setTimeout(() => {
-          atlasMap.flyTo([lat, lng], 12, { duration: 1.5 });
-          L.popup()
-            .setLatLng([lat, lng])
-            .setContent('<strong>You are here</strong>')
-            .openOn(atlasMap);
+          atlasMap.flyTo({ center: [lng, lat], zoom: 12, duration: 1500 });
+          new maplibregl.Popup({ closeButton: true })
+            .setLngLat([lng, lat])
+            .setHTML('<strong>You are here</strong>')
+            .addTo(atlasMap);
         }, 600);
       }
     },
@@ -305,65 +305,127 @@ locateBtn.addEventListener('click', () => {
   );
 });
 
-// ── Interactive Map (Leaflet) ─────────────────────────────────
+// ── Interactive Map (MapLibre GL — full US road network) ──────
 let atlasMap = null;
-let tileLayer = null;
 let searchPopup = null;
 
-const TILE_URLS = {
-  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-  dark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+const MAP_STYLES = {
+  light: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+  dark:  'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
 };
-const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>';
+
+const TYPE_COLORS = {
+  Mountain:  '#f97316',
+  Coastal:   '#0ea5e9',
+  Technical: '#ef4444',
+  Scenic:    '#22c55e',
+  Desert:    '#eab308',
+  Historic:  '#a855f7',
+  Canyon:    '#f59e0b',
+  'Off-road':'#6b7280',
+};
 
 function initMap() {
-  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+  const theme = document.documentElement.getAttribute('data-theme') || 'light';
 
-  atlasMap = L.map('atlasMap', {
-    center: [48, 14],
-    zoom: 4,
-    zoomControl: true,
-    scrollWheelZoom: false,
+  atlasMap = new maplibregl.Map({
+    container: 'atlasMap',
+    style: MAP_STYLES[theme] || MAP_STYLES.light,
+    center: [-98.35, 39.5],
+    zoom: 3.5,
+    minZoom: 2,
+    maxZoom: 18,
+    scrollZoom: false,
+    attributionControl: false,
   });
 
-  tileLayer = L.tileLayer(TILE_URLS[currentTheme], {
-    attribution: TILE_ATTR,
-    maxZoom: 19,
-  }).addTo(atlasMap);
+  atlasMap.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+  atlasMap.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
-  // Add markers for all featured places
-  const markerIcon = L.divIcon({
-    className: 'atlas-marker',
-    html: '<div class="atlas-marker-inner"></div>',
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-    popupAnchor: [0, -12],
-  });
+  // Drop a glowing pin for every curated place
+  atlasMap.on('load', () => {
+    PLACES.forEach(place => {
+      const color = TYPE_COLORS[place.type] || '#ef4444';
+      const el = document.createElement('div');
+      el.className = 'atlas-marker';
+      el.innerHTML = `<div class="atlas-marker-inner" style="background:${color};box-shadow:0 0 10px ${color}88"></div>`;
 
-  PLACES.forEach(place => {
-    L.marker([place.lat, place.lng], { icon: markerIcon })
-      .bindPopup(`<strong>${place.name}</strong><br><span style="color:#6b7280;font-size:0.85em">${place.type} · ${place.region}</span>`)
-      .addTo(atlasMap);
+      const popup = new maplibregl.Popup({ offset: 12, closeButton: false, maxWidth: '220px' })
+        .setHTML(`
+          <strong style="font-size:0.85rem;text-transform:uppercase;letter-spacing:0.04em">${place.name}</strong>
+          <div style="font-size:0.75rem;color:#6b7280;margin-top:2px">${place.type} · ${place.region}</div>
+          <a href="map.html?road=${encodeURIComponent(place.name)}&lat=${place.lat}&lng=${place.lng}"
+             style="font-size:0.72rem;font-weight:700;color:#ef4444;text-decoration:none;display:block;margin-top:6px">
+            View on map →
+          </a>
+        `);
+
+      new maplibregl.Marker({ element: el })
+        .setLngLat([place.lng, place.lat])
+        .setPopup(popup)
+        .addTo(atlasMap);
+
+      el.style.cursor = 'pointer';
+    });
+
+    // Highlight roads when hovering over them
+    atlasMap.on('mousemove', e => {
+      const features = atlasMap.queryRenderedFeatures(e.point);
+      const onRoad = features.some(f => f.geometry.type === 'LineString');
+      atlasMap.getCanvas().style.cursor = onRoad ? 'pointer' : '';
+    });
+
+    // Click any road on the map to see its name/type
+    atlasMap.on('click', e => {
+      if (e.originalEvent.target.closest('.atlas-marker')) return;
+      const features = atlasMap.queryRenderedFeatures(e.point);
+      const road = features.find(f =>
+        f.geometry.type === 'LineString' &&
+        f.properties &&
+        (f.properties.name || f.properties.ref || f.properties.class)
+      );
+      if (!road) return;
+      const p    = road.properties;
+      const name = p.name || p.ref || 'Road';
+      const cls  = (p.class || p.highway || '').replace(/_/g, ' ');
+      if (searchPopup) searchPopup.remove();
+      searchPopup = new maplibregl.Popup({ closeButton: true, offset: 6, maxWidth: '200px' })
+        .setLngLat(e.lngLat)
+        .setHTML(`
+          <strong style="font-size:0.82rem;text-transform:uppercase;letter-spacing:0.03em">${name}</strong>
+          ${cls ? `<div style="font-size:0.72rem;color:#6b7280;text-transform:capitalize;margin-top:2px">${cls}</div>` : ''}
+        `)
+        .addTo(atlasMap);
+    });
   });
 }
 
 function updateMapTiles(theme) {
-  if (!atlasMap || !tileLayer) return;
-  atlasMap.removeLayer(tileLayer);
-  tileLayer = L.tileLayer(TILE_URLS[theme] || TILE_URLS.light, {
-    attribution: TILE_ATTR,
-    maxZoom: 19,
-  }).addTo(atlasMap);
+  if (!atlasMap) return;
+  atlasMap.setStyle(MAP_STYLES[theme] || MAP_STYLES.light);
 }
 
 function openPopupAtLocation(lat, lng, name) {
   if (!atlasMap) return;
   if (searchPopup) searchPopup.remove();
-  searchPopup = L.popup()
-    .setLatLng([lat, lng])
-    .setContent(`<strong>${name}</strong>`)
-    .openOn(atlasMap);
+  atlasMap.flyTo({ center: [lng, lat], zoom: 8, duration: 1200 });
+  searchPopup = new maplibregl.Popup({ closeButton: true, offset: 6 })
+    .setLngLat([lng, lat])
+    .setHTML(`<strong style="font-size:0.85rem">${name}</strong>`)
+    .addTo(atlasMap);
 }
+
+// Wire up place card clicks immediately — navigate to map.html
+document.querySelectorAll('.place-card').forEach(card => {
+  const lat  = card.dataset.lat;
+  const lng  = card.dataset.lng;
+  const name = card.dataset.name;
+  const activate = () => {
+    window.location.href = `map.html?road=${encodeURIComponent(name)}&lat=${lat}&lng=${lng}`;
+  };
+  card.addEventListener('click', activate);
+  card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') activate(); });
+});
 
 // Init map once the section is near the viewport (lazy init)
 const mapSection = document.getElementById('explore');
@@ -371,22 +433,6 @@ const mapObserver = new IntersectionObserver(entries => {
   if (entries[0].isIntersecting) {
     initMap();
     mapObserver.disconnect();
-
-    // Wire up place card clicks after map is ready
-    document.querySelectorAll('.place-card').forEach(card => {
-      const lat = parseFloat(card.dataset.lat);
-      const lng = parseFloat(card.dataset.lng);
-      const name = card.dataset.name;
-
-      const activate = () => {
-        atlasMap.flyTo([lat, lng], 10, { duration: 1.2 });
-        openPopupAtLocation(lat, lng, name);
-        document.querySelector('.map-wrap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      };
-
-      card.addEventListener('click', activate);
-      card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') activate(); });
-    });
   }
 }, { threshold: 0.1 });
 mapObserver.observe(mapSection);
@@ -436,12 +482,12 @@ function validateForm() {
   return valid;
 }
 
-contactForm.addEventListener('submit', e => {
+contactForm.addEventListener('submit', async e => {
   e.preventDefault();
   if (!validateForm()) return;
 
   const btn = contactForm.querySelector('button[type="submit"]');
-  btn.textContent = 'Opening email…';
+  btn.textContent = 'Sending…';
   btn.disabled = true;
 
   const nameVal    = document.getElementById('name').value.trim();
@@ -450,18 +496,35 @@ contactForm.addEventListener('submit', e => {
   const subjectLabel = subjectEl.options[subjectEl.selectedIndex].text || 'General Inquiry';
   const messageVal = document.getElementById('message').value.trim();
 
-  const mailSubject = encodeURIComponent(`[Atlas] ${subjectLabel}`);
-  const mailBody    = encodeURIComponent(`From: ${nameVal} <${emailVal}>\n\n${messageVal}`);
+  try {
+    // Attempt to save to Supabase; fall back to mailto if config is placeholder
+    if (typeof db !== 'undefined' && !SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
+      await submitContact({
+        name:    nameVal,
+        email:   emailVal,
+        subject: subjectLabel,
+        message: messageVal,
+      });
+    } else {
+      // Fallback: open email client
+      const mailSubject = encodeURIComponent(`[Atlas] ${subjectLabel}`);
+      const mailBody    = encodeURIComponent(`From: ${nameVal} <${emailVal}>\n\n${messageVal}`);
+      window.location.href = `mailto:hello@atlas.app?subject=${mailSubject}&body=${mailBody}`;
+    }
 
-  window.location.href = `mailto:hello@atlas.app?subject=${mailSubject}&body=${mailBody}`;
-
-  setTimeout(() => {
     contactForm.reset();
-    btn.textContent = 'Send Message';
-    btn.disabled = false;
     document.getElementById('formSuccess').classList.add('visible');
     setTimeout(() => document.getElementById('formSuccess').classList.remove('visible'), 5000);
-  }, 600);
+  } catch (err) {
+    console.error('Contact form error:', err);
+    // Graceful fallback on DB error
+    const mailSubject = encodeURIComponent(`[Atlas] ${subjectLabel}`);
+    const mailBody    = encodeURIComponent(`From: ${nameVal} <${emailVal}>\n\n${messageVal}`);
+    window.location.href = `mailto:hello@atlas.app?subject=${mailSubject}&body=${mailBody}`;
+  } finally {
+    btn.textContent = 'Send Message';
+    btn.disabled = false;
+  }
 });
 
 ['name', 'email', 'message'].forEach(id => {

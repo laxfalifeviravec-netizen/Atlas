@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Atlas — Pricing Plans</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="pricing.css" />
 </head>
@@ -17,11 +20,19 @@
       </button>
       <ul class="nav-links" id="navLinks">
         <li><a href="index.html#features">Features</a></li>
-        <li><a href="index.html#explore">Explore Roads</a></li>
-        <li><a href="index.html#stats">Stats</a></li>
+        <li><a href="index.html#explore">Explore</a></li>
+        <li><a href="map.html">All Roads</a></li>
+        <li><a href="community.html">Community</a></li>
         <li><a href="pricing.html" class="active">Pricing</a></li>
         <li><a href="index.html#contact">Contact</a></li>
       </ul>
+      <div class="nav-auth">
+        <button class="btn btn-primary btn-sm" id="authBtn">Sign In</button>
+        <div class="user-menu hidden" id="userMenu">
+          <span class="user-email" id="userEmail"></span>
+          <button class="btn btn-secondary btn-sm" id="logoutBtn">Sign Out</button>
+        </div>
+      </div>
       <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
@@ -391,7 +402,7 @@
         <h2>Ready to find your next great drive?</h2>
         <p>Join 85,000 driving enthusiasts already exploring America's best roads with Atlas.</p>
         <div class="pricing-cta-actions">
-          <a href="#" class="btn btn-primary">Start Free — No Card Needed</a>
+          <a href="#" class="btn btn-primary" id="pricingCTABtn">Start Free — No Card Needed</a>
           <a href="index.html#explore" class="btn btn-secondary">Explore Roads First</a>
         </div>
       </div>
@@ -456,6 +467,60 @@
     </svg>
   </button>
 
+  <!-- Auth Modal -->
+  <div class="modal-overlay" id="authOverlay" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+    <div class="modal auth-modal">
+      <div class="modal-header">
+        <h3 id="authModalTitle">Welcome to Atlas</h3>
+        <button class="modal-close" id="authClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="signup">Create Account</button>
+          <button class="auth-tab" data-tab="login">Sign In</button>
+        </div>
+        <form id="signupForm">
+          <div class="form-group">
+            <label for="signupName">Full Name</label>
+            <input type="text" id="signupName" name="name" placeholder="Your name" required />
+          </div>
+          <div class="form-group">
+            <label for="signupEmail">Email</label>
+            <input type="email" id="signupEmail" name="email" placeholder="your@email.com" required />
+          </div>
+          <div class="form-group">
+            <label for="signupPassword">Password</label>
+            <input type="password" id="signupPassword" name="password" placeholder="Minimum 8 characters" required />
+          </div>
+          <p class="auth-error" id="signupError"></p>
+          <button type="submit" class="btn btn-primary btn-full">Create Free Account</button>
+        </form>
+        <form id="loginForm" class="hidden">
+          <div class="form-group">
+            <label for="loginEmail">Email</label>
+            <input type="email" id="loginEmail" name="email" placeholder="your@email.com" required />
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" name="password" placeholder="••••••••" required />
+          </div>
+          <p class="auth-error" id="loginError"></p>
+          <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="db.js"></script>
   <script src="pricing.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    // Wire pricing CTA to open signup
+    const cta = document.getElementById('pricingCTABtn');
+    if (cta) cta.addEventListener('click', e => { e.preventDefault(); openAuth('signup'); });
+  </script>
+  <script src="mobile-nav.js"></script>
 </body>
 </html>

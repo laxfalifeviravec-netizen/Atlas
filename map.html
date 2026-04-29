@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atlas — All Roads Map</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="map-page.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+</head>
+<body class="map-page">
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo">Atlas</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html#features">Features</a></li>
+        <li><a href="index.html#explore">Explore</a></li>
+        <li><a href="map.html" class="active">All Roads</a></li>
+        <li><a href="community.html">Community</a></li>
+        <li><a href="pricing.html">Pricing</a></li>
+        <li><a href="index.html#contact">Contact</a></li>
+      </ul>
+      <div class="nav-auth">
+        <button class="btn btn-primary btn-sm" id="authBtn">Sign In</button>
+        <div class="user-menu hidden" id="userMenu">
+          <span class="user-email" id="userEmail"></span>
+          <button class="btn btn-secondary btn-sm" id="logoutBtn">Sign Out</button>
+        </div>
+      </div>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Map layout -->
+  <div class="map-layout">
+
+    <!-- Sidebar -->
+    <aside class="map-sidebar" id="mapSidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">
+          <h2>All Roads</h2>
+          <span class="road-count" id="roadCount">45 roads</span>
+        </div>
+        <button class="sidebar-close" id="sidebarClose" aria-label="Close sidebar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Search -->
+      <div class="sidebar-search">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="sidebarSearch" placeholder="Search roads..." autocomplete="off" aria-label="Search roads" />
+        <button class="search-clear" id="searchClear" aria-label="Clear search" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Region filter -->
+      <div class="sidebar-filters">
+        <div class="filter-group">
+          <label class="filter-label">Region</label>
+          <div class="filter-chips" id="regionFilter">
+            <button class="chip active" data-value="">All</button>
+            <button class="chip" data-value="West Coast">West</button>
+            <button class="chip" data-value="Mountain West">Mountain</button>
+            <button class="chip" data-value="Southwest">SW</button>
+            <button class="chip" data-value="Southeast">SE</button>
+            <button class="chip" data-value="Northeast">NE</button>
+            <button class="chip" data-value="Midwest">Midwest</button>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Type</label>
+          <div class="filter-chips" id="typeFilter">
+            <button class="chip active" data-value="">All</button>
+            <button class="chip" data-value="Mountain">Mountain</button>
+            <button class="chip" data-value="Coastal">Coastal</button>
+            <button class="chip" data-value="Technical">Technical</button>
+            <button class="chip" data-value="Scenic">Scenic</button>
+            <button class="chip" data-value="Desert">Desert</button>
+            <button class="chip" data-value="Historic">Historic</button>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Road Style</label>
+          <div class="filter-chips" id="characterFilter">
+            <button class="chip active" data-value="">All</button>
+            <button class="chip" data-value="Curves">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11" style="margin-right:2px"><path d="M3 17c3-3 5-8 9-8s6 5 9 8"/></svg>
+              Curves
+            </button>
+            <button class="chip" data-value="Straightaways">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11" style="margin-right:2px"><line x1="3" y1="12" x2="21" y2="12"/></svg>
+              Straights
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Type legend -->
+      <div class="type-legend">
+        <div class="legend-item"><span class="legend-dot" style="background:#f97316"></span>Mountain</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#0ea5e9"></span>Coastal</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>Technical</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>Scenic</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#eab308"></span>Desert</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#a855f7"></span>Historic</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>Canyon</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#6b7280"></span>Off-road</div>
+      </div>
+
+      <!-- Featured Road of the Week -->
+      <div class="featured-road-card" id="featuredRoadCard"></div>
+
+      <!-- Location -->
+      <div class="sidebar-location" id="sidebarLocation">
+        <label class="filter-label">Your Location</label>
+        <form class="location-form" id="locationForm" autocomplete="off">
+          <div class="location-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" class="location-pin-icon">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <input type="text" id="locationInput" class="location-input" placeholder="City, state, or zip…" />
+            <button type="submit" class="location-go-btn" id="locationGoBtn">Go</button>
+          </div>
+          <p class="location-status" id="locationStatus"></p>
+        </form>
+        <button class="near-me-btn" id="nearMeBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15">
+            <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+          </svg>
+          Use My Location
+        </button>
+      </div>
+
+      <!-- Submit a road -->
+      <div class="sidebar-submit">
+        <button class="submit-road-btn" id="submitRoadBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Submit a Road
+        </button>
+      </div>
+
+      <!-- Route Builder -->
+      <div class="route-builder-panel" id="routeBuilderPanel" style="display:none">
+        <div class="route-builder-hdr">
+          <span class="route-builder-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            My Route &middot; <span id="routeStopCount">0</span> stops &middot; <span id="routeTotalDist">—</span>
+          </span>
+          <div class="route-builder-btns">
+            <button class="route-action-btn" id="shareRouteBtn" title="Copy link">Share</button>
+            <button class="route-action-btn route-clear-btn" id="clearRouteBtn" title="Clear">✕</button>
+          </div>
+        </div>
+        <div class="route-builder-list" id="routeBuilderList"></div>
+      </div>
+
+      <!-- Road list -->
+      <div class="road-list" id="roadList">
+        <!-- Populated by JS -->
+      </div>
+    </aside>
+
+    <!-- Map -->
+    <div class="map-main">
+      <div id="fullMap"></div>
+
+      <!-- Route info panel -->
+      <div class="route-panel" id="routePanel">
+        <div class="route-panel-header">
+          <div class="route-panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            <span id="routeDestName">Route</span>
+          </div>
+          <button class="route-panel-close" id="closeRoute">&times;</button>
+        </div>
+        <div class="route-stats">
+          <div class="route-stat">
+            <span class="route-stat-val" id="routeDist">—</span>
+            <span class="route-stat-label">to road</span>
+          </div>
+          <div class="route-stat-sep"></div>
+          <div class="route-stat">
+            <span class="route-stat-val" id="routeTime">—</span>
+            <span class="route-stat-label">drive time</span>
+          </div>
+          <a class="route-gmaps-btn" id="openGMaps" href="#" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+            Google Maps
+          </a>
+        </div>
+      </div>
+
+      <!-- Floating controls -->
+      <button class="map-sidebar-toggle" id="sidebarToggle" aria-label="Toggle road list">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+        <span>Roads</span>
+      </button>
+
+      <div class="map-stats-bar" id="mapStatsBar">
+        <span id="visibleCount">45 roads shown</span>
+        <button class="reset-filters-btn" id="resetFilters" style="display:none">Reset filters</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Map pick-location hint (shown when user is placing a pin) -->
+  <div class="map-pick-hint" id="mapPickHint">
+    <span>Click anywhere on the map to set the road location</span>
+    <button id="cancelPick">Cancel</button>
+  </div>
+
+  <!-- Submit a Road Modal -->
+  <div class="modal-overlay" id="submitRoadOverlay" role="dialog" aria-modal="true">
+    <div class="modal submit-road-modal">
+      <div class="modal-header">
+        <h3>Submit a Road</h3>
+        <button class="modal-close" id="submitRoadClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="submit-road-intro">Found a great drive that isn't on Atlas yet? Add it for the whole community.</p>
+        <form id="submitRoadForm" novalidate>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="srName">Road name <span class="req">*</span></label>
+              <input type="text" id="srName" name="name" placeholder="e.g. Tail of the Dragon" required />
+            </div>
+            <div class="form-group">
+              <label for="srDesignation">Highway / designation</label>
+              <input type="text" id="srDesignation" name="designation" placeholder="e.g. US-129" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="srState">State <span class="req">*</span></label>
+              <input type="text" id="srState" name="state" placeholder="e.g. North Carolina" required />
+            </div>
+            <div class="form-group">
+              <label for="srRegion">Region <span class="req">*</span></label>
+              <select id="srRegion" name="region" required>
+                <option value="">Select…</option>
+                <option value="West Coast">West Coast</option>
+                <option value="Mountain West">Mountain West</option>
+                <option value="Southwest">Southwest</option>
+                <option value="Southeast">Southeast</option>
+                <option value="Northeast">Northeast</option>
+                <option value="Midwest">Midwest</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="srType">Road type <span class="req">*</span></label>
+              <select id="srType" name="type" required>
+                <option value="">Select…</option>
+                <option value="Mountain">Mountain</option>
+                <option value="Coastal">Coastal</option>
+                <option value="Technical">Technical</option>
+                <option value="Scenic">Scenic</option>
+                <option value="Desert">Desert</option>
+                <option value="Historic">Historic</option>
+                <option value="Canyon">Canyon</option>
+                <option value="Off-road">Off-road</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="srDifficulty">Difficulty</label>
+              <select id="srDifficulty" name="difficulty">
+                <option value="">Select…</option>
+                <option value="Easy">Easy</option>
+                <option value="Moderate">Moderate</option>
+                <option value="Challenging">Challenging</option>
+                <option value="Expert">Expert</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="srLength">Length (miles)</label>
+              <input type="number" id="srLength" name="length" placeholder="e.g. 11" min="0" step="0.1" />
+            </div>
+            <div class="form-group">
+              <label for="srSeason">Best season</label>
+              <input type="text" id="srSeason" name="season" placeholder="e.g. Apr–Oct" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="srHighlight">What makes it special?</label>
+            <textarea id="srHighlight" name="highlight" rows="2" placeholder="One sentence that captures why drivers love this road…"></textarea>
+          </div>
+
+          <!-- Location picker -->
+          <div class="location-picker">
+            <div class="location-picker-header">
+              <label>Location <span class="req">*</span></label>
+              <button type="button" class="pick-map-btn" id="pickMapBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                  <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+                </svg>
+                Click map to place pin
+              </button>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <input type="number" id="srLat" name="lat" placeholder="Latitude e.g. 35.47" step="0.00001" required />
+              </div>
+              <div class="form-group">
+                <input type="number" id="srLng" name="lng" placeholder="Longitude e.g. -83.98" step="0.00001" required />
+              </div>
+            </div>
+          </div>
+
+          <p class="auth-error" id="submitRoadError"></p>
+          <button type="submit" class="btn btn-primary btn-full" id="submitRoadSubmit">Add Road to Atlas</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Condition Report Modal -->
+  <div class="modal-overlay" id="reportOverlay" role="dialog" aria-modal="true">
+    <div class="modal report-modal">
+      <div class="modal-header">
+        <h3>Report Road Condition</h3>
+        <button class="modal-close" id="reportClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="report-road-name" id="reportRoadName"></p>
+        <form id="reportForm">
+          <div class="form-group">
+            <label for="conditionType">Condition type</label>
+            <select id="conditionType" name="condition_type" required>
+              <option value="">Select a condition</option>
+              <option value="Clear">✅ Clear — all good</option>
+              <option value="Construction">🚧 Construction</option>
+              <option value="Snow">❄️ Snow</option>
+              <option value="Ice">🧊 Ice</option>
+              <option value="Flooding">🌊 Flooding</option>
+              <option value="Rockslide">⛰️ Rockslide / Debris</option>
+              <option value="Closure">🚫 Road closed</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="conditionDesc">Details <span style="font-weight:400;color:var(--color-text-muted)">(optional)</span></label>
+            <textarea id="conditionDesc" name="description" rows="3" placeholder="Any extra info for other drivers…"></textarea>
+          </div>
+          <p class="auth-error" id="reportError"></p>
+          <button type="submit" class="btn btn-primary btn-full">Submit Report</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Modal -->
+  <div class="modal-overlay" id="authOverlay" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+    <div class="modal auth-modal">
+      <div class="modal-header">
+        <h3 id="authModalTitle">Welcome to Atlas</h3>
+        <button class="modal-close" id="authClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">Sign In</button>
+          <button class="auth-tab" data-tab="signup">Create Account</button>
+        </div>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="loginEmail">Email</label>
+            <input type="email" id="loginEmail" name="email" placeholder="your@email.com" required />
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" name="password" placeholder="••••••••" required />
+          </div>
+          <p class="auth-error" id="loginError"></p>
+          <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        </form>
+        <form id="signupForm" class="hidden">
+          <div class="form-group">
+            <label for="signupName">Full Name</label>
+            <input type="text" id="signupName" name="name" placeholder="Your name" required />
+          </div>
+          <div class="form-group">
+            <label for="signupEmail">Email</label>
+            <input type="email" id="signupEmail" name="email" placeholder="your@email.com" required />
+          </div>
+          <div class="form-group">
+            <label for="signupPassword">Password</label>
+            <input type="password" id="signupPassword" name="password" placeholder="Minimum 8 characters" required />
+          </div>
+          <p class="auth-error" id="signupError"></p>
+          <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Photo Gallery Modal -->
+  <div class="modal-overlay" id="photoGalleryOverlay">
+    <div class="modal photo-gallery-modal">
+      <div class="modal-header">
+        <h3 id="photoGalleryTitle">Road Photos</h3>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <button class="btn btn-secondary btn-sm" id="photoUploadBtn">+ Add Photo</button>
+          <button class="modal-close" id="photoGalleryClose">&times;</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="photo-gallery-grid" id="photoGalleryGrid"></div>
+        <p class="photo-gallery-empty" id="photoGalleryEmpty" style="display:none">No photos yet — be the first to add one!</p>
+      </div>
+    </div>
+  </div>
+  <input type="file" id="photoFileInput" accept="image/*" style="display:none" />
+
+  <!-- Share toast -->
+  <div class="share-toast" id="shareToast">Link copied!</div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="db.js"></script>
+  <script src="map.js"></script>
+  <script src="auth.js"></script>
+  <script src="mobile-nav.js"></script>
+</body>
+</html>

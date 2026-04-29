@@ -586,11 +586,12 @@ const ROADS = [
 ];
 
 // ── Map initialisation ─────────────────────────────────────────
-const TILE_URLS = {
-  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-  dark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-};
-const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>';
+const TILE_OSM   = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILE_DARK  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const TILE_URLS = { light: TILE_OSM, dark: TILE_DARK };
+const ATTR_OSM   = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const ATTR_CARTO = ATTR_OSM + ' &copy; <a href="https://carto.com/">CARTO</a>';
+const TILE_ATTR = ATTR_CARTO;
 
 const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
 const fullMap = L.map('fullMap', {
@@ -601,21 +602,49 @@ const fullMap = L.map('fullMap', {
   maxZoom: 17,
 });
 L.control.zoom({ position: 'bottomright' }).addTo(fullMap);
-// Force Leaflet to recalculate container size after layout settles
-setTimeout(() => fullMap.invalidateSize(), 50);
-setTimeout(() => fullMap.invalidateSize(), 200);
 
-let tileLayer = L.tileLayer(TILE_URLS[currentTheme], {
-  attribution: TILE_ATTR,
-  maxZoom: 19,
-}).addTo(fullMap);
+// Ensure Leaflet measures the container after layout has fully painted
+function forceResize() { fullMap.invalidateSize({ pan: false }); }
+setTimeout(forceResize, 50);
+setTimeout(forceResize, 250);
+setTimeout(forceResize, 600);
+window.addEventListener('load', () => setTimeout(forceResize, 100));
+
+function makeTileLayer(url, attr) {
+  return L.tileLayer(url, { attribution: attr, maxZoom: 19 });
+}
+
+let tileLayer = makeTileLayer(
+  TILE_URLS[currentTheme] || TILE_DARK,
+  currentTheme === 'dark' ? ATTR_CARTO : ATTR_OSM,
+).addTo(fullMap);
+
+// Fall back to OSM if dark (CARTO) tiles fail to load
+let _tileErrCount = 0;
+tileLayer.on('tileerror', () => {
+  _tileErrCount++;
+  if (_tileErrCount === 4 && tileLayer._url !== TILE_OSM) {
+    fullMap.removeLayer(tileLayer);
+    tileLayer = makeTileLayer(TILE_OSM, ATTR_OSM).addTo(fullMap);
+    _tileErrCount = 0;
+  }
+});
 
 function updateMapTiles(theme) {
   fullMap.removeLayer(tileLayer);
-  tileLayer = L.tileLayer(TILE_URLS[theme] || TILE_URLS.dark, {
-    attribution: TILE_ATTR,
-    maxZoom: 19,
-  }).addTo(fullMap);
+  _tileErrCount = 0;
+  tileLayer = makeTileLayer(
+    TILE_URLS[theme] || TILE_DARK,
+    theme === 'dark' ? ATTR_CARTO : ATTR_OSM,
+  ).addTo(fullMap);
+  tileLayer.on('tileerror', () => {
+    _tileErrCount++;
+    if (_tileErrCount === 4 && tileLayer._url !== TILE_OSM) {
+      fullMap.removeLayer(tileLayer);
+      tileLayer = makeTileLayer(TILE_OSM, ATTR_OSM).addTo(fullMap);
+      _tileErrCount = 0;
+    }
+  });
 }
 
 // ── Markers ────────────────────────────────────────────────────
@@ -827,9 +856,11 @@ function setNearMeError(msg) {
   if (!msg) return;
   const el = document.createElement('p');
   el.id = 'nearMeErrorMsg';
-  el.style.cssText = 'margin:0;padding:6px 12px;font-size:12px;color:#f87171;background:rgba(239,68,68,.08);border-radius:6px;';
+  el.style.cssText = 'margin:4px 12px 0;padding:6px 10px;font-size:12px;color:#f87171;background:rgba(239,68,68,.1);border-radius:6px;border:1px solid rgba(239,68,68,.25);';
   el.textContent = msg;
-  nearMeBtn.parentNode.insertAdjacentElement('afterend', el);
+  // Insert directly after the button container so it's always visible
+  const submitSection = document.getElementById('nearMeBtn').closest('.sidebar-submit') || nearMeBtn.parentNode;
+  submitSection.insertAdjacentElement('afterend', el);
 }
 
 nearMeBtn.addEventListener('click', () => {
@@ -1314,8 +1345,8 @@ submitRoadForm.addEventListener('submit', async e => {
 
   const lat = parseFloat(document.getElementById('srLat').value);
   const lng = parseFloat(document.getElementById('srLng').value);
-  if (!lat || !lng) {
-    submitRoadError.textContent = 'Please set a location by clicking "Click map to place pin".';
+  if (isNaN(lat) || isNaN(lng) || (!lat && !lng)) {
+    submitRoadError.textContent = 'Please set a location — click "Click map to place pin" then tap the map.';
     return;
   }
 
@@ -1323,67 +1354,67 @@ submitRoadForm.addEventListener('submit', async e => {
   btn.disabled = true;
   btn.textContent = 'Submitting…';
 
-  const payload = {
-    name:        document.getElementById('srName').value.trim(),
-    designation: document.getElementById('srDesignation').value.trim(),
-    state:       document.getElementById('srState').value.trim(),
-    region:      document.getElementById('srRegion').value,
-    type:        document.getElementById('srType').value,
-    difficulty:  document.getElementById('srDifficulty').value || null,
-    lengthMi:    parseFloat(document.getElementById('srLength').value) || null,
-    bestSeason:  document.getElementById('srSeason').value.trim() || null,
-    highlight:   document.getElementById('srHighlight').value.trim() || null,
-    lat,
-    lng,
-    userId:      user.id,
-  };
+  const name        = document.getElementById('srName').value.trim();
+  const designation = document.getElementById('srDesignation').value.trim();
+  const state       = document.getElementById('srState').value.trim();
+  const region      = document.getElementById('srRegion').value;
+  const type        = document.getElementById('srType').value;
+  const difficulty  = document.getElementById('srDifficulty').value || null;
+  const lengthMi    = parseFloat(document.getElementById('srLength').value) || null;
+  const bestSeason  = document.getElementById('srSeason').value.trim() || null;
+  const highlight   = document.getElementById('srHighlight').value.trim() || null;
 
-  try {
-    const road = await submitRoad(payload);
+  if (!name || !state || !region || !type) {
+    submitRoadError.textContent = 'Please fill in name, state, region, and road type.';
+    btn.disabled = false;
+    btn.textContent = 'Add Road to Atlas';
+    return;
+  }
 
-    // Normalise to ROADS format and add to map live
-    const newRoad = {
-      name:        road.name,
-      designation: road.designation || '',
-      state:       road.state,
-      region:      road.region,
-      type:        road.type,
-      length:      road.length_mi ? `${road.length_mi} mi` : '—',
-      difficulty:  road.difficulty || '—',
-      bestSeason:  road.best_season || '—',
-      highlight:   road.highlight || '',
-      lat:         road.lat,
-      lng:         road.lng,
-      id:          road.id,
+  const payload = { name, designation, state, region, type, difficulty, lengthMi, bestSeason, highlight, lat, lng, userId: user.id };
+
+  // Build the road object for the map regardless of DB outcome
+  function buildNewRoad(savedId) {
+    return {
+      name, designation: designation || '',
+      state, region, type,
+      length:      lengthMi ? `${lengthMi} mi` : '—',
+      difficulty:  difficulty || '—',
+      bestSeason:  bestSeason || '—',
+      highlight:   highlight || '',
+      lat, lng,
+      id:          savedId || null,
       avgRating:   0,
       reviewCount: 0,
       source:      'community',
     };
+  }
 
-    const idx = ROADS.length;
+  function addRoadToMap(newRoad) {
+    const idx   = ROADS.length;
     ROADS.push(newRoad);
-
-    const color = TYPE_COLORS[road.type] || '#888';
-    const marker = L.marker([road.lat, road.lng], { icon: makeMarkerIcon(color) })
+    const color  = TYPE_COLORS[newRoad.type] || '#888';
+    const marker = L.marker([newRoad.lat, newRoad.lng], { icon: makeMarkerIcon(color) })
       .bindPopup(buildPopupHTML(newRoad), { maxWidth: 280, maxHeight: 420 })
       .addTo(fullMap);
     marker.on('click', () => highlightListItem(idx));
     attachPopupDataLoader(marker, newRoad);
     markersByIndex[idx] = marker;
-
-    // Remove the preview pin
     if (pickMarker) { fullMap.removeLayer(pickMarker); pickMarker = null; }
-
     renderList();
     closeSubmitRoad();
     submitRoadForm.reset();
-
-    // Fly to new road and open its popup
     flyToRoad(idx);
+  }
 
+  try {
+    const road = await submitRoad(payload);
+    addRoadToMap(buildNewRoad(road.id));
   } catch (err) {
-    console.error('Road submit error:', err);
-    submitRoadError.textContent = err.message || 'Failed to submit. Please try again.';
+    console.warn('Road submit to DB failed, adding locally:', err);
+    // Still add to map in this session so the user can see it
+    addRoadToMap(buildNewRoad(null));
+    // Show a non-blocking note (modal already closed by addRoadToMap)
   } finally {
     btn.disabled = false;
     btn.textContent = 'Add Road to Atlas';

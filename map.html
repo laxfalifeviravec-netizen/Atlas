@@ -130,6 +130,9 @@
         <div class="legend-item"><span class="legend-dot" style="background:#6b7280"></span>Off-road</div>
       </div>
 
+      <!-- Featured Road of the Week -->
+      <div class="featured-road-card" id="featuredRoadCard"></div>
+
       <!-- Location -->
       <div class="sidebar-location" id="sidebarLocation">
         <label class="filter-label">Your Location</label>
@@ -159,6 +162,21 @@
           </svg>
           Submit a Road
         </button>
+      </div>
+
+      <!-- Route Builder -->
+      <div class="route-builder-panel" id="routeBuilderPanel" style="display:none">
+        <div class="route-builder-hdr">
+          <span class="route-builder-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            My Route &middot; <span id="routeStopCount">0</span> stops &middot; <span id="routeTotalDist">—</span>
+          </span>
+          <div class="route-builder-btns">
+            <button class="route-action-btn" id="shareRouteBtn" title="Copy link">Share</button>
+            <button class="route-action-btn route-clear-btn" id="clearRouteBtn" title="Clear">✕</button>
+          </div>
+        </div>
+        <div class="route-builder-list" id="routeBuilderList"></div>
       </div>
 
       <!-- Road list -->
@@ -410,6 +428,27 @@
       </div>
     </div>
   </div>
+
+  <!-- Photo Gallery Modal -->
+  <div class="modal-overlay" id="photoGalleryOverlay">
+    <div class="modal photo-gallery-modal">
+      <div class="modal-header">
+        <h3 id="photoGalleryTitle">Road Photos</h3>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <button class="btn btn-secondary btn-sm" id="photoUploadBtn">+ Add Photo</button>
+          <button class="modal-close" id="photoGalleryClose">&times;</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="photo-gallery-grid" id="photoGalleryGrid"></div>
+        <p class="photo-gallery-empty" id="photoGalleryEmpty" style="display:none">No photos yet — be the first to add one!</p>
+      </div>
+    </div>
+  </div>
+  <input type="file" id="photoFileInput" accept="image/*" style="display:none" />
+
+  <!-- Share toast -->
+  <div class="share-toast" id="shareToast">Link copied!</div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>

@@ -592,3 +592,43 @@ async function uploadAvatar(userId, file) {
   if (updateErr) throw new Error(updateErr.message);
   return publicUrl;
 }
+
+// ── Drive Log ─────────────────────────────────────────────────
+
+async function markRoadDriven(userId, roadId) {
+  const { error } = await db.from('road_logs')
+    .upsert({ user_id: userId, road_id: roadId }, { onConflict: 'user_id,road_id' });
+  if (error) throw error;
+}
+
+async function unmarkRoadDriven(userId, roadId) {
+  const { error } = await db.from('road_logs').delete()
+    .eq('user_id', userId).eq('road_id', roadId);
+  if (error) throw error;
+}
+
+// ── Road Photos ───────────────────────────────────────────────
+
+async function getRoadPhotos(roadId) {
+  const { data, error } = await db.from('road_photos')
+    .select('id, photo_url, caption, created_at, profiles(username, full_name)')
+    .eq('road_id', roadId)
+    .order('created_at', { ascending: false })
+    .limit(12);
+  if (error) throw error;
+  return data || [];
+}
+
+async function addRoadPhoto(userId, roadId, file) {
+  const ext  = file.name.split('.').pop();
+  const path = `road-photos/${roadId}/${userId}-${Date.now()}.${ext}`;
+  const { data: up, error: upErr } = await db.storage
+    .from('community-media').upload(path, file, { upsert: false });
+  if (upErr) throw new Error(upErr.message);
+  const { data: { publicUrl } } = db.storage.from('community-media').getPublicUrl(up.path);
+  const { data, error } = await db.from('road_photos')
+    .insert({ road_id: roadId, user_id: userId, photo_url: publicUrl })
+    .select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}

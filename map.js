@@ -36,6 +36,41 @@ const TYPE_COLORS = {
   'Off-road':'#6b7280',
 };
 
+const TYPE_CHARACTER = {
+  Mountain:   'Curves',
+  Technical:  'Curves',
+  Canyon:     'Curves',
+  Coastal:    'Curves',
+  Scenic:     'Mixed',
+  'Off-road': 'Mixed',
+  Desert:     'Straightaways',
+  Historic:   'Straightaways',
+};
+
+const TYPE_BEST_TIME = {
+  Mountain:  { best: 'Weekday mornings',         avoid: 'Summer & holiday weekends' },
+  Coastal:   { best: 'Early weekday mornings',   avoid: 'Summer beach weekends' },
+  Technical: { best: 'Any weekday',              avoid: 'Weekend afternoons' },
+  Scenic:    { best: 'Golden hour, weekdays',    avoid: 'Peak fall-foliage weekends' },
+  Desert:    { best: 'Early morning or dusk',    avoid: 'Summer midday (100°F+)' },
+  Historic:  { best: 'Spring & fall weekdays',   avoid: 'Summer holiday weekends' },
+  Canyon:    { best: 'Weekday mornings',         avoid: 'After heavy rain (rockslides)' },
+  'Off-road':{ best: 'Dry season only',          avoid: 'After heavy rain' },
+};
+
+// ── Drive Log (localStorage-backed, optional Supabase sync) ───
+const _drivenSet  = new Set(JSON.parse(localStorage.getItem('atlas-driven')      || '[]'));
+const _savedSet   = new Set(JSON.parse(localStorage.getItem('atlas-bucket')      || '[]'));
+const _drivenMeta = JSON.parse(localStorage.getItem('atlas-driven-meta') || '{}');
+
+function _persistDriven() {
+  localStorage.setItem('atlas-driven',      JSON.stringify([..._drivenSet]));
+  localStorage.setItem('atlas-driven-meta', JSON.stringify(_drivenMeta));
+}
+function _persistSaved() {
+  localStorage.setItem('atlas-bucket', JSON.stringify([..._savedSet]));
+}
+
 const ROADS = [
   // ── West Coast ──────────────────────────────────────────────
   {
@@ -660,6 +695,9 @@ function makeMarkerIcon(color) {
   });
 }
 
+// ── Route Builder state (declared here so buildPopupHTML can ref it) ──
+let routeRoads = []; // array of road names
+
 // ── Weather (Open-Meteo, no API key) ──────────────────────────
 const WMO_CODES = {
   0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast',
@@ -684,21 +722,34 @@ async function fetchWeather(lat, lng) {
   return res.json();
 }
 
+function _safeRoadName(name) { return name.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
 function buildPopupHTML(road) {
-  const color = TYPE_COLORS[road.type] || '#888';
+  const color   = TYPE_COLORS[road.type] || '#888';
+  const driven  = _drivenSet.has(road.name);
+  const saved   = _savedSet.has(road.name);
+  const roadIdx = ROADS.findIndex(r => r.name === road.name);
+  const inRoute = routeRoads.includes(road.name);
+  const n       = _safeRoadName(road.name);
+
   const rating = road.avgRating > 0
     ? `<span class="road-popup-rating">★ ${parseFloat(road.avgRating).toFixed(1)} <em>(${road.reviewCount})</em></span>`
     : '';
-  const saveBtn = road.id
-    ? `<button class="road-popup-save" data-road-id="${road.id}" onclick="handleSave(${road.id},this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-        </svg> Save
-       </button>`
-    : '';
+
+  const bt = TYPE_BEST_TIME[road.type];
+  const bestTime = bt ? `
+    <div class="road-popup-best-time">
+      <span class="bt-icon">🕐</span>
+      <div><span class="bt-best">${bt.best}</span><span class="bt-avoid">Avoid: ${bt.avoid}</span></div>
+    </div>` : '';
+
   const reportBtn = road.id
-    ? `<button class="road-popup-report" onclick="openReportCondition(${road.id}, '${road.name.replace(/'/g,"\\'")}')">+ Report condition</button>`
+    ? `<button class="road-popup-report" onclick="openReportCondition(${road.id},'${n}')">+ Report condition</button>`
     : '';
+
+  const photoId = road.id ? `road-photos-${road.id}` : `road-photos-static`;
+  const onClickPhotos = `openPhotoGallery('${n}',${road.id || 'null'})`;
+
   return `
     <div class="road-popup">
       <div class="road-popup-name">${road.name}</div>
@@ -706,6 +757,7 @@ function buildPopupHTML(road) {
       <div class="road-popup-badges">
         <span class="road-popup-badge" style="background:${color}">${road.type}</span>
         <span class="road-popup-badge" style="background:#374151">${road.region}</span>
+        <span class="road-popup-badge" style="background:#1f2937">${TYPE_CHARACTER[road.type] || 'Mixed'}</span>
       </div>
       ${rating}
       <div class="road-popup-row">
@@ -713,6 +765,7 @@ function buildPopupHTML(road) {
         <span class="road-popup-stat">${road.difficulty}</span>
         <span class="road-popup-stat">${road.bestSeason}</span>
       </div>
+      ${bestTime}
       <div class="road-popup-weather" data-lat="${road.lat}" data-lng="${road.lng}">
         <span class="weather-loading">Loading weather…</span>
       </div>
@@ -725,7 +778,23 @@ function buildPopupHTML(road) {
           <span class="alerts-loading">Checking…</span>
         </div>
       </div>
-      ${saveBtn}
+      <div class="popup-action-row">
+        <button class="popup-btn popup-driven-btn${driven ? ' active' : ''}"
+          onclick="handleDriven('${n}',this)" title="${driven ? 'Remove from log' : 'Mark as driven'}">
+          ${driven ? '✓ Driven' : '+ Log Drive'}
+        </button>
+        <button class="popup-btn popup-save-btn${saved ? ' active' : ''}"
+          onclick="handleBucket('${n}',this)" title="${saved ? 'Remove from bucket list' : 'Add to bucket list'}">
+          ${saved ? '★ Saved' : '☆ Bucket List'}
+        </button>
+        <button class="popup-btn popup-route-btn${inRoute ? ' active' : ''}"
+          onclick="toggleRouteRoad('${n}',this)" title="${inRoute ? 'Remove from route' : 'Add to route'}">
+          ${inRoute ? '🗺 In Route' : '+ Route'}
+        </button>
+      </div>
+      <button class="popup-photos-btn" onclick="${onClickPhotos}">
+        📷 <span id="${photoId}">Photos</span>
+      </button>
     </div>
   `;
 }
@@ -781,22 +850,255 @@ function attachPopupDataLoader(marker, road) {
 
 async function handleSave(roadId, btn) {
   if (!window.__atlasUser) {
-    // Trigger auth modal
-    document.getElementById('authBtn') && document.getElementById('authBtn').click();
+    document.getElementById('authBtn')?.click();
     return;
   }
   try {
     btn.disabled = true;
-    const saved = await toggleSave(window.__atlasUser.id, roadId);
-    btn.innerHTML = saved
-      ? `<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Saved`
-      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Save`;
-  } catch (e) {
-    console.error('Save error:', e);
-  } finally {
+    await toggleSave(window.__atlasUser.id, roadId);
+  } catch { /* silent */ } finally {
     btn.disabled = false;
   }
 }
+
+// ── Drive Log ─────────────────────────────────────────────────
+function handleDriven(roadName, btn) {
+  const road = ROADS.find(r => r.name === roadName);
+  if (_drivenSet.has(roadName)) {
+    _drivenSet.delete(roadName);
+    delete _drivenMeta[roadName];
+    btn.textContent = '+ Log Drive';
+    btn.classList.remove('active');
+  } else {
+    _drivenSet.add(roadName);
+    _drivenMeta[roadName] = {
+      type:   road?.type   || '',
+      region: road?.region || '',
+      miles:  road ? parseFloat(road.length) || 0 : 0,
+    };
+    btn.textContent = '✓ Driven';
+    btn.classList.add('active');
+  }
+  _persistDriven();
+  // Sync to Supabase if possible
+  if (window.__atlasUser && road?.id) {
+    if (_drivenSet.has(roadName)) markRoadDriven(window.__atlasUser.id, road.id).catch(() => {});
+    else unmarkRoadDriven(window.__atlasUser.id, road.id).catch(() => {});
+  }
+}
+
+function handleBucket(roadName, btn) {
+  if (_savedSet.has(roadName)) {
+    _savedSet.delete(roadName);
+    btn.textContent = '☆ Bucket List';
+    btn.classList.remove('active');
+  } else {
+    _savedSet.add(roadName);
+    btn.textContent = '★ Saved';
+    btn.classList.add('active');
+  }
+  _persistSaved();
+}
+
+// ── Route Builder ─────────────────────────────────────────────
+function toggleRouteRoad(roadName, btn) {
+  if (routeRoads.includes(roadName)) {
+    routeRoads = routeRoads.filter(n => n !== roadName);
+    btn.textContent = '+ Route';
+    btn.classList.remove('active');
+  } else {
+    routeRoads.push(roadName);
+    btn.textContent = '🗺 In Route';
+    btn.classList.add('active');
+  }
+  renderRouteBuilder();
+}
+
+function renderRouteBuilder() {
+  const panel = document.getElementById('routeBuilderPanel');
+  if (!panel) return;
+  if (!routeRoads.length) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+
+  document.getElementById('routeStopCount').textContent = routeRoads.length;
+
+  // Total road miles + travel between them
+  let travelMi = 0;
+  let driveMi  = 0;
+  routeRoads.forEach((name, i) => {
+    const road = ROADS.find(r => r.name === name);
+    if (!road) return;
+    driveMi += parseFloat(road.length) || 0;
+    if (i > 0) {
+      const prev = ROADS.find(r => r.name === routeRoads[i - 1]);
+      if (prev) travelMi += haversine(prev.lat, prev.lng, road.lat, road.lng);
+    }
+  });
+  const total = Math.round(driveMi + travelMi);
+  document.getElementById('routeTotalDist').textContent = `~${total} mi`;
+
+  document.getElementById('routeBuilderList').innerHTML = routeRoads.map((name, i) => {
+    const road = ROADS.find(r => r.name === name);
+    const color = road ? (TYPE_COLORS[road.type] || '#888') : '#888';
+    return `
+      <div class="route-stop">
+        <span class="route-stop-num">${i + 1}</span>
+        <span class="route-stop-dot" style="background:${color}"></span>
+        <span class="route-stop-name">${name}</span>
+        <button class="route-stop-remove" onclick="removeRouteStop('${_safeRoadName(name)}')">×</button>
+      </div>`;
+  }).join('');
+}
+
+function removeRouteStop(roadName) {
+  routeRoads = routeRoads.filter(n => n !== roadName);
+  // Re-open popup if it's for this road to update button state
+  fullMap.eachLayer(l => {
+    if (l.getPopup && l.getPopup()?.isOpen()) {
+      const road = ROADS.find(r => r.name === roadName);
+      if (road) {
+        const idx = ROADS.indexOf(road);
+        if (markersByIndex[idx]) markersByIndex[idx].setPopupContent(buildPopupHTML(road));
+      }
+    }
+  });
+  renderRouteBuilder();
+}
+
+function shareRoute() {
+  if (!routeRoads.length) return;
+  const url = new URL(window.location.href);
+  url.searchParams.set('route', routeRoads.join('|'));
+  navigator.clipboard?.writeText(url.toString()).then(() => showToast('Link copied!')).catch(() => {
+    prompt('Copy this route link:', url.toString());
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('shareToast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('visible');
+  setTimeout(() => t.classList.remove('visible'), 2200);
+}
+
+function loadRouteFromURL() {
+  const param = new URLSearchParams(window.location.search).get('route');
+  if (!param) return;
+  const names = param.split('|').filter(Boolean);
+  names.forEach(name => {
+    const road = ROADS.find(r => r.name === name);
+    if (road) routeRoads.push(road.name);
+  });
+  if (routeRoads.length) renderRouteBuilder();
+}
+
+// ── Featured Road of the Week ─────────────────────────────────
+function renderFeaturedRoad() {
+  const el = document.getElementById('featuredRoadCard');
+  if (!el || !ROADS.length) return;
+  const weekNum  = Math.floor(Date.now() / (7 * 24 * 3600 * 1000));
+  const road     = ROADS[weekNum % ROADS.length];
+  const color    = TYPE_COLORS[road.type] || '#888';
+  const idx      = ROADS.indexOf(road);
+  el.innerHTML = `
+    <div class="featured-label">⭐ Road of the Week</div>
+    <div class="featured-name">${road.name}</div>
+    <div class="featured-sub">${road.designation} · ${road.state}</div>
+    <div class="featured-badges">
+      <span class="featured-badge" style="background:${color}">${road.type}</span>
+      <span class="featured-badge" style="background:#374151">${road.difficulty}</span>
+    </div>
+    ${road.highlight ? `<div class="featured-highlight">"${road.highlight}"</div>` : ''}
+    <button class="featured-view-btn" onclick="flyToRoad(${idx})">View on Map →</button>
+  `;
+}
+
+// ── Photo Gallery ─────────────────────────────────────────────
+let _photoRoadId   = null;
+let _photoRoadName = null;
+
+async function openPhotoGallery(roadName, roadId) {
+  _photoRoadName = roadName;
+  _photoRoadId   = roadId;
+
+  const overlay = document.getElementById('photoGalleryOverlay');
+  const title   = document.getElementById('photoGalleryTitle');
+  const grid    = document.getElementById('photoGalleryGrid');
+  const empty   = document.getElementById('photoGalleryEmpty');
+  if (!overlay) return;
+
+  title.textContent = roadName;
+  grid.innerHTML = '<div class="feed-loading"><div class="feed-loading-spin"></div>Loading…</div>';
+  empty.style.display = 'none';
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  if (!roadId) {
+    grid.innerHTML = '';
+    empty.textContent = 'Photos are available for community-submitted roads. Sign in and submit this road to add photos.';
+    empty.style.display = '';
+    return;
+  }
+
+  try {
+    const photos = typeof getRoadPhotos === 'function' ? await getRoadPhotos(roadId) : [];
+    if (!photos.length) {
+      grid.innerHTML = '';
+      empty.textContent = 'No photos yet — be the first to add one!';
+      empty.style.display = '';
+    } else {
+      empty.style.display = 'none';
+      grid.innerHTML = photos.map(p => {
+        const user = p.profiles?.full_name || p.profiles?.username || 'Driver';
+        return `<div class="photo-thumb">
+          <img src="${p.photo_url}" alt="road photo" loading="lazy" />
+          <div class="photo-thumb-credit">${user}</div>
+        </div>`;
+      }).join('');
+    }
+    // Update photo count button in popup
+    const countEl = document.getElementById(`road-photos-${roadId}`);
+    if (countEl) countEl.textContent = photos.length ? `${photos.length} Photos` : 'Photos';
+  } catch {
+    grid.innerHTML = '';
+    empty.textContent = 'Could not load photos.';
+    empty.style.display = '';
+  }
+}
+
+function closePhotoGallery() {
+  document.getElementById('photoGalleryOverlay')?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('photoGalleryClose')?.addEventListener('click', closePhotoGallery);
+document.getElementById('photoGalleryOverlay')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('photoGalleryOverlay')) closePhotoGallery();
+});
+
+document.getElementById('photoUploadBtn')?.addEventListener('click', () => {
+  if (!window.__atlasUser) { document.getElementById('authBtn')?.click(); return; }
+  document.getElementById('photoFileInput')?.click();
+});
+
+document.getElementById('photoFileInput')?.addEventListener('change', async function () {
+  const file = this.files?.[0];
+  if (!file || !_photoRoadId || !window.__atlasUser) return;
+  this.value = '';
+  const btn = document.getElementById('photoUploadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading…';
+  try {
+    await addRoadPhoto(window.__atlasUser.id, _photoRoadId, file);
+    openPhotoGallery(_photoRoadName, _photoRoadId); // refresh
+  } catch (e) {
+    alert('Upload failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '+ Add Photo';
+  }
+});
 
 ROADS.forEach((road, i) => {
   const color = TYPE_COLORS[road.type] || '#888';
@@ -822,18 +1124,6 @@ const roadList     = document.getElementById('roadList');
 const roadCount    = document.getElementById('roadCount');
 const visibleCount = document.getElementById('visibleCount');
 const resetBtn     = document.getElementById('resetFilters');
-
-// Road style character derived from road type
-const TYPE_CHARACTER = {
-  Mountain:   'Curves',
-  Technical:  'Curves',
-  Canyon:     'Curves',
-  Coastal:    'Curves',
-  Scenic:     'Mixed',
-  'Off-road': 'Mixed',
-  Desert:     'Straightaways',
-  Historic:   'Straightaways',
-};
 
 let filteredRoads   = [...ROADS];
 let activeItem      = null;
@@ -1178,6 +1468,16 @@ resetBtn.addEventListener('click', resetAll);
 
 // ── Initial render ─────────────────────────────────────────────
 renderList();
+renderFeaturedRoad();
+loadRouteFromURL();
+
+document.getElementById('shareRouteBtn')?.addEventListener('click', shareRoute);
+document.getElementById('clearRouteBtn')?.addEventListener('click', () => {
+  routeRoads = [];
+  renderRouteBuilder();
+  // Refresh any open popup
+  fullMap.eachLayer(l => { if (l.getPopup?.()?.isOpen()) l.closePopup(); });
+});
 
 // ── Deep-link: fly to road from URL params ─────────────────────
 let _pendingURLRoad = null;

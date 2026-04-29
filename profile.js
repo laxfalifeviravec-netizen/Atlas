@@ -245,6 +245,7 @@ async function init() {
   loadProfileGarage();
   loadProfileGroups();
   loadFollowStats();
+  loadChallenges();
 }
 
 function renderHeader(profile) {
@@ -369,8 +370,81 @@ async function loadProfileGroups() {
   }
 }
 
+// ── Challenges ────────────────────────────────────────────────────
+const CHALLENGES = [
+  { id: 'first',     icon: '⭐', name: 'First Drive',       desc: 'Log your first road',                       goal: 1,
+    check: m => Math.min(Object.keys(m).length, 1) },
+  { id: 'roads5',    icon: '🏁', name: 'Road Tripper',      desc: 'Drive 5 roads total',                       goal: 5,
+    check: m => Math.min(Object.keys(m).length, 5) },
+  { id: 'roads10',   icon: '🔥', name: 'Road Veteran',      desc: 'Drive 10 roads total',                      goal: 10,
+    check: m => Math.min(Object.keys(m).length, 10) },
+  { id: 'roads25',   icon: '🏆', name: 'Atlas Legend',      desc: 'Drive 25 roads',                            goal: 25,
+    check: m => Math.min(Object.keys(m).length, 25) },
+  { id: 'west5',     icon: '🌊', name: 'West Coast Explorer',desc: 'Drive 5 West Coast roads',                  goal: 5,
+    check: m => Math.min(Object.values(m).filter(r => r.region === 'West Coast').length, 5) },
+  { id: 'mountain3', icon: '⛰️', name: 'Mountain Master',   desc: 'Drive 3 mountain roads',                    goal: 3,
+    check: m => Math.min(Object.values(m).filter(r => r.type === 'Mountain').length, 3) },
+  { id: 'curves5',   icon: '🏎️', name: 'Apex Hunter',       desc: 'Drive 5 twisty roads',                      goal: 5,
+    check: m => Math.min(Object.values(m).filter(r => ['Mountain','Technical','Canyon','Coastal'].includes(r.type)).length, 5) },
+  { id: 'allregions',icon: '🗺️', name: 'All-American',      desc: 'Drive a road in every region',              goal: 6,
+    check: m => new Set(Object.values(m).map(r => r.region).filter(Boolean)).size },
+  { id: 'desert2',   icon: '🌵', name: 'Desert Rat',        desc: 'Drive 2 desert roads',                      goal: 2,
+    check: m => Math.min(Object.values(m).filter(r => r.type === 'Desert').length, 2) },
+  { id: 'scenic3',   icon: '🌄', name: 'Scenic Seeker',     desc: 'Drive 3 scenic roads',                      goal: 3,
+    check: m => Math.min(Object.values(m).filter(r => r.type === 'Scenic').length, 3) },
+];
+
+function loadChallenges() {
+  const wrap = document.getElementById('challengesWrap');
+  if (!wrap) return;
+
+  const meta   = JSON.parse(localStorage.getItem('atlas-driven-meta') || '{}');
+  const driven = Object.keys(meta).length;
+  const miles  = Object.values(meta).reduce((s, r) => s + (r.miles || 0), 0);
+
+  // Update the driven stat
+  updateStat('driven', driven);
+
+  if (!driven) {
+    wrap.innerHTML = `
+      <div class="challenges-empty">
+        <div class="challenges-empty-icon">🏁</div>
+        <h3>No drives logged yet</h3>
+        <p>Open the <a href="map.html">All Roads map</a>, click a road, and tap <strong>Log Drive</strong> to start earning badges.</p>
+      </div>`;
+    return;
+  }
+
+  const summary = `
+    <div class="challenges-summary">
+      <div class="challenge-stat"><span>${driven}</span><label>Roads driven</label></div>
+      <div class="challenge-stat"><span>${Math.round(miles)}</span><label>Miles logged</label></div>
+      <div class="challenge-stat"><span>${CHALLENGES.filter(c => c.check(meta) >= c.goal).length}</span><label>Badges earned</label></div>
+    </div>`;
+
+  const cards = CHALLENGES.map(c => {
+    const progress = c.check(meta);
+    const done     = progress >= c.goal;
+    const pct      = Math.min(100, Math.round((progress / c.goal) * 100));
+    return `
+      <div class="challenge-card${done ? ' done' : ''}">
+        <div class="challenge-icon">${c.icon}</div>
+        <div class="challenge-info">
+          <div class="challenge-name">${c.name}${done ? ' <span class="challenge-complete">✓</span>' : ''}</div>
+          <div class="challenge-desc">${c.desc}</div>
+          <div class="challenge-bar-wrap">
+            <div class="challenge-bar" style="width:${pct}%"></div>
+          </div>
+          <div class="challenge-progress">${progress} / ${c.goal}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  wrap.innerHTML = summary + `<div class="challenges-grid">${cards}</div>`;
+}
+
 // ── Stat counters ─────────────────────────────────────────────────
-const statValues = { posts: '—', followers: '—', following: '—', cars: '—', groups: '—' };
+const statValues = { posts: '—', driven: '—', followers: '—', following: '—', cars: '—', groups: '—' };
 function updateStat(key, val) {
   statValues[key] = val;
   const statsEl = document.getElementById('profileStats');

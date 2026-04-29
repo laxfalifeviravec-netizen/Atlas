@@ -823,13 +823,26 @@ const roadCount    = document.getElementById('roadCount');
 const visibleCount = document.getElementById('visibleCount');
 const resetBtn     = document.getElementById('resetFilters');
 
-let filteredRoads = [...ROADS];
-let activeItem    = null;
-let searchQuery   = '';
-let regionFilter  = '';
-let typeFilter    = '';
+// Road style character derived from road type
+const TYPE_CHARACTER = {
+  Mountain:   'Curves',
+  Technical:  'Curves',
+  Canyon:     'Curves',
+  Coastal:    'Curves',
+  Scenic:     'Mixed',
+  'Off-road': 'Mixed',
+  Desert:     'Straightaways',
+  Historic:   'Straightaways',
+};
 
-// ── Near Me & Directions ───────────────────────────────────────
+let filteredRoads   = [...ROADS];
+let activeItem      = null;
+let searchQuery     = '';
+let regionFilter    = '';
+let typeFilter      = '';
+let characterFilter = '';
+
+// ── Location & Near Me ─────────────────────────────────────────
 let userLat = null, userLng = null;
 let userMarker  = null;
 let routeLayer  = null;
@@ -850,72 +863,114 @@ function haversine(lat1, lng1, lat2, lng2) {
 
 const NEAR_ME_ICON_HTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>`;
 
-function setNearMeError(msg) {
-  const existing = document.getElementById('nearMeErrorMsg');
-  if (existing) existing.remove();
-  if (!msg) return;
-  const el = document.createElement('p');
-  el.id = 'nearMeErrorMsg';
-  el.style.cssText = 'margin:4px 12px 0;padding:6px 10px;font-size:12px;color:#f87171;background:rgba(239,68,68,.1);border-radius:6px;border:1px solid rgba(239,68,68,.25);';
-  el.textContent = msg;
-  // Insert directly after the button container so it's always visible
-  const submitSection = document.getElementById('nearMeBtn').closest('.sidebar-submit') || nearMeBtn.parentNode;
-  submitSection.insertAdjacentElement('afterend', el);
+// ── Shared: set user location and update UI ────────────────────
+function setUserLocation(lat, lng, label) {
+  userLat = lat;
+  userLng = lng;
+  nearMeActive = true;
+
+  if (userMarker) fullMap.removeLayer(userMarker);
+  const userIcon = L.divIcon({
+    className: 'user-location-marker',
+    html: '<div class="user-location-pulse"></div><div class="user-location-dot"></div>',
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+  });
+  userMarker = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(fullMap);
+  fullMap.flyTo([lat, lng], 7, { duration: 1.5 });
+
+  nearMeBtn.classList.add('active');
+  nearMeBtn.innerHTML = `${NEAR_ME_ICON_HTML} Using: ${label}`;
+
+  renderList();
 }
 
+function clearUserLocation() {
+  nearMeActive = false;
+  userLat = userLng = null;
+  if (userMarker) { fullMap.removeLayer(userMarker); userMarker = null; }
+  if (routeLayer) { fullMap.removeLayer(routeLayer); routeLayer = null; }
+  routePanel.classList.remove('open');
+  nearMeBtn.classList.remove('active');
+  nearMeBtn.innerHTML = `${NEAR_ME_ICON_HTML} Use My Location`;
+  setLocationStatus('');
+  const locInput = document.getElementById('locationInput');
+  if (locInput) locInput.value = '';
+  renderList();
+}
+
+function setLocationStatus(msg, type = '') {
+  const el = document.getElementById('locationStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'location-status' + (type ? ` ${type}` : '');
+}
+
+// ── Geocode a text query via Nominatim ─────────────────────────
+async function geocodeQuery(query) {
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+  const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+  if (!res.ok) throw new Error('Geocoding service unavailable');
+  const data = await res.json();
+  if (!data.length) throw new Error(`"${query}" not found — try a city name`);
+  const { lat, lon, display_name } = data[0];
+  const label = display_name.split(',').slice(0, 2).join(',').trim();
+  return { lat: parseFloat(lat), lng: parseFloat(lon), label };
+}
+
+// ── Location text input ────────────────────────────────────────
+const locationForm  = document.getElementById('locationForm');
+const locationInput = document.getElementById('locationInput');
+
+locationForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const query = locationInput.value.trim();
+  if (!query) return;
+
+  const goBtn = document.getElementById('locationGoBtn');
+  goBtn.disabled = true;
+  setLocationStatus('Searching…');
+
+  try {
+    const { lat, lng, label } = await geocodeQuery(query);
+    setLocationStatus(label, 'success');
+    setUserLocation(lat, lng, label.split(',')[0]);
+  } catch (err) {
+    setLocationStatus(err.message, 'error');
+  } finally {
+    goBtn.disabled = false;
+  }
+});
+
+// ── Near Me (geolocation) ──────────────────────────────────────
 nearMeBtn.addEventListener('click', () => {
   if (nearMeActive) {
-    // Toggle off
-    nearMeActive = false;
-    nearMeBtn.classList.remove('active');
-    nearMeBtn.innerHTML = `${NEAR_ME_ICON_HTML} Near Me`;
-    if (userMarker) { fullMap.removeLayer(userMarker); userMarker = null; }
-    if (routeLayer) { fullMap.removeLayer(routeLayer); routeLayer = null; }
-    routePanel.classList.remove('open');
-    userLat = userLng = null;
-    setNearMeError(null);
-    renderList();
+    clearUserLocation();
     return;
   }
 
-  setNearMeError(null);
-
   if (!navigator.geolocation) {
-    setNearMeError('Geolocation is not supported by your browser.');
+    setLocationStatus('Geolocation not supported by your browser.', 'error');
     return;
   }
 
   nearMeBtn.innerHTML = 'Locating…';
   nearMeBtn.disabled = true;
+  setLocationStatus('Getting your location…');
 
   navigator.geolocation.getCurrentPosition(pos => {
-    userLat = pos.coords.latitude;
-    userLng = pos.coords.longitude;
-    nearMeActive = true;
-    nearMeBtn.innerHTML = `${NEAR_ME_ICON_HTML} Near Me`;
     nearMeBtn.disabled = false;
-    nearMeBtn.classList.add('active');
-
-    // User location marker
-    if (userMarker) fullMap.removeLayer(userMarker);
-    const userIcon = L.divIcon({
-      className: 'user-location-marker',
-      html: '<div class="user-location-pulse"></div><div class="user-location-dot"></div>',
-      iconSize: [14, 14],
-      iconAnchor: [7, 7],
-    });
-    userMarker = L.marker([userLat, userLng], { icon: userIcon, zIndexOffset: 1000 }).addTo(fullMap);
-    fullMap.flyTo([userLat, userLng], 7, { duration: 1.5 });
-    renderList();
+    setUserLocation(pos.coords.latitude, pos.coords.longitude, 'My Location');
+    setLocationStatus('Showing roads nearest to you', 'success');
   }, err => {
-    nearMeBtn.innerHTML = `${NEAR_ME_ICON_HTML} Near Me`;
     nearMeBtn.disabled = false;
+    nearMeBtn.innerHTML = `${NEAR_ME_ICON_HTML} Use My Location`;
     const msg = err.code === 1
-      ? 'Location access denied — allow location in browser settings.'
+      ? 'Location denied — allow access in browser settings, or type your city above.'
       : err.code === 2
-      ? 'Location unavailable. Try again or check your connection.'
-      : 'Location timed out. Try again.';
-    setNearMeError(msg);
+      ? 'Location unavailable. Try typing your city above.'
+      : 'Location timed out. Try typing your city above.';
+    setLocationStatus(msg, 'error');
   }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
 });
 
@@ -974,19 +1029,24 @@ function renderList() {
         road.state.toLowerCase().includes(searchQuery) ||
         road.type.toLowerCase().includes(searchQuery) ||
         road.designation.toLowerCase().includes(searchQuery);
-      const matchRegion = !regionFilter || road.region === regionFilter;
-      const matchType   = !typeFilter   || road.type   === typeFilter;
-      return matchSearch && matchRegion && matchType;
+      const matchRegion    = !regionFilter    || road.region === regionFilter;
+      const matchType      = !typeFilter      || road.type   === typeFilter;
+      const roadCharacter  = TYPE_CHARACTER[road.type] || 'Mixed';
+      const matchCharacter = !characterFilter ||
+        characterFilter === roadCharacter ||
+        (characterFilter === 'Curves'       && roadCharacter === 'Curves') ||
+        (characterFilter === 'Straightaways' && roadCharacter === 'Straightaways');
+      return matchSearch && matchRegion && matchType && matchCharacter;
     });
 
-  // When Near Me is active, attach distance and sort nearest first
-  if (nearMeActive && userLat !== null) {
+  // When a location is set, attach distance and sort nearest first
+  if (userLat !== null) {
     results = results
       .map(r => ({ ...r, dist: haversine(userLat, userLng, r.road.lat, r.road.lng) }))
       .sort((a, b) => a.dist - b.dist);
   }
 
-  const hasFilter = searchQuery || regionFilter || typeFilter;
+  const hasFilter = searchQuery || regionFilter || typeFilter || characterFilter;
   resetBtn.style.display = hasFilter ? 'block' : 'none';
 
   roadCount.textContent = `${results.length} road${results.length !== 1 ? 's' : ''}`;
@@ -1010,10 +1070,10 @@ function renderList() {
     item.className = 'road-item';
     item.dataset.idx = idx;
 
-    const distHTML = (nearMeActive && dist != null)
+    const distHTML = (dist != null)
       ? `<div class="road-item-dist">${dist < 10 ? dist.toFixed(1) : Math.round(dist)} mi away</div>`
       : '';
-    const dirBtn = (nearMeActive && dist != null)
+    const dirBtn = (dist != null)
       ? `<button class="road-item-dir-btn">Directions</button>`
       : '';
 
@@ -1031,7 +1091,7 @@ function renderList() {
     `;
 
     item.addEventListener('click', () => flyToRoad(idx));
-    if (nearMeActive) {
+    if (userLat !== null) {
       const btn = item.querySelector('.road-item-dir-btn');
       if (btn) btn.addEventListener('click', e => getDirections(idx, e));
     }
@@ -1093,14 +1153,25 @@ document.querySelectorAll('#typeFilter .chip').forEach(chip => {
   });
 });
 
+document.querySelectorAll('#characterFilter .chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('#characterFilter .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    characterFilter = chip.dataset.value;
+    renderList();
+  });
+});
+
 function resetAll() {
-  searchQuery  = '';
-  regionFilter = '';
-  typeFilter   = '';
+  searchQuery     = '';
+  regionFilter    = '';
+  typeFilter      = '';
+  characterFilter = '';
   sidebarSearch.value = '';
   searchClear.style.display = 'none';
   document.querySelectorAll('#regionFilter .chip').forEach((c, i) => c.classList.toggle('active', i === 0));
   document.querySelectorAll('#typeFilter .chip').forEach((c, i) => c.classList.toggle('active', i === 0));
+  document.querySelectorAll('#characterFilter .chip').forEach((c, i) => c.classList.toggle('active', i === 0));
   renderList();
 }
 resetBtn.addEventListener('click', resetAll);

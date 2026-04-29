@@ -102,6 +102,20 @@
             <button class="chip" data-value="Historic">Historic</button>
           </div>
         </div>
+        <div class="filter-group">
+          <label class="filter-label">Road Style</label>
+          <div class="filter-chips" id="characterFilter">
+            <button class="chip active" data-value="">All</button>
+            <button class="chip" data-value="Curves">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11" style="margin-right:2px"><path d="M3 17c3-3 5-8 9-8s6 5 9 8"/></svg>
+              Curves
+            </button>
+            <button class="chip" data-value="Straightaways">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11" style="margin-right:2px"><line x1="3" y1="12" x2="21" y2="12"/></svg>
+              Straights
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Type legend -->
@@ -116,19 +130,34 @@
         <div class="legend-item"><span class="legend-dot" style="background:#6b7280"></span>Off-road</div>
       </div>
 
-      <!-- Submit a road + Near Me -->
+      <!-- Location -->
+      <div class="sidebar-location" id="sidebarLocation">
+        <label class="filter-label">Your Location</label>
+        <form class="location-form" id="locationForm" autocomplete="off">
+          <div class="location-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" class="location-pin-icon">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <input type="text" id="locationInput" class="location-input" placeholder="City, state, or zip…" />
+            <button type="submit" class="location-go-btn" id="locationGoBtn">Go</button>
+          </div>
+          <p class="location-status" id="locationStatus"></p>
+        </form>
+        <button class="near-me-btn" id="nearMeBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15">
+            <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+          </svg>
+          Use My Location
+        </button>
+      </div>
+
+      <!-- Submit a road -->
       <div class="sidebar-submit">
         <button class="submit-road-btn" id="submitRoadBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
           Submit a Road
-        </button>
-        <button class="near-me-btn" id="nearMeBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15">
-            <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
-          </svg>
-          Near Me
         </button>
       </div>
 

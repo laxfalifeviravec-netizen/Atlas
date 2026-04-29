@@ -42,7 +42,13 @@ function timeAgo(ts) {
   if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
   return `${Math.floor(diff/86400)}d ago`;
 }
-function openModal(id)  { document.getElementById(id)?.classList.add('open');    document.body.style.overflow = 'hidden'; }
+function openModal(id)  {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.querySelectorAll('.auth-error').forEach(e => { e.textContent = ''; });
+  el.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
 function closeModal(id) { document.getElementById(id)?.classList.remove('open'); document.body.style.overflow = ''; }
 
 // ── State ────────────────────────────────────────────────────────

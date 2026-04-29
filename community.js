@@ -88,7 +88,11 @@ function openAuthModal() {
 
 // ── Generic modal helpers ──────────────────────────────────────
 function openModal(id)  {
-  document.getElementById(id)?.classList.add('open');
+  const el = document.getElementById(id);
+  if (!el) return;
+  // Clear any stale error messages
+  el.querySelectorAll('.auth-error').forEach(e => { e.textContent = ''; });
+  el.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 function closeModal(id) {
@@ -96,14 +100,14 @@ function closeModal(id) {
   document.body.style.overflow = '';
 }
 
-['createPostOverlay','postDetailOverlay','createGroupOverlay','addCarOverlay','authOverlay'].forEach(id => {
+['createPostOverlay','postDetailOverlay','createGroupOverlay','addCarOverlay','createEventOverlay','authOverlay'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;
   el.addEventListener('click', e => { if (e.target === el) closeModal(id); });
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    ['createPostOverlay','postDetailOverlay','createGroupOverlay','addCarOverlay','authOverlay']
+    ['createPostOverlay','postDetailOverlay','createGroupOverlay','addCarOverlay','createEventOverlay','authOverlay']
       .forEach(id => closeModal(id));
   }
 });
@@ -997,7 +1001,6 @@ eventRoadInput?.addEventListener('input', () => {
 
 document.getElementById('createEventForm')?.addEventListener('submit', async e => {
   e.preventDefault();
-  const { data: { user } } = await db.auth.getSession().then(r => r);
   const sessionUser = (await db.auth.getSession()).data.session?.user;
   if (!sessionUser) { openAuthModal(); return; }
 

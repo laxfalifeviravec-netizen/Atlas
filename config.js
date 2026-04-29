@@ -17,7 +17,6 @@ const db = (typeof supabase !== 'undefined')
         persistSession:     true,
         autoRefreshToken:   true,
         detectSessionInUrl: true,
-        storageKey:         'atlas-auth',
       },
     })
   : null;

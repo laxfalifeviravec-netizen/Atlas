@@ -63,7 +63,12 @@ function updateProfileUI(user) {
   if (cpaAvatar) cpaAvatar.textContent = user ? initials : '?';
 }
 
-document.addEventListener('atlas:authchange', ({ detail: { user } }) => {
+// Community page manages its own auth state directly — no dependency on auth.js events.
+// onAuthStateChange is the primary source; getSession() seeds the UI before the first event fires.
+let _groupsNeedReload = false;
+
+db.auth.onAuthStateChange((_event, session) => {
+  const user = session?.user ?? null;
   currentUser = user;
   window.__atlasUser = user;
   updateProfileUI(user);
@@ -71,8 +76,30 @@ document.addEventListener('atlas:authchange', ({ detail: { user } }) => {
     loadMyGroups();
     loadGarage();
     loadSidebarGarage();
+    if (_groupsNeedReload) {
+      _groupsNeedReload = false;
+      joinedGroupIds = new Set();
+      initGroups();
+    }
   }
 });
+
+db.auth.getSession().then(({ data: { session } }) => {
+  if (!currentUser) {
+    const user = session?.user ?? null;
+    currentUser = user;
+    window.__atlasUser = user;
+    updateProfileUI(user);
+    if (user) {
+      loadMyGroups();
+      loadGarage();
+      loadSidebarGarage();
+      // Groups already rendered without join state — re-init with correct state
+      joinedGroupIds = new Set();
+      initGroups();
+    }
+  }
+}).catch(() => {});
 
 // ── Tabs ────────────────────────────────────────────────────────
 document.querySelectorAll('.comm-tab').forEach(tab => {
@@ -570,6 +597,7 @@ let joinedGroupIds = new Set();
 createGroupBtn?.addEventListener('click', () => requireAuth(() => openModal('createGroupOverlay')));
 
 async function initGroups() {
+  if (!currentUser) _groupsNeedReload = true;
   groupsGrid.innerHTML = '<div class="feed-loading"><div class="feed-loading-spin"></div>Loading…</div>';
   try {
     const groups = await communityGetGroups();

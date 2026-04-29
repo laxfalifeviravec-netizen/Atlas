@@ -128,14 +128,13 @@ function setAuthUI(session) {
   document.dispatchEvent(new CustomEvent('atlas:authchange', { detail: { user: currentUser } }));
 }
 
-// ── Boot: check existing session ─────────────────────────────
-(async () => {
-  const { data: { session } } = await db.auth.getSession();
-  setAuthUI(session);
-})();
-
-// ── Listen for auth state changes ─────────────────────────────
+// ── Listen for auth state changes (primary source of truth) ──
 db.auth.onAuthStateChange((_event, session) => setAuthUI(session));
+
+// ── Boot: seed UI from stored session if listener hasn't fired ─
+db.auth.getSession().then(({ data: { session } }) => {
+  if (!currentUser) setAuthUI(session);
+}).catch(() => {});
 
 // ── Export helper ─────────────────────────────────────────────
 function requireAuth(callback) {

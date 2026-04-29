@@ -602,7 +602,8 @@ const fullMap = L.map('fullMap', {
 });
 L.control.zoom({ position: 'bottomright' }).addTo(fullMap);
 // Force Leaflet to recalculate container size after layout settles
-requestAnimationFrame(() => fullMap.invalidateSize());
+setTimeout(() => fullMap.invalidateSize(), 50);
+setTimeout(() => fullMap.invalidateSize(), 200);
 
 let tileLayer = L.tileLayer(TILE_URLS[currentTheme], {
   attribution: TILE_ATTR,

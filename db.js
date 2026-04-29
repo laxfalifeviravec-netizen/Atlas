@@ -388,11 +388,20 @@ async function profileGetGroups(userId) {
 async function notificationsGet(userId, { limit = 20 } = {}) {
   const { data, error } = await db
     .from('notifications')
-    .select('*, actor:actor_id(full_name, username), posts(caption, image_url), driving_groups(name)')
+    .select('*, posts(caption, image_url), driving_groups(name)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
+
+  // actor_id references auth.users (not directly joinable); batch-fetch from profiles
+  const actorIds = [...new Set(data.map(n => n.actor_id).filter(Boolean))];
+  if (actorIds.length) {
+    const { data: profiles } = await db
+      .from('profiles').select('id, full_name, username').in('id', actorIds);
+    const map = Object.fromEntries((profiles || []).map(p => [p.id, p]));
+    data.forEach(n => { n.actor = map[n.actor_id] || null; });
+  }
   return data;
 }
 
@@ -482,22 +491,39 @@ async function communityGetFollowingPosts(followerId, { limit = 10, offset = 0 }
 async function eventsGetUpcoming({ limit = 20 } = {}) {
   const { data, error } = await db
     .from('events')
-    .select('*, driving_groups(name), roads(name, state), profiles!created_by(full_name, username)')
+    .select('*, driving_groups(name), roads(name, state)')
     .gte('event_date', new Date().toISOString().slice(0, 10))
     .order('event_date', { ascending: true })
     .limit(limit);
   if (error) throw error;
+
+  // created_by references auth.users; batch-fetch names from profiles
+  const creatorIds = [...new Set(data.map(e => e.created_by).filter(Boolean))];
+  if (creatorIds.length) {
+    const { data: profiles } = await db
+      .from('profiles').select('id, full_name, username').in('id', creatorIds);
+    const map = Object.fromEntries((profiles || []).map(p => [p.id, p]));
+    data.forEach(e => { e.profiles = map[e.created_by] || null; });
+  }
   return data;
 }
 
 async function eventsGetByGroup(groupId) {
   const { data, error } = await db
     .from('events')
-    .select('*, roads(name, state), profiles!created_by(full_name, username)')
+    .select('*, roads(name, state)')
     .eq('group_id', groupId)
     .gte('event_date', new Date().toISOString().slice(0, 10))
     .order('event_date', { ascending: true });
   if (error) throw error;
+
+  const creatorIds = [...new Set(data.map(e => e.created_by).filter(Boolean))];
+  if (creatorIds.length) {
+    const { data: profiles } = await db
+      .from('profiles').select('id, full_name, username').in('id', creatorIds);
+    const map = Object.fromEntries((profiles || []).map(p => [p.id, p]));
+    data.forEach(e => { e.profiles = map[e.created_by] || null; });
+  }
   return data;
 }
 

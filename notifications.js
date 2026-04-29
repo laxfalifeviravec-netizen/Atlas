@@ -85,6 +85,8 @@
     if (n.type === 'like')       msg = `<b>${safe(actor)}</b> liked your post`;
     if (n.type === 'comment')    msg = `<b>${safe(actor)}</b> commented on your post`;
     if (n.type === 'group_join') msg = `<b>${safe(actor)}</b> joined <b>${safe(n.driving_groups?.name)}</b>`;
+    if (n.type === 'follow')     msg = `<b>${safe(actor)}</b> started following you`;
+    if (!msg) msg = `<b>${safe(actor)}</b> interacted with your content`;
     return `<div class="notif-text">${msg}</div><div class="notif-time">${ts}</div>`;
   }
 

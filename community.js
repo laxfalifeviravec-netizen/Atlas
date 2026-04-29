@@ -49,9 +49,14 @@ function updateProfileUI(user) {
   const cpcAvatar = document.getElementById('cpcAvatar');
   const cpcName   = document.getElementById('cpcName');
   const cpcMeta   = document.getElementById('cpcMeta');
+  const card      = document.getElementById('commProfileCard');
   if (cpcAvatar) cpcAvatar.textContent  = user ? initials : '?';
   if (cpcName)   cpcName.textContent    = user ? name : 'Sign in to post';
   if (cpcMeta)   cpcMeta.textContent    = user ? user.email : '';
+  if (card && user) card.style.cursor = 'pointer';
+  if (card) {
+    card.onclick = user ? () => { window.location.href = `profile.html?id=${user.id}`; } : null;
+  }
 
   // Create-post bar avatar
   const cpaAvatar = document.getElementById('cpaAvatar');
@@ -127,10 +132,6 @@ function timeAgo(ts) {
   return `${Math.floor(diff/86400)}d ago`;
 }
 
-// ── Placeholder: functions filled in later parts ───────────────
-function loadMyGroups()     { /* Part 4 */ }
-function loadGarage()       { /* Part 5 */ }
-function loadSidebarGarage(){ /* Part 5 */ }
 
 /* ============================================================
    Part 2: Feed — load posts, render cards, infinite scroll
@@ -266,6 +267,9 @@ function buildPostCard(post) {
   const initials = getInitials(profile.full_name || profile.username, '');
   const liked    = likedPostIds.has(post.id);
   const road     = post.roads;
+  const avatarContent = profile.avatar_url
+    ? `<img src="${escHtml(profile.avatar_url)}" alt="${escHtml(name)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
+    : initials;
 
   const card = document.createElement('article');
   card.className   = 'post-card';
@@ -274,7 +278,7 @@ function buildPostCard(post) {
   const profileUrl = `profile.html?id=${post.user_id}`;
   card.innerHTML = `
     <div class="post-header">
-      <a class="post-avatar" href="${profileUrl}">${initials}</a>
+      <a class="post-avatar" href="${profileUrl}">${avatarContent}</a>
       <div class="post-user">
         <a class="post-username" href="${profileUrl}">${escHtml(name)}</a>
         <div class="post-time">${timeAgo(post.created_at)}</div>

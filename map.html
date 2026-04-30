@@ -216,6 +216,35 @@
         </div>
       </div>
 
+      <!-- Live Directions Panel -->
+      <div class="directions-panel" id="directionsPanel" style="display:none">
+        <div class="dir-header">
+          <div class="dir-current">
+            <div class="dir-turn-icon" id="dirTurnIcon">↑</div>
+            <div class="dir-instruction-wrap">
+              <div class="dir-instruction-text" id="dirInstructionText">Calculating route…</div>
+              <div class="dir-step-dist" id="dirStepDist"></div>
+            </div>
+          </div>
+          <div class="dir-header-actions">
+            <button class="dir-follow-btn active" id="dirFollowBtn" title="Follow my location">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                <circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+              </svg>
+            </button>
+            <button class="dir-end-btn" id="dirEndBtn">End</button>
+          </div>
+        </div>
+        <div class="dir-summary">
+          <span id="dirTotalDist">—</span>
+          <span class="dir-sep">·</span>
+          <span id="dirTotalTime">—</span>
+          <span class="dir-sep">·</span>
+          <span class="dir-dest-name" id="dirDestName"></span>
+        </div>
+        <div class="dir-steps-list" id="dirStepsList"></div>
+      </div>
+
       <!-- Floating controls -->
       <button class="map-sidebar-toggle" id="sidebarToggle" aria-label="Toggle road list">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

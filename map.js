@@ -246,6 +246,12 @@ function buildPopupHTML(road) {
           ${inRoute ? '🗺 In Route' : '+ Route'}
         </button>
       </div>
+      <button class="popup-directions-btn" onclick="startNavigation('${n}');fullMap.closePopup()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+        Get Directions
+      </button>
       <button class="popup-photos-btn" onclick="${onClickPhotos}">
         📷 <span id="${photoId}">Photos</span>
       </button>
@@ -1244,4 +1250,225 @@ submitRoadForm.addEventListener('submit', async e => {
     btn.disabled = false;
     btn.textContent = 'Add Road to Atlas';
   }
+});
+
+/* ============================================================
+   Live Directions (OSRM + Leaflet + GPS watchPosition)
+   ============================================================ */
+
+// ── Maneuver → icon & instruction ─────────────────────────────
+const MANEUVER_ICONS = {
+  'depart':              '↑',  'arrive':              '⭐',
+  'turn:left':           '←',  'turn:right':          '→',
+  'turn:slight left':    '↖',  'turn:slight right':   '↗',
+  'turn:sharp left':     '↰',  'turn:sharp right':    '↱',
+  'turn:uturn':          '↩',  'continue':            '↑',
+  'new name':            '↑',  'merge':               '↑',
+  'merge:left':          '↖',  'merge:right':         '↗',
+  'on ramp:left':        '↖',  'on ramp:right':       '↗',
+  'off ramp:left':       '↙',  'off ramp:right':      '↘',
+  'fork:left':           '↖',  'fork:right':          '↗',
+  'end of road:left':    '←',  'end of road:right':   '→',
+  'roundabout':          '↺',  'rotary':              '↺',
+};
+
+function _dirIcon(type, modifier) {
+  return MANEUVER_ICONS[`${type}:${modifier}`] || MANEUVER_ICONS[type] || '↑';
+}
+
+function _dirInstruction(step) {
+  const { type, modifier } = step.maneuver;
+  const on  = step.name ? ` onto ${step.name}` : '';
+  const dir = modifier && modifier !== 'straight' ? ` ${modifier}` : '';
+  switch (type) {
+    case 'depart':      return `Head ${modifier || 'forward'}${on}`;
+    case 'arrive':      return 'Arrive at destination';
+    case 'turn':        return `Turn${dir}${on}`;
+    case 'new name':
+    case 'continue':    return `Continue${on || ' straight'}`;
+    case 'merge':       return `Merge${dir}${on}`;
+    case 'on ramp':     return `Take ramp${dir}${on}`;
+    case 'off ramp':    return `Take exit${on}`;
+    case 'fork':        return `Keep${dir} at fork${on}`;
+    case 'end of road': return `Turn${dir} at end of road${on}`;
+    case 'roundabout':  return `Enter roundabout${step.maneuver.exit ? ', exit ' + step.maneuver.exit : ''}`;
+    default:            return `${type}${dir}${on}`;
+  }
+}
+
+// ── Format helpers ─────────────────────────────────────────────
+function _fmtM(meters) {
+  if (meters >= 1609) return (meters / 1609).toFixed(1) + ' mi';
+  return Math.round(meters * 3.281) + ' ft';
+}
+
+function _fmtSec(s) {
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h} hr ${m} min` : `${m} min`;
+}
+
+function _metersBetween(lat1, lng1, lat2, lng2) {
+  return haversine(lat1, lng1, lat2, lng2) * 1609.34;
+}
+
+// ── Navigation state ───────────────────────────────────────────
+let _navWatchId    = null;
+let _navPolyline   = null;
+let _navUserMarker = null;
+let _navSteps      = [];
+let _navStepIdx    = 0;
+let _navFollowing  = true;
+
+// ── Start navigation to a road ─────────────────────────────────
+async function startNavigation(roadName) {
+  const road = ROADS.find(r => r.name === roadName);
+  if (!road) return;
+
+  if (!navigator.geolocation) {
+    alert('Your browser does not support geolocation.');
+    return;
+  }
+
+  const panel = document.getElementById('directionsPanel');
+  panel.style.display = '';
+  _setDirText('Getting your location…', '');
+  document.getElementById('dirDestName').textContent = road.name;
+
+  navigator.geolocation.getCurrentPosition(
+    async pos => {
+      const { latitude: uLat, longitude: uLng } = pos.coords;
+      _updateUserDot(uLat, uLng);
+      _setDirText('Calculating route…', '');
+
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${uLng},${uLat};${road.lng},${road.lat}?steps=true&geometries=geojson&overview=full`;
+        const res  = await fetch(url);
+        const data = await res.json();
+
+        if (data.code !== 'Ok' || !data.routes?.length) {
+          _setDirText('No route found — destination may be unreachable by road.', '');
+          return;
+        }
+
+        const route  = data.routes[0];
+        _navSteps    = route.legs[0].steps;
+        _navStepIdx  = 0;
+
+        // Draw route polyline
+        if (_navPolyline) fullMap.removeLayer(_navPolyline);
+        const coords = route.geometry.coordinates.map(([ln, lt]) => [lt, ln]);
+        _navPolyline = L.polyline(coords, { color: '#3b82f6', weight: 5, opacity: 0.85 }).addTo(fullMap);
+        fullMap.fitBounds(_navPolyline.getBounds(), { padding: [60, 60] });
+
+        // Update summary
+        document.getElementById('dirTotalDist').textContent = _fmtM(route.distance);
+        document.getElementById('dirTotalTime').textContent = _fmtSec(route.duration);
+
+        // Render steps + current step
+        _renderDirSteps();
+        _renderCurrentStep();
+
+        // Start GPS tracking
+        if (_navWatchId !== null) navigator.geolocation.clearWatch(_navWatchId);
+        _navWatchId = navigator.geolocation.watchPosition(
+          p => _onGPSUpdate(p.coords.latitude, p.coords.longitude),
+          () => {},
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+        );
+
+      } catch (err) {
+        console.error('Directions error:', err);
+        _setDirText('Could not load route. Check connection and try again.', '');
+      }
+    },
+    () => _setDirText('Location access denied — allow location to get directions.', ''),
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+// ── Render helpers ─────────────────────────────────────────────
+function _setDirText(text, dist) {
+  const t = document.getElementById('dirInstructionText');
+  const d = document.getElementById('dirStepDist');
+  if (t) t.textContent = text;
+  if (d) d.textContent = dist || '';
+}
+
+function _renderCurrentStep() {
+  const step = _navSteps[_navStepIdx];
+  if (!step) return;
+  const { type, modifier } = step.maneuver;
+  document.getElementById('dirTurnIcon').textContent      = _dirIcon(type, modifier);
+  document.getElementById('dirInstructionText').textContent = _dirInstruction(step);
+  document.getElementById('dirStepDist').textContent       = step.distance > 0 ? _fmtM(step.distance) : '';
+
+  document.querySelectorAll('.dir-step-item').forEach((el, i) => {
+    el.classList.toggle('active', i === _navStepIdx);
+    if (i === _navStepIdx) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+}
+
+function _renderDirSteps() {
+  const list = document.getElementById('dirStepsList');
+  if (!list) return;
+  list.innerHTML = _navSteps.map((step, i) => {
+    const { type, modifier } = step.maneuver;
+    return `
+      <div class="dir-step-item${i === _navStepIdx ? ' active' : ''}">
+        <div class="dir-step-item-icon">${_dirIcon(type, modifier)}</div>
+        <div class="dir-step-item-body">
+          <div class="dir-step-item-text">${_dirInstruction(step)}</div>
+          ${step.distance > 0 ? `<div class="dir-step-item-dist">${_fmtM(step.distance)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── GPS update ─────────────────────────────────────────────────
+function _onGPSUpdate(lat, lng) {
+  _updateUserDot(lat, lng);
+  if (_navFollowing) fullMap.setView([lat, lng], Math.max(fullMap.getZoom(), 13));
+
+  // Advance step when within 60 m of next maneuver point
+  if (_navStepIdx < _navSteps.length - 1) {
+    const next     = _navSteps[_navStepIdx + 1];
+    const [nLng, nLat] = next.maneuver.location;
+    if (_metersBetween(lat, lng, nLat, nLng) < 60) {
+      _navStepIdx++;
+      _renderCurrentStep();
+    }
+  }
+}
+
+function _updateUserDot(lat, lng) {
+  if (!_navUserMarker) {
+    _navUserMarker = L.marker([lat, lng], {
+      icon: L.divIcon({
+        className: '',
+        html: '<div class="nav-user-dot"></div>',
+        iconSize: [20, 20], iconAnchor: [10, 10],
+      }),
+      zIndexOffset: 1000,
+    }).addTo(fullMap);
+  } else {
+    _navUserMarker.setLatLng([lat, lng]);
+  }
+}
+
+// ── End navigation ─────────────────────────────────────────────
+function clearNavigation() {
+  if (_navWatchId !== null) { navigator.geolocation.clearWatch(_navWatchId); _navWatchId = null; }
+  if (_navPolyline)   { fullMap.removeLayer(_navPolyline);   _navPolyline   = null; }
+  if (_navUserMarker) { fullMap.removeLayer(_navUserMarker); _navUserMarker = null; }
+  _navSteps = []; _navStepIdx = 0; _navFollowing = true;
+  const panel = document.getElementById('directionsPanel');
+  if (panel) panel.style.display = 'none';
+}
+
+document.getElementById('dirEndBtn')?.addEventListener('click', clearNavigation);
+
+document.getElementById('dirFollowBtn')?.addEventListener('click', function () {
+  _navFollowing = !_navFollowing;
+  this.classList.toggle('active', _navFollowing);
 });

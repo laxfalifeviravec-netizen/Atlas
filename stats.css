@@ -1,0 +1,321 @@
+/* ============================================================
+   Atlas — Drive Stats Page Styles
+   ============================================================ */
+
+/* ── Hero ─────────────────────────────────────────────────────── */
+.stats-hero {
+  padding: calc(var(--nav-height) + 2.5rem) 1.5rem 2.25rem;
+  background: var(--color-bg-alt);
+  border-bottom: 1px solid var(--color-border);
+  text-align: center;
+}
+.stats-hero-title {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  color: var(--color-text);
+  margin-bottom: 0.4rem;
+}
+.stats-hero-sub {
+  font-size: 0.92rem;
+  color: var(--color-text-muted);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ── Container ────────────────────────────────────────────────── */
+.stats-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ── Top stat cards ───────────────────────────────────────────── */
+.stats-top-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+.stat-card {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.35rem 1rem;
+  text-align: center;
+  transition: border-color var(--transition);
+}
+.stat-card:hover { border-color: var(--color-primary); }
+.stat-card-val {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1;
+  margin-bottom: 0.3rem;
+}
+.stat-card-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text);
+  margin-bottom: 0.2rem;
+}
+.stat-card-sub {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
+/* ── Sections ─────────────────────────────────────────────────── */
+.stats-section {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+}
+.stats-section-hdr {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.stats-section-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+.stats-section-meta {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Overall progress bar ─────────────────────────────────────── */
+.stats-overall-bar-wrap {
+  height: 12px;
+  background: var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 0.6rem;
+}
+.stats-overall-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  border-radius: 6px;
+  transition: width 0.8s cubic-bezier(.4,0,.2,1);
+  min-width: 3px;
+}
+.stats-overall-label {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+/* ── Two-column layout ────────────────────────────────────────── */
+.stats-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+/* ── Breakdown bar rows ───────────────────────────────────────── */
+.stats-bar-row {
+  margin-bottom: 0.9rem;
+}
+.stats-bar-row:last-child { margin-bottom: 0; }
+.stats-bar-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--color-text);
+}
+.stats-bar-count {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+}
+.stats-bar-track {
+  height: 7px;
+  background: var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.stats-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(.4,0,.2,1);
+  min-width: 3px;
+}
+
+/* Type dot */
+.type-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.45rem;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* ── Drive Log ────────────────────────────────────────────────── */
+.drive-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.drive-log-item {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.8rem 1rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition);
+}
+.drive-log-item:hover { border-color: var(--color-primary); }
+.drive-log-type-bar {
+  width: 4px;
+  height: 38px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.drive-log-info { flex: 1; min-width: 0; }
+.drive-log-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.18rem;
+}
+.drive-log-meta {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+.drive-log-stats {
+  text-align: right;
+  flex-shrink: 0;
+}
+.drive-log-miles {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1;
+}
+.drive-log-difficulty {
+  font-size: 0.67rem;
+  color: var(--color-text-muted);
+  margin-top: 0.15rem;
+  white-space: nowrap;
+}
+.drive-log-map-btn {
+  color: var(--color-text-muted);
+  transition: color var(--transition);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0.25rem;
+}
+.drive-log-map-btn:hover { color: var(--color-primary); }
+
+/* Difficulty badges */
+.diff-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+.diff-badge.hard   { background: rgba(239,68,68,.15);  color: #ef4444; }
+.diff-badge.very   { background: rgba(239,68,68,.25);  color: #dc2626; }
+.diff-badge.mod    { background: rgba(249,115,22,.12); color: var(--color-accent); }
+
+/* ── Bucket list grid ─────────────────────────────────────────── */
+.bucket-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.75rem;
+}
+.bucket-card {
+  display: block;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  transition: border-color var(--transition), transform var(--transition);
+  color: inherit;
+  text-decoration: none;
+}
+.bucket-card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+}
+.bucket-card-top { margin-bottom: 0.65rem; padding-top: 0.5rem; }
+.bucket-card-name {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  margin-bottom: 0.15rem;
+  line-height: 1.3;
+}
+.bucket-card-desg {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+.bucket-card-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.35rem;
+}
+.bucket-card-type {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Empty states ─────────────────────────────────────────────── */
+.stats-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--color-text-muted);
+}
+.stats-empty-icon {
+  font-size: 2.8rem;
+  margin-bottom: 0.75rem;
+}
+.stats-empty h3 {
+  font-size: 1.05rem;
+  color: var(--color-text);
+  margin-bottom: 0.4rem;
+}
+.stats-empty p { font-size: 0.85rem; line-height: 1.6; }
+.stats-empty a  { color: var(--color-primary); }
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .stats-top-cards { grid-template-columns: repeat(2, 1fr); }
+  .stats-two-col   { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .stats-top-cards { grid-template-columns: repeat(2, 1fr); }
+  .stat-card-val   { font-size: 1.9rem; }
+  .drive-log-stats { display: none; }
+}

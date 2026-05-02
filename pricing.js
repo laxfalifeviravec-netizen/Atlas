@@ -160,3 +160,8 @@ document.querySelectorAll('[data-modal]').forEach(link => {
 modalClose.addEventListener('click', closeModal);
 modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalOverlay.classList.contains('open')) closeModal(); });
+
+// ── Pricing CTA buttons → open signup ────────────────────────
+document.querySelectorAll('.plan-cta, #pricingCTABtn').forEach(btn => {
+  btn.addEventListener('click', e => { e.preventDefault(); openAuth('signup'); });
+});

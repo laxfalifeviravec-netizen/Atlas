@@ -111,6 +111,7 @@ async function renderOwnControls() {
   if (!actionsEl) return;
   if (isOwn) {
     actionsEl.innerHTML = `<button class="profile-edit-btn" id="editProfileBtn">Edit Profile</button>`;
+    document.getElementById('editProfileBtn')?.addEventListener('click', openEditProfile);
   } else if (viewerUser && profileId) {
     let following = false;
     try { following = await isFollowing(viewerUser.id, profileId); } catch { /* ignore */ }
@@ -157,6 +158,42 @@ async function loadFollowStats() {
     updateStat('following', following);
   } catch { /* silent */ }
 }
+
+// ── Edit Profile ─────────────────────────────────────────────────
+function openEditProfile() {
+  document.getElementById('editFullName').value  = profileData?.full_name || '';
+  document.getElementById('editUsername').value  = profileData?.username  || '';
+  document.getElementById('editProfileError').textContent = '';
+  openModal('editProfileOverlay');
+}
+
+document.getElementById('editProfileClose')?.addEventListener('click', () => closeModal('editProfileOverlay'));
+document.getElementById('editProfileOverlay')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('editProfileOverlay')) closeModal('editProfileOverlay');
+});
+
+document.getElementById('editProfileForm')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn   = document.getElementById('editProfileSubmit');
+  const errEl = document.getElementById('editProfileError');
+  const fullName = document.getElementById('editFullName').value.trim();
+  const username = document.getElementById('editUsername').value.trim().replace(/^@/, '');
+  if (!fullName) { errEl.textContent = 'Name is required.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  errEl.textContent = '';
+  try {
+    const updated = await profileUpdateUser(viewerUser.id, { fullName, username: username || null });
+    profileData = { ...profileData, ...updated };
+    document.getElementById('profileName').textContent = updated.full_name || updated.username || 'Driver';
+    closeModal('editProfileOverlay');
+  } catch (err) {
+    errEl.textContent = err.message || 'Could not save changes.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Changes';
+  }
+});
 
 // ── Lightbox (post detail) ────────────────────────────────────────
 document.getElementById('lightboxClose')?.addEventListener('click', () => closeModal('lightboxOverlay'));

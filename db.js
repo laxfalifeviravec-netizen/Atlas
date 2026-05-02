@@ -364,6 +364,20 @@ async function profileGetUser(userId) {
   return data;
 }
 
+async function profileUpdateUser(userId, { fullName, username }) {
+  const updates = {};
+  if (fullName !== undefined) updates.full_name = fullName;
+  if (username  !== undefined) updates.username  = username;
+  const { data, error } = await db
+    .from('profiles')
+    .update(updates)
+    .eq('id', userId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 async function profileGetPosts(userId) {
   const { data, error } = await db
     .from('posts')

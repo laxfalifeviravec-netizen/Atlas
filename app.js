@@ -541,6 +541,257 @@ document.querySelectorAll('.feature-card').forEach(card => {
   revealObserver.observe(card);
 });
 
+// ── Rich road data ────────────────────────────────────────────
+const ROAD_DATA = {
+  'Pacific Coast Highway (Hwy 1)': { length: '656 mi', difficulty: 2, surface: 'Excellent', bestTime: 'Year-round', status: 'open', description: 'The crown jewel of American coastal driving. 656 miles of ocean bluffs, sea stacks, and sweeping curves from LA to the Oregon border — with Bixby Bridge as the defining stop.', tip: 'Drive south-to-north for the best ocean views on your side of the road. Midweek mornings are almost traffic-free.' },
+  'Angeles Crest Highway': { length: '66 mi', difficulty: 3, surface: 'Good', bestTime: 'Apr–Nov', status: 'seasonal', description: 'A rapid climb from the LA basin to 7,902 ft through the San Gabriel Mountains. Genuinely technical switchbacks with almost no traffic — a sports car driver\'s secret hiding in plain sight.', tip: 'Check Caltrans for closures after rain — debris is common. Sunrise runs give you the mountain to yourself.' },
+  'Mulholland Drive': { length: '21 mi', difficulty: 3, surface: 'Good', bestTime: 'Year-round', status: 'open', description: 'The ridge road running the spine of the Santa Monica Mountains above Los Angeles. Technical canyon-carving with city views in both directions — a 21-mile proving ground in the middle of a metropolis.', tip: 'Go at dawn on a weekday. By 9am you share it with Ubers, cyclists, and distracted sightseers.' },
+  'Tioga Pass Road (CA-120)': { length: '39 mi', difficulty: 3, surface: 'Excellent', bestTime: 'Jun–Oct', status: 'seasonal', description: 'The highest paved crossing in the Sierra Nevada at 9,945 ft, cutting through Yosemite\'s high country of polished granite and subalpine lakes.', tip: 'Usually opens late May–June. Check NPS. Tenaya Lake section is worth stopping at every single time.' },
+  'Beartooth Highway (US-212)': { length: '68 mi', difficulty: 4, surface: 'Good', bestTime: 'Jun–Sep', status: 'seasonal', description: 'Charles Kuralt\'s "most beautiful road in America." Switchbacks climb to 10,947 ft through tundra plateaus and glaciers with a view horizon that stretches into Wyoming.', tip: 'Snow is possible any month at elevation. Fill up in Red Lodge — next fuel is 70 miles away.' },
+  'Going-to-the-Sun Road': { length: '50 mi', difficulty: 3, surface: 'Good', bestTime: 'Jul–Sep', status: 'seasonal', description: 'Carved directly into the Continental Divide at Glacier NP — one of the great engineering achievements of the National Park Service. Exposed cliff edges, waterfalls, and mountain goats at every turn.', tip: 'Vehicle length limits apply — check NPS. Get there before 9am to skip mandatory shuttle periods.' },
+  'Million Dollar Highway (US-550)': { length: '25 mi', difficulty: 5, surface: 'Good', bestTime: 'Jun–Oct', status: 'seasonal', description: 'Ouray to Silverton through the San Juans: no guardrails on the inside lane, sheer drop-offs of hundreds of feet, and the kind of exposure that sorts out serious drivers from the rest.', tip: 'This road does not forgive distraction. No-guardrail sections are real — drive the centre line with confidence.' },
+  'Pikes Peak Highway': { length: '19 mi', difficulty: 5, surface: 'Good', bestTime: 'May–Oct', status: 'seasonal', description: 'The race-proven ascent to 14,115 ft — site of the Pikes Peak International Hill Climb since 1916. 156 corners, fully paved since 2011, and a summit that is genuinely above the clouds.', tip: 'Brake fade is a real risk on the descent. Downshift early and use engine braking — your pads will thank you.' },
+  'Independence Pass (CO-82)': { length: '20 mi', difficulty: 4, surface: 'Good', bestTime: 'Jun–Oct', status: 'seasonal', description: 'Colorado\'s highest paved pass at 12,095 ft between Aspen and Twin Lakes. Exposed switchbacks, thin air, and a summit with 360° alpine views.', tip: 'Vehicle limit of 35 ft. Altitude affects fuel delivery at the top — give the engine time to adjust.' },
+  'Mount Evans Road (CO-5)': { length: '14 mi', difficulty: 4, surface: 'Fair', bestTime: 'Jun–Sep', status: 'seasonal', description: 'The highest paved auto road in North America at 14,265 ft. 28 miles of switchbacks above the treeline with mountain goats literally on the tarmac.', tip: 'No guardrails above treeline. Afternoon thunderstorms are daily in July–August — summit by noon, no exceptions.' },
+  'Highway 12': { length: '124 mi', difficulty: 2, surface: 'Excellent', bestTime: 'Apr–Oct', status: 'open', description: 'Utah\'s Highway 12 threads through Bryce Canyon, Grand Staircase–Escalante, and Capitol Reef — arguably the most scenically dense road in North America.', tip: 'The Hogsback section is genuinely exposed with drop-offs on both sides. Drive it at dawn for golden light on the sandstone.' },
+  'Moki Dugway (UT-261)': { length: '3 mi', difficulty: 4, surface: 'Gravel', bestTime: 'Mar–Nov', status: 'open', description: 'Three miles of unpaved switchbacks hand-blasted into the face of Cedar Mesa in 1958. No guardrails. 1,100 ft of exposure. One of the most dramatic short stretches of road in the world.', tip: 'RVs and trailers not recommended. Descend with low gear engaged — loose gravel on the steep corners is serious.' },
+  'Twisted Sisters (TX FM-336/337)': { length: '100 mi', difficulty: 4, surface: 'Good', bestTime: 'Oct–May', status: 'open', description: 'Three farm-to-market roads in the Texas Hill Country that loop through river gorges and ridgelines with tight, rhythmic corners that reward smooth, committed driving.', tip: 'Leakey is the unofficial hub — fuel, food, and locals who know every mile. Spring and fall are perfect conditions.' },
+  'Tail of the Dragon (US-129)': { length: '11 mi', difficulty: 5, surface: 'Excellent', bestTime: 'Apr–Nov', status: 'open', description: '318 curves packed into 11 miles with zero intersections, zero driveways, and zero distractions. The most famous driving road in America, and it earns every bit of that reputation.', tip: 'Go on a weekday morning to avoid bikes and cruisers. It\'s over fast — most drivers go back for a second pass.' },
+  'Moonshiner 28 (NC-28)': { length: '28 mi', difficulty: 4, surface: 'Good', bestTime: 'Apr–Nov', status: 'open', description: 'One of the best roads in the Southeast that almost nobody talks about. 28 miles of technical switchbacks and sweeping bends through the Nantahala Forest.', tip: 'Less traffic than the Dragon — locals\' choice. The stretch from Fontana Dam is the most technical section.' },
+  'Cherohala Skyway': { length: '43 mi', difficulty: 2, surface: 'Excellent', bestTime: 'May–Nov', status: 'open', description: 'The less-crowded sibling to the Tail of the Dragon. 43 miles of ridge-top cruising through the Cherokee and Nantahala National Forests with almost no traffic.', tip: 'Combine with the Dragon for a full day loop. Cherohala rewards smooth, flowing driving — not trail braking.' },
+  'Blue Ridge Parkway': { length: '469 mi', difficulty: 2, surface: 'Good', bestTime: 'Apr–Nov', status: 'seasonal', description: 'America\'s Favourite Drive runs 469 miles along the Appalachian spine. No commercial vehicles, no billboards, no traffic lights — just pure ridge-top driving for 469 miles.', tip: 'The Linn Cove Viaduct (MP 304) is the engineering highlight. Drive it at 45mph with the windows down.' },
+  'Kancamagus Highway (NH-112)': { length: '35 mi', difficulty: 2, surface: 'Excellent', bestTime: 'Sep–Oct', status: 'open', description: 'New Hampshire\'s "Kanc" climbs over Kancamagus Pass through White Mountain National Forest. A genuinely flowing road with October foliage spectacle that\'s hard to match anywhere in the US.', tip: 'Peak foliage is usually the second week of October. Early morning fog in the valleys creates surreal driving conditions.' },
+  'Smugglers Notch (VT-108)': { length: '5 mi', difficulty: 5, surface: 'Good', bestTime: 'May–Oct', status: 'seasonal', description: 'A mountain notch so narrow that boulders literally touch both sides of the road. Closed all winter. 5 miles of switchbacks and blind corners through a gap in the Green Mountains.', tip: 'Cars over 21 ft are banned. This is NOT the road for wide-bodied sports cars — the clearances are measured in inches.' },
+  'Skyline Drive': { length: '105 mi', difficulty: 1, surface: 'Excellent', bestTime: 'Apr–Nov', status: 'open', description: 'The ridge road through Shenandoah National Park. 35mph limit, 75 overlooks, and near-zero traffic midweek — one of the most relaxing drives on the East Coast.', tip: 'Enter at Rockfish Gap (South Entrance) and drive north for better mid-afternoon light on the valley views.' },
+  'Old La Honda Road': { length: '10 mi', difficulty: 4, surface: 'Good', bestTime: 'Year-round', status: 'open', description: 'The Bay Area\'s legendary sports car road: 10 miles of tight, technical bends between Woodside and La Honda through second-growth redwoods. A short road with a massive following.', tip: 'Cyclists own this road — they\'re there every weekend. Find your gap patiently; there is no safe passing on the descent.' },
+};
+
+function getRoadDetails(place) {
+  const custom = ROAD_DATA[place.name] || {};
+  const diffMap   = { Mountain: 4, Technical: 5, Canyon: 3, Coastal: 2, Scenic: 2, Desert: 2, Historic: 1, 'Off-road': 4 };
+  const surfaceMap = { Mountain: 'Good', Technical: 'Excellent', Canyon: 'Good', Coastal: 'Excellent', Scenic: 'Good', Desert: 'Good', Historic: 'Fair', 'Off-road': 'Rough' };
+  const seasonMap  = { 'West Coast': 'Year-round', 'Mountain West': 'Jun–Sep', Southwest: 'Mar–May, Sep–Nov', Southeast: 'Apr–Nov', Northeast: 'May–Oct', Midwest: 'May–Oct' };
+  return {
+    length:      custom.length      || 'Varies',
+    difficulty:  custom.difficulty  ?? (diffMap[place.type] || 3),
+    surface:     custom.surface     || surfaceMap[place.type] || 'Good',
+    bestTime:    custom.bestTime    || seasonMap[place.region] || 'Year-round',
+    status:      custom.status      || (place.type === 'Mountain' ? 'seasonal' : 'open'),
+    description: custom.description || `A ${place.type.toLowerCase()} road through the ${place.region} region, known for its driving character and scenery.`,
+    tip:         custom.tip         || 'Check local conditions before heading out. Early mornings give you the road to yourself.',
+  };
+}
+
+// ── Road detail modal ─────────────────────────────────────────
+const roadModalOverlay = document.getElementById('roadModal');
+const roadModalClose   = document.getElementById('roadModalClose');
+
+function openRoadModal(place) {
+  if (!roadModalOverlay) return;
+  const d = getRoadDetails(place);
+  const saved = isRoadSaved(place.name);
+  const saveCount = getSavedRoads().length;
+  const FREE_LIMIT = 5;
+  const statusLabel = { open: 'Open', seasonal: 'Seasonal', closed: 'Closed' }[d.status] || 'Open';
+
+  const diffSegs = Array.from({ length: 5 }, (_, i) => {
+    const filled = i < d.difficulty;
+    const max    = filled && i === 4;
+    return `<div class="difficulty-seg${filled ? ' filled' : ''}${max ? ' max' : ''}"></div>`;
+  }).join('');
+
+  document.getElementById('roadModalInner').innerHTML = `
+    <button class="road-modal-close" id="roadModalCloseBtn" aria-label="Close">&times;</button>
+    <div class="road-modal-badges">
+      <span class="road-type-badge">${place.type}</span>
+      <span class="road-status-badge ${d.status}">${statusLabel}</span>
+    </div>
+    <h2 class="road-modal-name">${escapeHtml(place.name)}</h2>
+    <p class="road-modal-region">${place.region}</p>
+    <div class="road-modal-stats">
+      <div class="road-stat">
+        <span class="road-stat-value">${d.length}</span>
+        <span class="road-stat-label">Length</span>
+      </div>
+      <div class="road-stat">
+        <div class="road-stat-value"><div class="difficulty-bar">${diffSegs}</div></div>
+        <span class="road-stat-label">Difficulty</span>
+      </div>
+      <div class="road-stat">
+        <span class="road-stat-value">${d.surface}</span>
+        <span class="road-stat-label">Surface</span>
+      </div>
+      <div class="road-stat">
+        <span class="road-stat-value">${d.bestTime}</span>
+        <span class="road-stat-label">Best Season</span>
+      </div>
+    </div>
+    <p class="road-modal-description">${d.description}</p>
+    <div class="road-modal-tip"><strong>Driver's Tip —</strong> ${d.tip}</div>
+    <div class="road-modal-locked">
+      <div class="locked-preview"></div>
+      <div class="locked-label">Elevation Profile</div>
+      <a href="pricing.html" class="locked-cta">Unlock with Enthusiast Plan →</a>
+    </div>
+    <div class="road-modal-actions">
+      <button class="btn save-road-btn ${saved ? 'saved' : ''}" id="modalSaveBtn" data-name="${escapeHtml(place.name)}">
+        ${saved ? '✓ Saved' : '+ Save Road'}
+      </button>
+      <a href="#explore" class="btn btn-primary" id="modalMapBtn">View on Map</a>
+    </div>
+    <div class="saved-count">You have saved <span>${saveCount}</span> / ${FREE_LIMIT} roads on the free plan. <a href="pricing.html" style="color:var(--color-primary);text-decoration:underline">Upgrade for unlimited →</a></div>
+  `;
+
+  roadModalOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  document.getElementById('roadModalCloseBtn').addEventListener('click', closeRoadModal);
+
+  const saveBtn = document.getElementById('modalSaveBtn');
+  saveBtn.addEventListener('click', () => {
+    const name = saveBtn.dataset.name;
+    if (isRoadSaved(name)) {
+      unsaveRoad(name);
+      saveBtn.textContent = '+ Save Road';
+      saveBtn.classList.remove('saved');
+    } else {
+      const saved = getSavedRoads();
+      if (saved.length >= FREE_LIMIT) {
+        window.location.href = 'pricing.html';
+        return;
+      }
+      saveRoad(name);
+      saveBtn.textContent = '✓ Saved';
+      saveBtn.classList.add('saved');
+    }
+    const cnt = document.querySelector('.saved-count span');
+    if (cnt) cnt.textContent = getSavedRoads().length;
+  });
+
+  document.getElementById('modalMapBtn').addEventListener('click', e => {
+    closeRoadModal();
+    if (atlasMap) {
+      document.getElementById('explore').scrollIntoView({ behavior: 'smooth' });
+      setTimeout(() => {
+        atlasMap.flyTo([place.lat, place.lng], 11, { duration: 1.5 });
+        openPopupAtLocation(place.lat, place.lng, place.name);
+      }, 700);
+    }
+  });
+}
+
+function closeRoadModal() {
+  roadModalOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+if (roadModalClose) roadModalClose.addEventListener('click', closeRoadModal);
+if (roadModalOverlay) roadModalOverlay.addEventListener('click', e => { if (e.target === roadModalOverlay) closeRoadModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && roadModalOverlay && roadModalOverlay.classList.contains('open')) closeRoadModal(); });
+
+// ── Saved roads (localStorage) ────────────────────────────────
+function getSavedRoads() { return JSON.parse(localStorage.getItem('atlas-saved') || '[]'); }
+function saveRoad(name)   { const s = getSavedRoads(); if (!s.includes(name)) { s.push(name); localStorage.setItem('atlas-saved', JSON.stringify(s)); } }
+function unsaveRoad(name) { localStorage.setItem('atlas-saved', JSON.stringify(getSavedRoads().filter(n => n !== name))); }
+function isRoadSaved(name){ return getSavedRoads().includes(name); }
+
+// ── Type filter chips ─────────────────────────────────────────
+let activeFilter = 'All';
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    activeFilter = chip.dataset.type;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    if (searchInput.value.trim()) renderResults(searchInput.value);
+  });
+});
+
+// Patch renderResults to respect activeFilter
+const _origRenderResults = renderResults;
+// Override at module level: redefine renderResults after it's declared
+// (We patch by overwriting search event listeners to use filtered set)
+function getFilteredPlaces(query) {
+  const q = query.trim().toLowerCase();
+  return PLACES.filter(p =>
+    (activeFilter === 'All' || p.type === activeFilter) &&
+    (p.name.toLowerCase().includes(q) || p.type.toLowerCase().includes(q) || p.region.toLowerCase().includes(q))
+  ).slice(0, 9);
+}
+
+// Re-wire search to use filtered set
+function renderResultsFiltered(query) {
+  const q = query.trim().toLowerCase();
+  searchResults.innerHTML = '';
+  if (!q && activeFilter === 'All') return;
+  const matches = getFilteredPlaces(query);
+  if (!matches.length) {
+    searchResults.innerHTML = `<div class="search-empty">No results found. Try a different search term or filter.</div>`;
+    return;
+  }
+  matches.forEach(place => {
+    const item = document.createElement('div');
+    item.className = 'search-result-item';
+    item.setAttribute('tabindex', '0');
+    item.setAttribute('role', 'button');
+    item.setAttribute('aria-label', `View ${place.name}`);
+    item.innerHTML = `
+      <div class="search-result-icon">${pinIconSVG}</div>
+      <div class="search-result-text">
+        <div class="search-result-name">${q ? highlightMatch(place.name, q) : escapeHtml(place.name)}</div>
+        <div class="search-result-type">${place.type} &middot; ${place.region}</div>
+      </div>
+      <span class="search-result-action">Details →</span>
+    `;
+    const open = () => openRoadModal(place);
+    item.addEventListener('click', open);
+    item.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') open(); });
+    searchResults.appendChild(item);
+  });
+}
+
+// Replace old search listeners with the filtered version
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => renderResultsFiltered(searchInput.value), 200);
+});
+searchBtn.addEventListener('click', () => renderResultsFiltered(searchInput.value));
+searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') renderResultsFiltered(searchInput.value); });
+
+// Show results when filter chip clicked with no query
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    renderResultsFiltered(searchInput.value || (activeFilter !== 'All' ? ' ' : ''));
+  });
+});
+
+// ── Newsletter form ───────────────────────────────────────────
+const newsletterForm = document.getElementById('newsletterForm');
+if (newsletterForm) {
+  newsletterForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const email = newsletterForm.querySelector('input[type="email"]').value.trim();
+    if (!email) return;
+    const emails = JSON.parse(localStorage.getItem('atlas-newsletter') || '[]');
+    if (!emails.includes(email)) { emails.push(email); localStorage.setItem('atlas-newsletter', JSON.stringify(emails)); }
+    newsletterForm.style.display = 'none';
+    document.getElementById('newsletterSuccess').classList.add('visible');
+  });
+}
+
+// ── Cookie consent ────────────────────────────────────────────
+const cookieBanner = document.getElementById('cookieBanner');
+if (cookieBanner && !localStorage.getItem('atlas-cookie-consent')) {
+  setTimeout(() => cookieBanner.classList.add('visible'), 1500);
+  document.getElementById('cookieAccept').addEventListener('click', () => {
+    localStorage.setItem('atlas-cookie-consent', '1');
+    cookieBanner.classList.remove('visible');
+  });
+  document.getElementById('cookieDecline').addEventListener('click', () => {
+    localStorage.setItem('atlas-cookie-consent', '0');
+    cookieBanner.classList.remove('visible');
+  });
+}
+
 // ── Back to top ───────────────────────────────────────────────
 const backToTop = document.getElementById('backToTop');
 

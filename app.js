@@ -2,6 +2,41 @@
    Atlas — App JS
    ============================================================ */
 
+const API = 'http://localhost:3001';
+
+// ── Nav auth (shared with community page) ─────────────────────
+(async () => {
+  const token = localStorage.getItem('atlas-token');
+  const navAuth = document.getElementById('navAuth');
+  if (!navAuth) return;
+
+  if (!token) {
+    navAuth.innerHTML = `<button class="nav-signin-btn" id="navSignInBtn">Sign In</button>`;
+    document.getElementById('navSignInBtn').addEventListener('click', () => {
+      window.location.href = 'community.html';
+    });
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) { localStorage.removeItem('atlas-token'); return; }
+    const { user } = await res.json();
+    const initials = user.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    navAuth.innerHTML = `
+      <a href="community.html" class="nav-user-btn">
+        <div class="avatar avatar-sm">${initials}</div>
+        ${user.name.split(' ')[0]}
+      </a>
+      <button class="nav-signout-btn" id="navSignOutBtn">Sign Out</button>
+    `;
+    document.getElementById('navSignOutBtn').addEventListener('click', () => {
+      localStorage.removeItem('atlas-token');
+      window.location.reload();
+    });
+  } catch {}
+})();
+
 // ── Theme Toggle ──────────────────────────────────────────────
 const themeToggle = document.getElementById('themeToggle');
 const savedTheme = localStorage.getItem('atlas-theme') || 'light';

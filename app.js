@@ -298,10 +298,10 @@ function escapeHtml(str) {
 let searchDebounce;
 searchInput.addEventListener('input', () => {
   clearTimeout(searchDebounce);
-  searchDebounce = setTimeout(() => renderResults(searchInput.value), 200);
+  searchDebounce = setTimeout(() => renderResultsFiltered(searchInput.value), 200);
 });
-searchBtn.addEventListener('click', () => renderResults(searchInput.value));
-searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') renderResults(searchInput.value); });
+searchBtn.addEventListener('click', () => renderResultsFiltered(searchInput.value));
+searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') renderResultsFiltered(searchInput.value); });
 
 // ── Geolocation ───────────────────────────────────────────────
 const locateBtn = document.getElementById('locateBtn');
@@ -424,14 +424,15 @@ const mapObserver = new IntersectionObserver(entries => {
 
     // Wire up place card clicks after map is ready
     document.querySelectorAll('.place-card').forEach(card => {
-      const lat = parseFloat(card.dataset.lat);
-      const lng = parseFloat(card.dataset.lng);
+      const lat  = parseFloat(card.dataset.lat);
+      const lng  = parseFloat(card.dataset.lng);
       const name = card.dataset.name;
 
       const activate = () => {
         atlasMap.flyTo([lat, lng], 10, { duration: 1.2 });
-        openPopupAtLocation(lat, lng, name);
-        document.querySelector('.map-wrap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const place = PLACES.find(p => Math.abs(p.lat - lat) < 0.01 && Math.abs(p.lng - lng) < 0.01)
+                   || { name, type: 'Scenic', region: 'Unknown', lat, lng };
+        openRoadModal(place);
       };
 
       card.addEventListener('click', activate);
@@ -702,14 +703,10 @@ document.querySelectorAll('.filter-chip').forEach(chip => {
     activeFilter = chip.dataset.type;
     document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
-    if (searchInput.value.trim()) renderResults(searchInput.value);
+    renderResultsFiltered(searchInput.value);
   });
 });
 
-// Patch renderResults to respect activeFilter
-const _origRenderResults = renderResults;
-// Override at module level: redefine renderResults after it's declared
-// (We patch by overwriting search event listeners to use filtered set)
 function getFilteredPlaces(query) {
   const q = query.trim().toLowerCase();
   return PLACES.filter(p =>
@@ -748,21 +745,6 @@ function renderResultsFiltered(query) {
     searchResults.appendChild(item);
   });
 }
-
-// Replace old search listeners with the filtered version
-searchInput.addEventListener('input', () => {
-  clearTimeout(searchDebounce);
-  searchDebounce = setTimeout(() => renderResultsFiltered(searchInput.value), 200);
-});
-searchBtn.addEventListener('click', () => renderResultsFiltered(searchInput.value));
-searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') renderResultsFiltered(searchInput.value); });
-
-// Show results when filter chip clicked with no query
-document.querySelectorAll('.filter-chip').forEach(chip => {
-  chip.addEventListener('click', () => {
-    renderResultsFiltered(searchInput.value || (activeFilter !== 'All' ? ' ' : ''));
-  });
-});
 
 // ── Newsletter form ───────────────────────────────────────────
 const newsletterForm = document.getElementById('newsletterForm');

@@ -74,6 +74,59 @@ document.querySelectorAll('.faq-question').forEach(btn => {
   });
 });
 
+// ── Sign-up modal ─────────────────────────────────────────────
+const signupOverlay = document.getElementById('signupOverlay');
+const signupClose   = document.getElementById('signupClose');
+const signupPlan    = document.getElementById('signupPlan');
+const signupForm    = document.getElementById('signupForm');
+const signupSuccess = document.getElementById('signupSuccess');
+
+function openSignup(planLabel) {
+  signupPlan.textContent = planLabel;
+  signupForm.style.display = '';
+  signupSuccess.classList.remove('visible');
+  document.getElementById('signupName').value  = '';
+  document.getElementById('signupEmail').value = '';
+  document.getElementById('signupNameError').textContent  = '';
+  document.getElementById('signupEmailError').textContent = '';
+  signupOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('signupName').focus();
+}
+function closeSignup() {
+  signupOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.querySelectorAll('[data-signup]').forEach(btn => {
+  btn.addEventListener('click', () => openSignup(btn.dataset.signup));
+});
+signupClose.addEventListener('click', closeSignup);
+signupOverlay.addEventListener('click', e => { if (e.target === signupOverlay) closeSignup(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && signupOverlay.classList.contains('open')) closeSignup();
+});
+
+signupForm.addEventListener('submit', e => {
+  e.preventDefault();
+  const name  = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  let valid = true;
+  if (!name) {
+    document.getElementById('signupNameError').textContent = 'Please enter your name.'; valid = false;
+  } else { document.getElementById('signupNameError').textContent = ''; }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    document.getElementById('signupEmailError').textContent = 'Please enter a valid email.'; valid = false;
+  } else { document.getElementById('signupEmailError').textContent = ''; }
+  if (!valid) return;
+  const accounts = JSON.parse(localStorage.getItem('atlas-accounts') || '[]');
+  accounts.push({ name, email, plan: signupPlan.textContent, date: new Date().toISOString() });
+  localStorage.setItem('atlas-accounts', JSON.stringify(accounts));
+  signupForm.style.display = 'none';
+  signupSuccess.classList.add('visible');
+  setTimeout(closeSignup, 3000);
+});
+
 // ── Back to top ───────────────────────────────────────────────
 const backToTop = document.getElementById('backToTop');
 window.addEventListener('scroll', () => {

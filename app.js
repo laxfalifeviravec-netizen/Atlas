@@ -225,6 +225,118 @@ const PLACES = [
   { name: 'Lutsen Mountains Byway (MN)',     type: 'Mountain',  region: 'Midwest',      lat: 47.65,  lng: -90.69  },
   { name: 'Apostle Islands Scenic Byway (WI)',type: 'Coastal',  region: 'Midwest',      lat: 46.86,  lng: -90.83  },
   { name: 'Kettle Moraine Scenic Drive (WI)',type: 'Scenic',    region: 'Midwest',      lat: 43.00,  lng: -88.42  },
+  // West Coast — additional
+  { name: 'Ortega Highway (CA-74)',          type: 'Technical', region: 'West Coast',   lat: 33.55,  lng: -117.38 },
+  { name: 'Nacimiento-Fergusson Road',       type: 'Coastal',   region: 'West Coast',   lat: 35.98,  lng: -121.47 },
+  { name: 'Malibu Canyon Road (CA)',         type: 'Canyon',    region: 'West Coast',   lat: 34.08,  lng: -118.73 },
+  { name: 'Lost Coast Highway (CA)',         type: 'Coastal',   region: 'West Coast',   lat: 40.24,  lng: -124.07 },
+  { name: 'Sonoma Coast (CA-1 North)',       type: 'Coastal',   region: 'West Coast',   lat: 38.52,  lng: -123.22 },
+  { name: 'CA-49 Gold Country Route',        type: 'Scenic',    region: 'West Coast',   lat: 38.35,  lng: -120.55 },
+  { name: 'Stevens Pass (WA-2)',             type: 'Mountain',  region: 'West Coast',   lat: 47.74,  lng: -121.09 },
+  { name: 'Mount Baker Highway (WA-542)',    type: 'Mountain',  region: 'West Coast',   lat: 48.82,  lng: -121.68 },
+  { name: 'Chinook Pass (WA-410)',           type: 'Mountain',  region: 'West Coast',   lat: 46.87,  lng: -121.52 },
+  { name: 'White Pass (WA-12)',              type: 'Mountain',  region: 'West Coast',   lat: 46.64,  lng: -121.39 },
+  { name: 'Santiam Pass (US-20 OR)',         type: 'Mountain',  region: 'West Coast',   lat: 44.42,  lng: -121.87 },
+  { name: 'Fish Lake Road (OR-140)',         type: 'Scenic',    region: 'West Coast',   lat: 42.55,  lng: -122.32 },
+  { name: 'Richardson Highway (AK)',         type: 'Scenic',    region: 'West Coast',   lat: 62.10,  lng: -145.50 },
+  { name: 'Saddle Road (HI-200)',            type: 'Mountain',  region: 'West Coast',   lat: 19.73,  lng: -155.44 },
+  { name: 'Pilot Rock Road (OR)',            type: 'Scenic',    region: 'West Coast',   lat: 42.10,  lng: -122.78 },
+  // Mountain West — additional
+  { name: 'Loveland Pass (US-6 CO)',         type: 'Mountain',  region: 'Mountain West', lat: 39.66,  lng: -105.89 },
+  { name: 'Wolf Creek Pass (US-160 CO)',     type: 'Mountain',  region: 'Mountain West', lat: 37.48,  lng: -106.79 },
+  { name: 'Monarch Pass (US-50 CO)',         type: 'Mountain',  region: 'Mountain West', lat: 38.49,  lng: -106.33 },
+  { name: 'Rabbit Ears Pass (US-40 CO)',     type: 'Mountain',  region: 'Mountain West', lat: 40.37,  lng: -106.58 },
+  { name: 'Cameron Pass (CO-14)',            type: 'Mountain',  region: 'Mountain West', lat: 40.52,  lng: -105.90 },
+  { name: 'Hoosier Pass (CO-9)',             type: 'Mountain',  region: 'Mountain West', lat: 39.36,  lng: -106.07 },
+  { name: 'Peak to Peak Highway (CO-72)',    type: 'Scenic',    region: 'Mountain West', lat: 40.05,  lng: -105.53 },
+  { name: 'Rim Rock Drive (CO)',             type: 'Canyon',    region: 'Mountain West', lat: 39.10,  lng: -108.73 },
+  { name: 'San Juan Skyway (CO)',            type: 'Scenic',    region: 'Mountain West', lat: 37.55,  lng: -107.99 },
+  { name: 'Slumgullion Pass (CO-149)',       type: 'Mountain',  region: 'Mountain West', lat: 37.97,  lng: -107.18 },
+  { name: 'Sawtooth Scenic Byway (ID-75)',   type: 'Scenic',    region: 'Mountain West', lat: 43.91,  lng: -114.74 },
+  { name: 'Galena Summit (ID-75)',           type: 'Mountain',  region: 'Mountain West', lat: 43.87,  lng: -114.74 },
+  { name: 'Ponderosa Pine Byway (ID-21)',    type: 'Scenic',    region: 'Mountain West', lat: 44.10,  lng: -115.42 },
+  { name: 'Lost River Valley (US-93 ID)',    type: 'Scenic',    region: 'Mountain West', lat: 43.97,  lng: -113.95 },
+  { name: 'Many Glacier Road (MT)',          type: 'Mountain',  region: 'Mountain West', lat: 48.80,  lng: -113.65 },
+  { name: 'Lamar Valley (US-212 WY)',        type: 'Scenic',    region: 'Mountain West', lat: 44.90,  lng: -110.20 },
+  { name: 'Gros Ventre Road (WY)',           type: 'Technical', region: 'Mountain West', lat: 43.59,  lng: -110.55 },
+  { name: 'Ten Sleep Canyon (WY-16)',        type: 'Canyon',    region: 'Mountain West', lat: 44.05,  lng: -107.36 },
+  { name: 'Mirror Lake Scenic Byway (UT)',   type: 'Scenic',    region: 'Mountain West', lat: 40.70,  lng: -110.88 },
+  { name: 'Guardsman Pass (UT)',             type: 'Mountain',  region: 'Mountain West', lat: 40.53,  lng: -111.56 },
+  { name: 'Flaming Gorge Byway (UT-44)',     type: 'Scenic',    region: 'Mountain West', lat: 40.91,  lng: -109.42 },
+  // Southwest — additional
+  { name: 'Zion-Mt Carmel Highway (UT-9)',   type: 'Technical', region: 'Southwest',    lat: 37.21,  lng: -112.95 },
+  { name: 'Cedar Breaks Scenic Road (UT-143)',type:'Mountain',  region: 'Southwest',    lat: 37.62,  lng: -112.84 },
+  { name: 'Bryce Canyon Rim Road (UT-63)',   type: 'Scenic',    region: 'Southwest',    lat: 37.64,  lng: -112.17 },
+  { name: 'Dead Horse Point Road (UT-313)',  type: 'Scenic',    region: 'Southwest',    lat: 38.48,  lng: -109.74 },
+  { name: 'Arches Scenic Drive (UT)',        type: 'Scenic',    region: 'Southwest',    lat: 38.73,  lng: -109.59 },
+  { name: "Hell's Backbone Road (UT)",       type: 'Technical', region: 'Southwest',    lat: 37.93,  lng: -111.58 },
+  { name: 'Enchanted Circle Byway (NM)',     type: 'Scenic',    region: 'Southwest',    lat: 36.55,  lng: -105.40 },
+  { name: 'High Road to Taos (NM-76)',       type: 'Mountain',  region: 'Southwest',    lat: 36.07,  lng: -105.77 },
+  { name: 'Jemez Mountain Trail (NM-4)',     type: 'Mountain',  region: 'Southwest',    lat: 35.85,  lng: -106.65 },
+  { name: 'Davis Mountains Loop (TX-118)',   type: 'Scenic',    region: 'Southwest',    lat: 30.52,  lng: -103.80 },
+  { name: 'Apache Trail (AZ-88)',            type: 'Canyon',    region: 'Southwest',    lat: 33.52,  lng: -111.45 },
+  { name: 'Senator Highway (AZ)',            type: 'Mountain',  region: 'Southwest',    lat: 34.53,  lng: -112.45 },
+  { name: 'Crown King Road (AZ)',            type: 'Technical', region: 'Southwest',    lat: 34.20,  lng: -112.34 },
+  { name: 'Lamoille Canyon Road (NV)',       type: 'Canyon',    region: 'Southwest',    lat: 40.66,  lng: -115.43 },
+  { name: 'Vermilion Cliffs Byway (AZ)',     type: 'Desert',    region: 'Southwest',    lat: 36.85,  lng: -111.95 },
+  { name: 'Kolob Canyons Road (UT)',         type: 'Canyon',    region: 'Southwest',    lat: 37.43,  lng: -113.18 },
+  // Southeast — additional
+  { name: 'Wolf Pen Gap Road (GA-180)',      type: 'Technical', region: 'Southeast',    lat: 34.83,  lng: -84.22  },
+  { name: 'Suches Valley Loop (GA)',         type: 'Scenic',    region: 'Southeast',    lat: 34.73,  lng: -84.30  },
+  { name: 'Brasstown Bald Road (GA)',        type: 'Mountain',  region: 'Southeast',    lat: 34.87,  lng: -83.81  },
+  { name: 'Richard Russell Scenic Hwy (GA)',type: 'Scenic',    region: 'Southeast',    lat: 34.74,  lng: -83.84  },
+  { name: 'Cohutta Wilderness Road (GA)',    type: 'Scenic',    region: 'Southeast',    lat: 34.88,  lng: -84.64  },
+  { name: 'Rich Mountain Road (TN-73)',      type: 'Mountain',  region: 'Southeast',    lat: 35.68,  lng: -83.73  },
+  { name: 'Parsons Branch Road (TN)',        type: 'Technical', region: 'Southeast',    lat: 35.44,  lng: -83.91  },
+  { name: 'Clinch Mountain (TN-33)',         type: 'Mountain',  region: 'Southeast',    lat: 36.46,  lng: -82.78  },
+  { name: 'Roan Mountain (TN/NC-143)',       type: 'Mountain',  region: 'Southeast',    lat: 36.10,  lng: -82.10  },
+  { name: 'Spruce Knob Road (WV)',           type: 'Mountain',  region: 'Southeast',    lat: 38.70,  lng: -79.53  },
+  { name: 'Dolly Sods Scenic Area (WV)',     type: 'Scenic',    region: 'Southeast',    lat: 38.96,  lng: -79.45  },
+  { name: 'Seneca Rocks Byway (WV)',         type: 'Technical', region: 'Southeast',    lat: 38.83,  lng: -79.37  },
+  { name: 'Shenandoah Mountain Byway (VA)',  type: 'Mountain',  region: 'Southeast',    lat: 38.40,  lng: -79.22  },
+  { name: 'Floyd County Roads (VA-8)',       type: 'Technical', region: 'Southeast',    lat: 36.92,  lng: -80.32  },
+  { name: 'Clinch Valley Byway (US-58 VA)', type: 'Scenic',    region: 'Southeast',    lat: 36.72,  lng: -82.10  },
+  { name: 'Cumberland Gap (US-25E TN/KY)',   type: 'Mountain',  region: 'Southeast',    lat: 36.60,  lng: -83.67  },
+  { name: 'Natural Bridge Scenic (VA-130)',  type: 'Scenic',    region: 'Southeast',    lat: 37.63,  lng: -79.54  },
+  { name: 'Amelia Island Scenic (FL-A1A)',   type: 'Coastal',   region: 'Southeast',    lat: 30.67,  lng: -81.46  },
+  // Northeast — additional
+  { name: 'Pinkham Notch (NH-16)',           type: 'Mountain',  region: 'Northeast',    lat: 44.19,  lng: -71.17  },
+  { name: 'Grafton Notch (ME-26)',           type: 'Mountain',  region: 'Northeast',    lat: 44.58,  lng: -70.83  },
+  { name: 'Evans Notch (ME-113)',            type: 'Mountain',  region: 'Northeast',    lat: 44.24,  lng: -71.00  },
+  { name: 'Dixville Notch (NH-26)',          type: 'Mountain',  region: 'Northeast',    lat: 44.87,  lng: -71.32  },
+  { name: 'Appalachian Gap (VT-17)',         type: 'Technical', region: 'Northeast',    lat: 44.21,  lng: -73.00  },
+  { name: 'Lincoln Gap (VT)',                type: 'Technical', region: 'Northeast',    lat: 44.08,  lng: -72.93  },
+  { name: 'Middlebury Gap (VT-125)',         type: 'Mountain',  region: 'Northeast',    lat: 43.95,  lng: -72.92  },
+  { name: 'Granville Gulf (VT-100)',         type: 'Canyon',    region: 'Northeast',    lat: 43.97,  lng: -72.83  },
+  { name: 'Delaware Water Gap (US-209 NJ)',  type: 'Scenic',    region: 'Northeast',    lat: 40.97,  lng: -75.14  },
+  { name: 'Pennsylvania Grand Canyon (US-6)',type: 'Canyon',    region: 'Northeast',    lat: 41.64,  lng: -77.62  },
+  { name: 'Whiteface Mountain Road (NY)',    type: 'Mountain',  region: 'Northeast',    lat: 44.37,  lng: -73.90  },
+  { name: 'Route 28 Adirondacks (NY)',       type: 'Scenic',    region: 'Northeast',    lat: 43.35,  lng: -74.57  },
+  { name: 'Catskill Mountain Road (NY-28)', type: 'Scenic',    region: 'Northeast',    lat: 42.10,  lng: -74.45  },
+  { name: 'Hudson Highlands Byway (NY)',     type: 'Scenic',    region: 'Northeast',    lat: 41.39,  lng: -73.95  },
+  { name: 'Hawk Mountain Road (PA)',         type: 'Scenic',    region: 'Northeast',    lat: 40.64,  lng: -75.99  },
+  { name: 'Hyner Run Road (PA)',             type: 'Technical', region: 'Northeast',    lat: 41.33,  lng: -77.64  },
+  // Midwest — additional
+  { name: 'Spearfish Canyon (SD-14A)',       type: 'Canyon',    region: 'Midwest',      lat: 44.52,  lng: -103.86 },
+  { name: 'Peter Norbeck Scenic Byway (SD)', type: 'Mountain',  region: 'Midwest',      lat: 43.87,  lng: -103.44 },
+  { name: 'Wildlife Loop Road (SD)',         type: 'Scenic',    region: 'Midwest',      lat: 43.71,  lng: -103.48 },
+  { name: 'North Shore Scenic Drive (MN-61)',type: 'Coastal',   region: 'Midwest',      lat: 47.00,  lng: -91.63  },
+  { name: 'Gunflint Trail (MN-12)',          type: 'Scenic',    region: 'Midwest',      lat: 48.10,  lng: -90.58  },
+  { name: 'Scenic 7 Byway (AR-7)',           type: 'Scenic',    region: 'Midwest',      lat: 35.43,  lng: -92.60  },
+  { name: 'Mount Magazine Road (AR-309)',    type: 'Mountain',  region: 'Midwest',      lat: 35.17,  lng: -93.65  },
+  { name: "Devil's Den Road (AR-170)",       type: 'Canyon',    region: 'Midwest',      lat: 35.83,  lng: -94.24  },
+  { name: 'Buffalo River Road (AR-74)',      type: 'Scenic',    region: 'Midwest',      lat: 36.00,  lng: -92.97  },
+  { name: 'Door County (WI-42)',             type: 'Coastal',   region: 'Midwest',      lat: 45.05,  lng: -87.00  },
+  { name: 'Driftless Region Scenic (WI-35)', type: 'Scenic',    region: 'Midwest',      lat: 43.05,  lng: -90.87  },
+  { name: 'Pictured Rocks Route (MI-28)',    type: 'Scenic',    region: 'Midwest',      lat: 46.42,  lng: -86.61  },
+  { name: 'Sleeping Bear Dunes (MI-22)',     type: 'Coastal',   region: 'Midwest',      lat: 44.85,  lng: -86.03  },
+  { name: 'Leelanau Peninsula (MI-22)',      type: 'Scenic',    region: 'Midwest',      lat: 45.08,  lng: -85.68  },
+  { name: 'Garden Peninsula (MI-183)',       type: 'Coastal',   region: 'Midwest',      lat: 45.83,  lng: -86.57  },
+  { name: 'Flint Hills Scenic Byway (KS)',   type: 'Scenic',    region: 'Midwest',      lat: 38.43,  lng: -96.45  },
+  { name: 'Wichita Mountains Byway (OK-49)', type: 'Scenic',    region: 'Midwest',      lat: 34.73,  lng: -98.68  },
+  { name: 'Current River Byway (MO)',        type: 'Scenic',    region: 'Midwest',      lat: 37.47,  lng: -90.75  },
+  { name: 'Nebraska Sandhills (US-2)',       type: 'Desert',    region: 'Midwest',      lat: 42.06,  lng: -101.80 },
+  { name: 'Niobrara River Valley (NE)',      type: 'Scenic',    region: 'Midwest',      lat: 42.73,  lng: -100.42 },
 ];
 
 const pinIconSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -415,32 +527,25 @@ function openPopupAtLocation(lat, lng, name) {
     .openOn(atlasMap);
 }
 
-// Init map once the section is near the viewport (lazy init)
-const mapSection = document.getElementById('explore');
-const mapObserver = new IntersectionObserver(entries => {
-  if (entries[0].isIntersecting) {
-    initMap();
-    mapObserver.disconnect();
+// Initialize map immediately — script runs after DOM is ready (end of body)
+initMap();
 
-    // Wire up place card clicks after map is ready
-    document.querySelectorAll('.place-card').forEach(card => {
-      const lat  = parseFloat(card.dataset.lat);
-      const lng  = parseFloat(card.dataset.lng);
-      const name = card.dataset.name;
+// Wire up place card clicks
+document.querySelectorAll('.place-card').forEach(card => {
+  const lat  = parseFloat(card.dataset.lat);
+  const lng  = parseFloat(card.dataset.lng);
+  const name = card.dataset.name;
 
-      const activate = () => {
-        atlasMap.flyTo([lat, lng], 10, { duration: 1.2 });
-        const place = PLACES.find(p => Math.abs(p.lat - lat) < 0.01 && Math.abs(p.lng - lng) < 0.01)
-                   || { name, type: 'Scenic', region: 'Unknown', lat, lng };
-        openRoadModal(place);
-      };
+  const activate = () => {
+    atlasMap.flyTo([lat, lng], 10, { duration: 1.2 });
+    const place = PLACES.find(p => Math.abs(p.lat - lat) < 0.01 && Math.abs(p.lng - lng) < 0.01)
+               || { name, type: 'Scenic', region: 'Unknown', lat, lng };
+    openRoadModal(place);
+  };
 
-      card.addEventListener('click', activate);
-      card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') activate(); });
-    });
-  }
-}, { threshold: 0.1 });
-mapObserver.observe(mapSection);
+  card.addEventListener('click', activate);
+  card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') activate(); });
+});
 
 // ── Contact form — mailto ─────────────────────────────────────
 const contactForm = document.getElementById('contactForm');

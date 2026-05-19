@@ -846,9 +846,13 @@ input.error, textarea.error, select.error { border-color: var(--color-error); }
    Map
    ============================================================ */
 .map-wrap {
-  border-top: 1px solid var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-md);
 }
-#atlasMap { height: 420px; width: 100%; z-index: 1; }
+#atlasMap { height: 540px; width: 100%; z-index: 1; }
 
 .atlas-marker { background: none; border: none; }
 .atlas-marker-inner {
@@ -1049,7 +1053,7 @@ input.error, textarea.error, select.error { border-color: var(--color-error); }
   .footer-bottom { flex-direction: column; text-align: center; }
 
   .tacho-wrap { width: 260px; height: 260px; }
-  #atlasMap   { height: 300px; }
+  #atlasMap   { height: 360px; }
 }
 
 @media (max-width: 480px) {

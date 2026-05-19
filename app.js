@@ -527,8 +527,14 @@ function openPopupAtLocation(lat, lng, name) {
     .openOn(atlasMap);
 }
 
-// Initialize map immediately — script runs after DOM is ready (end of body)
-initMap();
+// Initialize map — wrapped in try-catch so a map failure never crashes the rest of the app
+try {
+  initMap();
+} catch (e) {
+  console.error('Map init failed:', e);
+  const el = document.getElementById('atlasMap');
+  if (el) el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--color-text-muted);font-family:var(--font-body)">Map unavailable — check your connection</div>';
+}
 
 // Wire up place card clicks
 document.querySelectorAll('.place-card').forEach(card => {
@@ -537,7 +543,7 @@ document.querySelectorAll('.place-card').forEach(card => {
   const name = card.dataset.name;
 
   const activate = () => {
-    atlasMap.flyTo([lat, lng], 10, { duration: 1.2 });
+    if (atlasMap) atlasMap.flyTo([lat, lng], 10, { duration: 1.2 });
     const place = PLACES.find(p => Math.abs(p.lat - lat) < 0.01 && Math.abs(p.lng - lng) < 0.01)
                || { name, type: 'Scenic', region: 'Unknown', lat, lng };
     openRoadModal(place);

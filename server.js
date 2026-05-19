@@ -14,9 +14,10 @@ const fs       = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'atlas-jwt-secret-change-in-production';
+const IS_VERCEL  = !!process.env.VERCEL;
 
-// ── Uploads directory ─────────────────────────────────────────
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
+// ── Uploads directory (writable /tmp on Vercel) ───────────────
+const UPLOADS_DIR = IS_VERCEL ? '/tmp/uploads' : path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const storage = multer.diskStorage({
@@ -35,8 +36,9 @@ const upload = multer({
   },
 });
 
-// ── Database ──────────────────────────────────────────────────
-const db = new Database(path.join(__dirname, 'atlas.db'));
+// ── Database (writable /tmp on Vercel) ───────────────────────
+const DB_PATH = IS_VERCEL ? '/tmp/atlas.db' : path.join(__dirname, 'atlas.db');
+const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
@@ -286,6 +288,13 @@ async function seed() {
   }
 }
 
-seed().then(() => {
-  app.listen(PORT, () => console.log(`Atlas API running on http://localhost:${PORT}`));
-});
+if (require.main === module) {
+  // Local dev: start the server
+  seed().then(() => {
+    app.listen(PORT, () => console.log(`Atlas API running on http://localhost:${PORT}`));
+  });
+} else {
+  // Vercel serverless: export app, seed in background
+  seed().catch(console.error);
+  module.exports = app;
+}

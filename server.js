@@ -274,12 +274,12 @@ async function seed() {
   ).lastInsertRowid;
 
   const demoPosts = [
-    { image_url: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800', caption: 'Tail of the Dragon — 318 curves in 11 miles. Nothing else comes close.', road_name: 'Tail of the Dragon (US-129)', region: 'Southeast' },
-    { image_url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', caption: 'Beartooth Highway at sunrise. Worth every switchback.', road_name: 'Beartooth Highway (US-212)', region: 'Mountain West' },
-    { image_url: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=800', caption: 'Pacific Coast Highway. Windows down, ocean to the left.', road_name: 'Pacific Coast Highway (CA-1)', region: 'West Coast' },
-    { image_url: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800', caption: 'Million Dollar Highway descending to Ouray. Colorado\'s finest.', road_name: 'Million Dollar Highway (US-550)', region: 'Mountain West' },
-    { image_url: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800', caption: 'Skyline Drive in the fall. The colours are unreal this time of year.', road_name: 'Skyline Drive', region: 'Northeast' },
-    { image_url: 'https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=800', caption: 'Going-to-the-Sun Road through Glacier NP. One of the greats.', road_name: 'Going-to-the-Sun Road', region: 'Mountain West' },
+    { image_url: 'https://images.unsplash.com/photo-sCj3PwIdRvM?w=800&auto=format&fit=crop', caption: 'Tail of the Dragon — 318 curves in 11 miles. Nothing else comes close. The 911 was made for this road.', road_name: 'Tail of the Dragon (US-129)', region: 'Southeast' },
+    { image_url: 'https://images.unsplash.com/photo-NeH9w4CdmnA?w=800&auto=format&fit=crop', caption: 'Beartooth Highway at sunrise. Silver 911 on the roof of America. Worth every switchback.', road_name: 'Beartooth Highway (US-212)', region: 'Mountain West' },
+    { image_url: 'https://images.unsplash.com/photo-F8NXa0WH5wk?w=800&auto=format&fit=crop', caption: 'Pacific Coast Highway. Windows down, 911 in GT Silver, ocean to the left. Nothing beats it.', road_name: 'Pacific Coast Highway (CA-1)', region: 'West Coast' },
+    { image_url: 'https://images.unsplash.com/photo-ZUwJ_aP1ED8?w=800&auto=format&fit=crop', caption: 'Million Dollar Highway descending to Ouray. Blue 911 on Colorado\'s finest piece of tarmac.', road_name: 'Million Dollar Highway (US-550)', region: 'Mountain West' },
+    { image_url: 'https://images.unsplash.com/photo-tT829CAphnM?w=800&auto=format&fit=crop', caption: 'Skyline Drive in the fall. The M3 felt right at home on this canyon of colour.', road_name: 'Skyline Drive', region: 'Northeast' },
+    { image_url: 'https://images.unsplash.com/photo-AMgve6dPt-k?w=800&auto=format&fit=crop', caption: 'Going-to-the-Sun Road through Glacier NP. One of the greats — and the car earned every bend.', road_name: 'Going-to-the-Sun Road', region: 'Mountain West' },
   ];
 
   const insertPost = db.prepare('INSERT INTO posts (user_id, image_url, caption, road_name, region, likes) VALUES (?, ?, ?, ?, ?, ?)');

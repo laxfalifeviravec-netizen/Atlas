@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Atlas — Pricing Plans</title>
+  <meta name="description" content="Atlas pricing — Free, Enthusiast ($8.99/mo), and Track Day ($19.99/mo) plans for driving enthusiasts. 7-day free trial on all paid plans." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="pricing.css" />
 </head>
@@ -18,10 +22,11 @@
       <ul class="nav-links" id="navLinks">
         <li><a href="index.html#features">Features</a></li>
         <li><a href="index.html#explore">Explore Roads</a></li>
-        <li><a href="index.html#stats">Stats</a></li>
+        <li><a href="community.html">Community</a></li>
         <li><a href="pricing.html" class="active">Pricing</a></li>
         <li><a href="index.html#contact">Contact</a></li>
       </ul>
+      <div class="nav-auth" id="navAuth"></div>
       <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
@@ -40,9 +45,9 @@
   <!-- Pricing Hero -->
   <section class="pricing-hero">
     <div class="container">
-      <span class="hero-badge">Simple, Honest Pricing</span>
-      <h1>Choose Your Plan</h1>
-      <p>Start free and upgrade when you're ready. No hidden fees, no surprise charges — just great roads.</p>
+      <span class="hero-badge">Built for Drivers</span>
+      <h1>Pick Your Line</h1>
+      <p>Start free and push harder when you're ready. No hidden fees, no surprise charges — just the roads ahead.</p>
       <!-- Billing toggle -->
       <div class="billing-toggle" id="billingToggle">
         <span class="toggle-label" id="labelMonthly">Monthly</span>
@@ -50,6 +55,12 @@
           <span class="toggle-thumb"></span>
         </button>
         <span class="toggle-label" id="labelAnnual">Annual <span class="save-badge">Save 17%</span></span>
+      </div>
+      <div class="trust-bar">
+        <div class="trust-item-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Secure checkout via Stripe</div>
+        <div class="trust-item-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Cancel any time</div>
+        <div class="trust-item-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> 30-day money-back guarantee</div>
+        <div class="trust-item-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 7-day free trial on paid plans</div>
       </div>
     </div>
   </section>
@@ -74,7 +85,7 @@
             <span class="price-amount">$0</span>
             <span class="price-period">forever</span>
           </div>
-          <a href="#" class="btn btn-secondary plan-cta">Get Started Free</a>
+          <button class="btn btn-secondary plan-cta" data-signup="Explorer · Free">Get Started Free</button>
           <ul class="plan-features">
             <li class="feature-yes">Search &amp; discover roads</li>
             <li class="feature-yes">Interactive map access</li>
@@ -107,7 +118,7 @@
             <span class="price-period">/month</span>
           </div>
           <p class="price-annual-note" id="proAnnualNote" style="display:none">Billed as <strong>$89.99/year</strong></p>
-          <a href="#" class="btn btn-primary plan-cta">Start 7-Day Free Trial</a>
+          <button class="btn btn-primary plan-cta" data-signup="Enthusiast · $8.99/mo">Start 7-Day Free Trial</button>
           <ul class="plan-features">
             <li class="feature-yes">Everything in Explorer</li>
             <li class="feature-yes">Unlimited saved routes</li>
@@ -141,7 +152,7 @@
             <span class="price-period">/month</span>
           </div>
           <p class="price-annual-note" id="eliteAnnualNote" style="display:none">Billed as <strong>$199.99/year</strong></p>
-          <a href="#" class="btn btn-secondary plan-cta">Start 7-Day Free Trial</a>
+          <button class="btn btn-secondary plan-cta" data-signup="Track Day · $19.99/mo">Start 7-Day Free Trial</button>
           <ul class="plan-features">
             <li class="feature-yes">Everything in Enthusiast</li>
             <li class="feature-yes">Curated expert road guides</li>
@@ -391,7 +402,7 @@
         <h2>Ready to find your next great drive?</h2>
         <p>Join 85,000 driving enthusiasts already exploring America's best roads with Atlas.</p>
         <div class="pricing-cta-actions">
-          <a href="#" class="btn btn-primary">Start Free — No Card Needed</a>
+          <button class="btn btn-primary" data-signup="Explorer · Free">Start Free — No Card Needed</button>
           <a href="index.html#explore" class="btn btn-secondary">Explore Roads First</a>
         </div>
       </div>
@@ -437,6 +448,37 @@
       </div>
     </div>
   </footer>
+
+  <!-- Sign-up modal -->
+  <div class="modal-overlay" id="signupOverlay" role="dialog" aria-modal="true" aria-labelledby="signupTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="signupTitle">Create Your Account</h3>
+        <button class="modal-close" id="signupClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom:1.25rem;color:var(--color-text-muted);font-size:0.9rem;">Selected plan: <strong id="signupPlan" style="color:var(--color-primary)"></strong></p>
+        <form id="signupForm" novalidate>
+          <div class="form-group" style="margin-bottom:1rem">
+            <label for="signupName" style="display:block;font-weight:600;margin-bottom:.4rem;font-size:.85rem;text-transform:uppercase;letter-spacing:.06em">Name</label>
+            <input type="text" id="signupName" placeholder="Your name" required />
+            <span class="field-error" id="signupNameError"></span>
+          </div>
+          <div class="form-group" style="margin-bottom:1.5rem">
+            <label for="signupEmail" style="display:block;font-weight:600;margin-bottom:.4rem;font-size:.85rem;text-transform:uppercase;letter-spacing:.06em">Email</label>
+            <input type="email" id="signupEmail" placeholder="your@email.com" required />
+            <span class="field-error" id="signupEmailError"></span>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Create Account — Start Driving</button>
+        </form>
+        <div class="form-success" id="signupSuccess" style="margin-top:1rem">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          You're in. Welcome to Atlas — check your email to verify.
+        </div>
+        <p style="margin-top:1rem;text-align:center;font-size:0.8rem;color:var(--color-text-muted)">By signing up you agree to our <a href="#" data-modal="terms" style="color:var(--color-primary)">Terms</a> and <a href="#" data-modal="privacy" style="color:var(--color-primary)">Privacy Policy</a>.</p>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal (shared) -->
   <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">

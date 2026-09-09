@@ -83,7 +83,11 @@ db.exec(`
 // ── Middleware ────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));                      // serve static site
+// Static files are served by Vercel's CDN in production.
+// In local dev, express.static handles them here.
+if (!IS_VERCEL) {
+  app.use(express.static(path.join(__dirname)));
+}
 app.use('/uploads', express.static(UPLOADS_DIR));       // serve uploaded images
 
 // ── Auth middleware ───────────────────────────────────────────

@@ -14,8 +14,8 @@ let currentGroupId = null;
 let locationPoll = null;
 
 // ── Theme ──────────────────────────────────────────────────
-const savedTheme = localStorage.getItem('atlas-theme') || 'light';
-document.documentElement.setAttribute('data-theme', savedTheme);
+const savedTheme = localStorage.getItem('atlas-theme');
+if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
 document.getElementById('themeToggle').addEventListener('click', () => {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);

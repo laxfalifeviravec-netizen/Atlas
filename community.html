@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Atlas — Community</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -158,16 +158,23 @@
     </div>
   </div>
 
-  <!-- ═══ STORY VIEWER MODAL ══════════════════════════════════════ -->
+  <!-- ═══ STORY VIEWER — full portrait phone ══════════════════════ -->
   <div class="story-overlay" id="storyOverlay">
-    <button class="story-nav story-prev" id="storyPrev">&#8249;</button>
     <div class="story-viewer" id="storyViewer">
-      <div class="story-progress-bar" id="storyProgressBar"></div>
+      <!-- Progress bars row -->
+      <div class="story-bars" id="storyBars"></div>
+      <!-- User info -->
+      <div class="story-user-header" id="storyUserHeader"></div>
+      <!-- Close -->
+      <button class="story-close" id="storyClose">&times;</button>
+      <!-- Full image -->
       <img id="storyViewImg" src="" alt="" />
+      <!-- Road name caption -->
       <div class="story-info" id="storyInfo"></div>
+      <!-- Tap zones (prev / next) -->
+      <button class="story-nav story-prev" id="storyPrev" aria-label="Previous story"></button>
+      <button class="story-nav story-next" id="storyNext" aria-label="Next story"></button>
     </div>
-    <button class="story-nav story-next" id="storyNext">&#8250;</button>
-    <button class="story-close" id="storyClose">&times;</button>
   </div>
 
   <!-- ═══ AUTH MODAL ═══════════════════════════════════════════════ -->

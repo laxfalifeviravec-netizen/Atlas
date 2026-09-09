@@ -16,8 +16,8 @@ let storyIndex = 0;
 let storyTimer = null;
 
 // ── Theme ──────────────────────────────────────────────────
-const savedTheme = localStorage.getItem('atlas-theme') || 'light';
-document.documentElement.setAttribute('data-theme', savedTheme);
+const savedTheme = localStorage.getItem('atlas-theme');
+if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
 document.getElementById('themeToggle').addEventListener('click', () => {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
@@ -87,30 +87,66 @@ function renderStories(stories) {
 function openStoryViewer(idx) {
   storyIndex = idx;
   document.getElementById('storyOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  buildStoryBars();
   showStory(idx);
+}
+
+function buildStoryBars() {
+  const barsEl = document.getElementById('storyBars');
+  if (!barsEl) return;
+  barsEl.innerHTML = allStories.map(() =>
+    `<div class="story-bar-seg"><div class="story-bar-fill"></div></div>`
+  ).join('');
 }
 
 function showStory(idx) {
   if (idx < 0 || idx >= allStories.length) { closeStoryViewer(); return; }
+  storyIndex = idx;
   const s = allStories[idx];
   document.getElementById('storyViewImg').src = s.image_url.startsWith('http') ? s.image_url : `${API}${s.image_url}`;
-  document.getElementById('storyInfo').innerHTML = `<strong>${s.user_name||'Driver'}</strong><span>${s.road_name||''}</span>`;
-  const bar = document.getElementById('storyProgressBar');
-  bar.style.transition = 'none'; bar.style.width = '0%';
-  requestAnimationFrame(() => {
-    bar.style.transition = 'width 5s linear'; bar.style.width = '100%';
+  document.getElementById('storyInfo').innerHTML = s.road_name ? `<span>${esc(s.road_name)}</span>` : '';
+
+  // User header
+  const initials = (s.user_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  const timeAgo = formatTime(s.created_at);
+  const userHdr = document.getElementById('storyUserHeader');
+  if (userHdr) {
+    userHdr.innerHTML = `
+      <div class="story-user-avatar">${initials}</div>
+      <div>
+        <div class="story-user-name">${esc(s.user_name||'Driver')}</div>
+        <div class="story-user-time">${timeAgo}</div>
+      </div>`;
+  }
+
+  // Progress bars — mark past as done, reset current, clear future
+  const fills = document.querySelectorAll('.story-bar-fill');
+  fills.forEach((f, i) => {
+    f.style.transition = 'none';
+    if (i < idx) { f.style.width = '100%'; f.classList.add('done'); }
+    else if (i === idx) {
+      f.classList.remove('done'); f.style.width = '0%';
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          f.style.transition = 'width 5s linear'; f.style.width = '100%';
+        });
+      });
+    } else { f.classList.remove('done'); f.style.width = '0%'; }
   });
+
   clearTimeout(storyTimer);
-  storyTimer = setTimeout(() => showStory(idx + 1), 5000);
+  storyTimer = setTimeout(() => showStory(idx + 1), 5100);
 }
 
 function closeStoryViewer() {
   document.getElementById('storyOverlay').classList.remove('open');
+  document.body.style.overflow = '';
   clearTimeout(storyTimer);
 }
 
-document.getElementById('storyPrev').addEventListener('click', () => { clearTimeout(storyTimer); showStory(--storyIndex); });
-document.getElementById('storyNext').addEventListener('click', () => { clearTimeout(storyTimer); showStory(++storyIndex); });
+document.getElementById('storyPrev').addEventListener('click', () => { clearTimeout(storyTimer); showStory(storyIndex - 1); });
+document.getElementById('storyNext').addEventListener('click', () => { clearTimeout(storyTimer); showStory(storyIndex + 1); });
 document.getElementById('storyClose').addEventListener('click', closeStoryViewer);
 
 // ── Story Upload ───────────────────────────────────────────

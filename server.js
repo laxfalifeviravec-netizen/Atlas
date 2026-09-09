@@ -9,12 +9,14 @@ const multer    = require('multer');
 const cors      = require('cors');
 const path      = require('path');
 const { createClient } = require('@supabase/supabase-js');
+const { Pool }  = require('pg');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET     = process.env.JWT_SECRET     || 'atlas-jwt-secret-change-in-production';
 const SUPABASE_URL   = process.env.SUPABASE_URL   || '';
 const SUPABASE_KEY   = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const DATABASE_URL   = process.env.DATABASE_URL   || '';
 const IS_VERCEL      = !!process.env.VERCEL;
 
 // ── Supabase client ───────────────────────────────────────────
@@ -25,6 +27,128 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   });
 } else {
   console.warn('⚠  SUPABASE_URL / SUPABASE_SERVICE_KEY not set — running with in-memory fallback.');
+}
+
+// ── Auto-migration (runs on first cold start in Vercel) ───────
+let migrationDone = false;
+const MIGRATION_SQL = `
+  create table if not exists users (
+    id bigserial primary key,
+    name text not null,
+    email text unique not null,
+    password_hash text not null,
+    avatar text,
+    bio text default '',
+    plan text default 'Explorer',
+    created_at timestamptz default now()
+  );
+  create table if not exists posts (
+    id bigserial primary key,
+    user_id bigint references users(id) on delete cascade,
+    image_url text not null,
+    caption text default '',
+    road_name text default '',
+    region text default '',
+    likes integer default 0,
+    created_at timestamptz default now()
+  );
+  create table if not exists post_likes (
+    user_id bigint references users(id) on delete cascade,
+    post_id bigint references posts(id) on delete cascade,
+    primary key (user_id, post_id)
+  );
+  create table if not exists comments (
+    id bigserial primary key,
+    post_id bigint references posts(id) on delete cascade,
+    user_id bigint references users(id) on delete cascade,
+    body text not null,
+    created_at timestamptz default now()
+  );
+  create table if not exists stories (
+    id bigserial primary key,
+    user_id bigint references users(id) on delete cascade,
+    image_url text not null,
+    road_name text default '',
+    created_at timestamptz default now()
+  );
+  create table if not exists groups (
+    id bigserial primary key,
+    creator_id bigint references users(id) on delete cascade,
+    name text not null,
+    description text default '',
+    meeting_point text default '',
+    route_name text default '',
+    created_at timestamptz default now()
+  );
+  create table if not exists group_members (
+    group_id bigint references groups(id) on delete cascade,
+    user_id bigint references users(id) on delete cascade,
+    joined_at timestamptz default now(),
+    primary key (group_id, user_id)
+  );
+  create table if not exists group_locations (
+    group_id bigint references groups(id) on delete cascade,
+    user_id bigint references users(id) on delete cascade,
+    lat double precision not null,
+    lng double precision not null,
+    heading double precision default 0,
+    updated_at timestamptz default now(),
+    primary key (group_id, user_id)
+  );
+  create table if not exists group_routes (
+    id bigserial primary key,
+    group_id bigint references groups(id) on delete cascade,
+    user_id bigint references users(id) on delete cascade,
+    name text not null,
+    points jsonb not null,
+    created_at timestamptz default now()
+  );
+  create table if not exists listings (
+    id bigserial primary key,
+    user_id bigint references users(id) on delete cascade,
+    title text not null,
+    price text not null,
+    category text default 'Other',
+    description text default '',
+    contact text default '',
+    image_url text,
+    created_at timestamptz default now()
+  );
+  create table if not exists roads (
+    id bigserial primary key,
+    user_id bigint references users(id) on delete cascade,
+    name text not null,
+    region text default '',
+    description text default '',
+    difficulty text default 'Moderate',
+    points jsonb not null,
+    likes integer default 0,
+    created_at timestamptz default now()
+  );
+  create or replace function increment_likes(pid bigint)
+    returns void language sql as $$ update posts set likes = likes + 1 where id = pid; $$;
+  create or replace function decrement_likes(pid bigint)
+    returns void language sql as $$ update posts set likes = greatest(0, likes - 1) where id = pid; $$;
+  create or replace function increment_road_likes(rid bigint)
+    returns void language sql as $$ update roads set likes = likes + 1 where id = rid; $$;
+`;
+
+async function runMigrations() {
+  if (migrationDone) return;
+  migrationDone = true;
+  if (!DATABASE_URL) {
+    console.warn('⚠  DATABASE_URL not set — skipping auto-migration.');
+    return;
+  }
+  const pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 1 });
+  try {
+    await pool.query(MIGRATION_SQL);
+    console.log('✓ Database schema up to date.');
+  } catch (e) {
+    console.error('Migration error:', e.message);
+  } finally {
+    await pool.end();
+  }
 }
 
 // ── Multer: memory storage (upload to Supabase Storage) ───────
@@ -702,10 +826,11 @@ async function maybeMemSeed() {
 
 // ── Start ─────────────────────────────────────────────────────
 if (require.main === module) {
-  maybeMemSeed().then(() => {
+  runMigrations().then(() => maybeMemSeed()).then(() => {
     app.listen(PORT, () => console.log(`Atlas API → http://localhost:${PORT}`));
   });
 } else {
+  runMigrations().catch(console.error);
   maybeMemSeed().catch(console.error);
   module.exports = app;
 }

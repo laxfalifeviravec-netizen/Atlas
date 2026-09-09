@@ -5,51 +5,45 @@
 /* ── Reset / base ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── Design tokens ────────────────────────────────────────────
+   Default: dark / asphalt. Amber accent = headlights at night.
+   ─────────────────────────────────────────────────────────── */
 :root {
-  --c-bg:          #fafafa;
-  --c-surface:     #ffffff;
-  --c-border:      #dbdbdb;
-  --c-text:        #262626;
-  --c-text-2:      #8e8e8e;
-  --c-accent:      #dc2222;
-  --c-accent-h:    #b81c1c;
-  --c-story-ring:  linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);
-  --c-story-seen:  #dbdbdb;
-  --radius-card:   3px;
-  --font-ui:       'Barlow', system-ui, -apple-system, sans-serif;
-  --font-head:     'Barlow Condensed', 'Barlow', system-ui, sans-serif;
+  /* dark-first palette */
+  --c-bg:          #0C0C0F;
+  --c-surface:     #141417;
+  --c-border:      #252529;
+  --c-text:        #EDEBE6;
+  --c-text-2:      #5C5A60;
+  --c-accent:      #E4A530;
+  --c-accent-h:    #CF9220;
+  --c-story-ring:  linear-gradient(135deg,#E4A530,#F07020,#E03520);
+  --c-story-seen:  #2C2C32;
+  --radius-card:   4px;
+  --font-ui:       'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-head:     'Barlow Condensed', system-ui, sans-serif;
   --header-h:      52px;
-  --bottom-nav-h:  calc(52px + env(safe-area-inset-bottom, 0px));
+  --bottom-nav-h:  calc(56px + env(safe-area-inset-bottom, 0px));
   --safe-b:        env(safe-area-inset-bottom, 0px);
 }
 
-/* Dark mode — default to dark (Instagram does this) */
-:root {
-  --c-bg:        #0d0d0d;
-  --c-surface:   #121212;
-  --c-border:    #262626;
-  --c-text:      #f0f0f0;
-  --c-text-2:    #737373;
-  --c-story-seen:#3a3a3a;
-}
-
-/* Light mode override */
+/* Light mode */
 [data-theme="light"] {
-  --c-bg:          #fafafa;
-  --c-surface:     #ffffff;
-  --c-border:      #dbdbdb;
-  --c-text:        #262626;
-  --c-text-2:      #8e8e8e;
-  --c-story-seen:  #c7c7c7;
+  --c-bg:          #F3F1EC;
+  --c-surface:     #FAF9F6;
+  --c-border:      #E0DDDA;
+  --c-text:        #141312;
+  --c-text-2:      #8A8580;
+  --c-story-seen:  #D0CCC8;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --c-bg:        #fafafa;
-    --c-surface:   #ffffff;
-    --c-border:    #dbdbdb;
-    --c-text:      #262626;
-    --c-text-2:    #8e8e8e;
-    --c-story-seen:#c7c7c7;
+    --c-bg:          #F3F1EC;
+    --c-surface:     #FAF9F6;
+    --c-border:      #E0DDDA;
+    --c-text:        #141312;
+    --c-text-2:      #8A8580;
+    --c-story-seen:  #D0CCC8;
   }
 }
 
@@ -77,8 +71,9 @@ body {
   padding: 0 12px 0 16px;
 }
 .app-logo {
-  font-family: var(--font-head); font-size: 26px; font-weight: 800;
-  color: var(--c-text); text-decoration: none; letter-spacing: -0.5px;
+  font-family: var(--font-head); font-size: 22px; font-weight: 800;
+  color: var(--c-text); text-decoration: none;
+  letter-spacing: 2.5px; text-transform: uppercase;
 }
 .app-header-actions { display: flex; align-items: center; gap: 4px; }
 .app-icon-btn {
@@ -107,8 +102,9 @@ body {
 .nav-auth { display: flex; align-items: center; gap: 6px; }
 .nav-signin-btn, .nav-signout-btn {
   background: none; border: 1px solid var(--c-border); cursor: pointer;
-  color: var(--c-text); font-size: 13px; padding: 6px 14px; border-radius: 8px;
-  font-family: var(--font-ui); font-weight: 600; min-height: 36px;
+  color: var(--c-text); font-size: 12px; padding: 6px 14px; border-radius: 4px;
+  font-family: var(--font-ui); font-weight: 600; min-height: 34px;
+  letter-spacing: 0.3px; text-transform: uppercase;
   transition: background 0.15s;
 }
 .nav-signin-btn:hover, .nav-signout-btn:hover { background: var(--c-border); }
@@ -238,7 +234,7 @@ body {
 .post-card-caption strong { font-weight: 600; margin-right: 5px; }
 .post-card-time { padding: 0 12px 12px; font-size: 10px; color: var(--c-text-2); text-transform: uppercase; letter-spacing: 0.5px; }
 
-/* ── Bottom Navigation — Instagram style ───────────────────── */
+/* ── Bottom Navigation ─────────────────────────────────────── */
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0;
   height: var(--bottom-nav-h);
@@ -246,33 +242,40 @@ body {
   background: var(--c-surface);
   border-top: 1px solid var(--c-border);
   display: flex; align-items: flex-start; justify-content: space-around;
-  padding-top: 6px;
+  padding-top: 8px;
   z-index: 100;
 }
 .bnav-item {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  color: var(--c-text-2); text-decoration: none; font-size: 10px;
-  padding: 4px 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: var(--c-text-2); text-decoration: none;
+  padding: 6px 10px;
   min-width: 52px; min-height: 44px;
   border: none; background: none; cursor: pointer;
-  transition: color 0.1s;
-  position: relative;
+  transition: color 0.15s;
+  position: relative; gap: 0;
 }
+.bnav-item span { display: none; } /* icons only — clean */
+.bnav-item svg { width: 23px; height: 23px; }
 .bnav-item.active { color: var(--c-text); }
-.bnav-item.active svg { stroke-width: 2.5; }
-.bnav-item svg { width: 24px; height: 24px; }
-.bnav-item span { font-size: 10px; font-weight: 500; letter-spacing: 0.2px; }
+.bnav-item.active svg { stroke-width: 2.3; }
+/* Active dot */
+.bnav-item.active::after {
+  content: '';
+  position: absolute; bottom: 2px;
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--c-accent);
+}
 
 /* Center "post" button */
 .bnav-post {
-  width: 44px; height: 44px; border-radius: 12px;
+  width: 42px; height: 42px; border-radius: 8px;
   background: var(--c-accent); color: #fff !important;
-  font-size: 0; padding: 0; margin-top: -4px;
+  font-size: 0; padding: 0; margin-top: -2px;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 16px rgba(220,34,34,0.4);
-  min-width: 44px;
+  box-shadow: 0 4px 18px rgba(228,165,48,0.35);
+  min-width: 42px;
 }
-.bnav-post svg { width: 24px; height: 24px; stroke: #fff; }
+.bnav-post svg { width: 22px; height: 22px; stroke: #fff; }
 
 /* ── Spinner ───────────────────────────────────────────────── */
 .spinner {
@@ -286,15 +289,16 @@ body {
 /* ── Buttons ───────────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; gap: 6px;
-  border: none; cursor: pointer; border-radius: 8px;
+  border: none; cursor: pointer; border-radius: 6px;
   font-family: var(--font-ui); font-weight: 600; font-size: 14px;
-  padding: 11px 20px; min-height: 44px;
+  padding: 11px 22px; min-height: 44px;
+  letter-spacing: 0.15px;
   transition: background 0.15s, opacity 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
-.btn-primary { background: var(--c-accent); color: #fff; }
+.btn-primary { background: var(--c-accent); color: #0C0C0F; }
 .btn-primary:active { background: var(--c-accent-h); }
-.btn-outline { background: none; border: 1.5px solid var(--c-border); color: var(--c-text); }
+.btn-outline { background: none; border: 1px solid var(--c-border); color: var(--c-text); }
 .btn-outline:active { background: var(--c-border); }
 .btn-sm { padding: 7px 16px; font-size: 13px; min-height: 36px; }
 .btn-full { width: 100%; justify-content: center; }
@@ -312,15 +316,14 @@ body {
 
 .modal {
   background: var(--c-surface);
-  border-radius: 20px 20px 0 0;
+  border-radius: 16px 16px 0 0;
   width: 100%; max-width: 600px;
   max-height: 92vh;
   overflow-y: auto;
   position: relative;
   padding-bottom: var(--safe-b);
   transform: translateY(40px);
-  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
-  /* drag handle */
+  transition: transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
 }
 .modal-overlay.open .modal { transform: translateY(0); }
 
@@ -347,7 +350,7 @@ body {
 .modal-body { padding: 16px 20px 24px; display: flex; flex-direction: column; gap: 12px; }
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-group input, .form-group select, .form-group textarea {
-  border: 1.5px solid var(--c-border); border-radius: 10px;
+  border: 1px solid var(--c-border); border-radius: 6px;
   padding: 12px 14px; background: var(--c-bg); color: var(--c-text);
   font-size: 15px; font-family: var(--font-ui); outline: none;
   transition: border-color 0.15s; min-height: 44px;
@@ -360,12 +363,12 @@ body {
 
 /* Upload zone */
 .upload-zone {
-  border: 2px dashed var(--c-border); border-radius: 12px;
+  border: 1px solid var(--c-border); border-radius: 6px;
   padding: 28px; text-align: center; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; gap: 8px;
   color: var(--c-text-2); transition: border-color 0.15s, background 0.15s;
 }
-.upload-zone:active { border-color: var(--c-accent); background: rgba(220,34,34,0.04); }
+.upload-zone:active { border-color: var(--c-accent); background: rgba(228,165,48,0.04); }
 .upload-zone p { font-size: 14px; font-weight: 500; }
 .upload-preview { width: 100%; border-radius: 10px; object-fit: cover; max-height: 280px; }
 

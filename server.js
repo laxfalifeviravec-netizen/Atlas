@@ -1,9 +1,8 @@
 /* ============================================================
-   Atlas — API Server (Express + SQLite)
+   Atlas — API Server (Express + in-memory store)
    ============================================================ */
 
 const express  = require('express');
-const Database = require('better-sqlite3');
 const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const multer   = require('multer');
@@ -36,49 +35,17 @@ const upload = multer({
   },
 });
 
-// ── Database (writable /tmp on Vercel) ───────────────────────
-const DB_PATH = IS_VERCEL ? '/tmp/atlas.db' : path.join(__dirname, 'atlas.db');
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+// ── In-memory store ───────────────────────────────────────────
+let users    = [];
+let posts    = [];
+let comments = [];
+const postLikes = new Set(); // keys: `${userId}-${postId}`
+let nextUserId    = 1;
+let nextPostId    = 1;
+let nextCommentId = 1;
+let seeded = false;
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    name       TEXT    NOT NULL,
-    email      TEXT    NOT NULL UNIQUE,
-    password   TEXT    NOT NULL,
-    avatar     TEXT,
-    bio        TEXT    DEFAULT '',
-    plan       TEXT    DEFAULT 'Explorer',
-    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS posts (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    image_url  TEXT    NOT NULL,
-    caption    TEXT    NOT NULL DEFAULT '',
-    road_name  TEXT    NOT NULL DEFAULT '',
-    region     TEXT    NOT NULL DEFAULT '',
-    likes      INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS post_likes (
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-    PRIMARY KEY (user_id, post_id)
-  );
-
-  CREATE TABLE IF NOT EXISTS comments (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    post_id    INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    body       TEXT    NOT NULL,
-    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
-  );
-`);
+function now() { return new Date().toISOString().replace('T', ' ').slice(0, 19); }
 
 // ── Middleware ────────────────────────────────────────────────
 app.use(cors());
@@ -110,6 +77,27 @@ function optionalAuth(req, res, next) {
   next();
 }
 
+// ── Helpers ───────────────────────────────────────────────────
+function safeUser(u) {
+  const { password: _, ...rest } = u;
+  return rest;
+}
+
+function postWithMeta(post, userId) {
+  const user = users.find(u => u.id === post.user_id) || {};
+  return {
+    ...post,
+    user_name:   user.name   || '',
+    user_avatar: user.avatar || null,
+    liked: userId ? postLikes.has(`${userId}-${post.id}`) : false,
+  };
+}
+
+function commentWithMeta(c) {
+  const user = users.find(u => u.id === c.user_id) || {};
+  return { ...c, user_name: user.name || '', user_avatar: user.avatar || null };
+}
+
 // ── Auth routes ───────────────────────────────────────────────
 app.post('/api/auth/register', async (req, res) => {
   const { name, email, password } = req.body;
@@ -120,38 +108,44 @@ app.post('/api/auth/register', async (req, res) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return res.status(400).json({ error: 'Invalid email address.' });
 
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
-  if (existing) return res.status(409).json({ error: 'An account with that email already exists.' });
+  if (users.find(u => u.email === email.toLowerCase()))
+    return res.status(409).json({ error: 'An account with that email already exists.' });
 
   const hash = await bcrypt.hash(password, 10);
-  const result = db.prepare(
-    'INSERT INTO users (name, email, password) VALUES (?, ?, ?)'
-  ).run(name.trim(), email.toLowerCase(), hash);
+  const user = {
+    id: nextUserId++,
+    name: name.trim(),
+    email: email.toLowerCase(),
+    password: hash,
+    avatar: null,
+    bio: '',
+    plan: 'Explorer',
+    created_at: now(),
+  };
+  users.push(user);
 
-  const user = db.prepare('SELECT id, name, email, avatar, bio, plan, created_at FROM users WHERE id = ?').get(result.lastInsertRowid);
   const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
-  res.status(201).json({ token, user });
+  res.status(201).json({ token, user: safeUser(user) });
 });
 
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required.' });
 
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
+  const user = users.find(u => u.email === email.toLowerCase());
   if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
 
   const match = await bcrypt.compare(password, user.password);
   if (!match) return res.status(401).json({ error: 'Invalid email or password.' });
 
-  const { password: _, ...safeUser } = user;
   const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
-  res.json({ token, user: safeUser });
+  res.json({ token, user: safeUser(user) });
 });
 
 app.get('/api/auth/me', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT id, name, email, avatar, bio, plan, created_at FROM users WHERE id = ?').get(req.user.id);
+  const user = users.find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found.' });
-  res.json({ user });
+  res.json({ user: safeUser(user) });
 });
 
 // ── Post routes ───────────────────────────────────────────────
@@ -160,122 +154,123 @@ app.get('/api/posts', optionalAuth, (req, res) => {
   const limit = Math.min(24, parseInt(req.query.limit) || 12);
   const offset = (page - 1) * limit;
 
-  const posts = db.prepare(`
-    SELECT p.*, u.name AS user_name, u.avatar AS user_avatar
-    FROM posts p
-    JOIN users u ON u.id = p.user_id
-    ORDER BY p.created_at DESC
-    LIMIT ? OFFSET ?
-  `).all(limit, offset);
+  const sorted = [...posts].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const page_posts = sorted.slice(offset, offset + limit)
+    .map(p => postWithMeta(p, req.user?.id));
 
-  const total = db.prepare('SELECT COUNT(*) AS n FROM posts').get().n;
-
-  // Attach liked flag for current user
-  if (req.user) {
-    const likedIds = new Set(
-      db.prepare('SELECT post_id FROM post_likes WHERE user_id = ?').all(req.user.id).map(r => r.post_id)
-    );
-    posts.forEach(p => { p.liked = likedIds.has(p.id); });
-  } else {
-    posts.forEach(p => { p.liked = false; });
-  }
-
-  res.json({ posts, total, page, pages: Math.ceil(total / limit) });
+  res.json({ posts: page_posts, total: posts.length, page, pages: Math.ceil(posts.length / limit) });
 });
 
 app.post('/api/posts', requireAuth, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'An image is required.' });
   const { caption = '', road_name = '', region = '' } = req.body;
 
-  const result = db.prepare(
-    'INSERT INTO posts (user_id, image_url, caption, road_name, region) VALUES (?, ?, ?, ?, ?)'
-  ).run(req.user.id, `/uploads/${req.file.filename}`, caption.trim(), road_name.trim(), region.trim());
+  const post = {
+    id: nextPostId++,
+    user_id:   req.user.id,
+    image_url: `/uploads/${req.file.filename}`,
+    caption:   caption.trim(),
+    road_name: road_name.trim(),
+    region:    region.trim(),
+    likes:     0,
+    created_at: now(),
+  };
+  posts.push(post);
 
-  const post = db.prepare(`
-    SELECT p.*, u.name AS user_name, u.avatar AS user_avatar
-    FROM posts p JOIN users u ON u.id = p.user_id
-    WHERE p.id = ?
-  `).get(result.lastInsertRowid);
-
-  post.liked = false;
-  res.status(201).json({ post });
+  res.status(201).json({ post: postWithMeta(post, req.user.id) });
 });
 
 app.delete('/api/posts/:id', requireAuth, (req, res) => {
-  const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(req.params.id);
-  if (!post) return res.status(404).json({ error: 'Post not found.' });
+  const postId = parseInt(req.params.id);
+  const idx = posts.findIndex(p => p.id === postId);
+  if (idx === -1) return res.status(404).json({ error: 'Post not found.' });
+  const post = posts[idx];
   if (post.user_id !== req.user.id) return res.status(403).json({ error: 'Not your post.' });
 
-  // Delete image file
-  const filePath = path.join(__dirname, post.image_url);
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  // Delete image file (only locally-uploaded ones)
+  if (post.image_url.startsWith('/uploads/')) {
+    const filePath = path.join(UPLOADS_DIR, path.basename(post.image_url));
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  }
 
-  db.prepare('DELETE FROM posts WHERE id = ?').run(req.params.id);
+  posts.splice(idx, 1);
+  // Clean up related data
+  comments = comments.filter(c => c.post_id !== postId);
+  for (const key of postLikes) {
+    if (key.endsWith(`-${postId}`)) postLikes.delete(key);
+  }
   res.json({ ok: true });
 });
 
 app.post('/api/posts/:id/like', requireAuth, (req, res) => {
   const postId = parseInt(req.params.id);
   const userId = req.user.id;
+  const key = `${userId}-${postId}`;
+  const post = posts.find(p => p.id === postId);
+  if (!post) return res.status(404).json({ error: 'Post not found.' });
 
-  const existing = db.prepare('SELECT 1 FROM post_likes WHERE user_id = ? AND post_id = ?').get(userId, postId);
-  if (existing) {
-    db.prepare('DELETE FROM post_likes WHERE user_id = ? AND post_id = ?').run(userId, postId);
-    db.prepare('UPDATE posts SET likes = MAX(0, likes - 1) WHERE id = ?').run(postId);
+  if (postLikes.has(key)) {
+    postLikes.delete(key);
+    post.likes = Math.max(0, post.likes - 1);
+    res.json({ liked: false, likes: post.likes });
   } else {
-    db.prepare('INSERT OR IGNORE INTO post_likes (user_id, post_id) VALUES (?, ?)').run(userId, postId);
-    db.prepare('UPDATE posts SET likes = likes + 1 WHERE id = ?').run(postId);
+    postLikes.add(key);
+    post.likes++;
+    res.json({ liked: true, likes: post.likes });
   }
-
-  const { likes } = db.prepare('SELECT likes FROM posts WHERE id = ?').get(postId);
-  res.json({ liked: !existing, likes });
 });
 
 // ── Comment routes ────────────────────────────────────────────
 app.get('/api/posts/:id/comments', (req, res) => {
-  const comments = db.prepare(`
-    SELECT c.*, u.name AS user_name, u.avatar AS user_avatar
-    FROM comments c
-    JOIN users u ON u.id = c.user_id
-    WHERE c.post_id = ?
-    ORDER BY c.created_at ASC
-  `).all(req.params.id);
-  res.json({ comments });
+  const postId = parseInt(req.params.id);
+  const result = comments
+    .filter(c => c.post_id === postId)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    .map(commentWithMeta);
+  res.json({ comments: result });
 });
 
 app.post('/api/posts/:id/comments', requireAuth, (req, res) => {
   const { body } = req.body;
   if (!body || !body.trim()) return res.status(400).json({ error: 'Comment cannot be empty.' });
 
-  const result = db.prepare(
-    'INSERT INTO comments (post_id, user_id, body) VALUES (?, ?, ?)'
-  ).run(req.params.id, req.user.id, body.trim());
-
-  const comment = db.prepare(`
-    SELECT c.*, u.name AS user_name, u.avatar AS user_avatar
-    FROM comments c JOIN users u ON u.id = c.user_id
-    WHERE c.id = ?
-  `).get(result.lastInsertRowid);
-  res.status(201).json({ comment });
+  const comment = {
+    id: nextCommentId++,
+    post_id: parseInt(req.params.id),
+    user_id: req.user.id,
+    body: body.trim(),
+    created_at: now(),
+  };
+  comments.push(comment);
+  res.status(201).json({ comment: commentWithMeta(comment) });
 });
 
 app.delete('/api/comments/:id', requireAuth, (req, res) => {
-  const comment = db.prepare('SELECT * FROM comments WHERE id = ?').get(req.params.id);
-  if (!comment) return res.status(404).json({ error: 'Comment not found.' });
-  if (comment.user_id !== req.user.id) return res.status(403).json({ error: 'Not your comment.' });
-  db.prepare('DELETE FROM comments WHERE id = ?').run(req.params.id);
+  const commentId = parseInt(req.params.id);
+  const idx = comments.findIndex(c => c.id === commentId);
+  if (idx === -1) return res.status(404).json({ error: 'Comment not found.' });
+  if (comments[idx].user_id !== req.user.id) return res.status(403).json({ error: 'Not your comment.' });
+  comments.splice(idx, 1);
   res.json({ ok: true });
 });
 
-// ── Seed demo posts if DB is empty ────────────────────────────
+// ── Seed demo posts if store is empty ─────────────────────────
 async function seed() {
-  const count = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
-  if (count > 0) return;
+  if (seeded || users.length > 0) return;
+  seeded = true;
 
   const hash = await bcrypt.hash('atlas123', 10);
-  const uid = db.prepare("INSERT INTO users (name, email, password, bio) VALUES (?, ?, ?, ?)").run(
-    'Atlas Team', 'team@atlas.app', hash, 'The official Atlas account. Follow for road inspiration.'
-  ).lastInsertRowid;
+  const teamUser = {
+    id: nextUserId++,
+    name: 'Atlas Team',
+    email: 'team@atlas.app',
+    password: hash,
+    avatar: null,
+    bio: 'The official Atlas account. Follow for road inspiration.',
+    plan: 'Explorer',
+    created_at: now(),
+  };
+  users.push(teamUser);
 
   const demoPosts = [
     { image_url: 'https://images.unsplash.com/photo-sCj3PwIdRvM?w=800&auto=format&fit=crop', caption: 'Tail of the Dragon — 318 curves in 11 miles. Nothing else comes close. The 911 was made for this road.', road_name: 'Tail of the Dragon (US-129)', region: 'Southeast' },
@@ -286,9 +281,17 @@ async function seed() {
     { image_url: 'https://images.unsplash.com/photo-AMgve6dPt-k?w=800&auto=format&fit=crop', caption: 'Going-to-the-Sun Road through Glacier NP. One of the greats — and the car earned every bend.', road_name: 'Going-to-the-Sun Road', region: 'Mountain West' },
   ];
 
-  const insertPost = db.prepare('INSERT INTO posts (user_id, image_url, caption, road_name, region, likes) VALUES (?, ?, ?, ?, ?, ?)');
   for (const p of demoPosts) {
-    insertPost.run(uid, p.image_url, p.caption, p.road_name, p.region, Math.floor(Math.random() * 120) + 20);
+    posts.push({
+      id: nextPostId++,
+      user_id: teamUser.id,
+      image_url: p.image_url,
+      caption: p.caption,
+      road_name: p.road_name,
+      region: p.region,
+      likes: Math.floor(Math.random() * 120) + 20,
+      created_at: now(),
+    });
   }
 }
 

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atlas — Driving Groups</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="lib/leaflet.css" />
+  <link rel="stylesheet" href="community.css" />
+  <link rel="stylesheet" href="groups.css" />
+</head>
+<body>
+
+  <header class="app-header" id="appHeader">
+    <a href="index.html" class="app-logo">Atlas</a>
+    <div class="app-header-actions">
+      <button class="app-icon-btn" id="themeToggle" aria-label="Toggle theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <div id="navAuth" class="nav-auth"></div>
+    </div>
+  </header>
+
+  <main class="groups-main">
+    <div class="groups-header">
+      <div>
+        <h1>Driving Groups</h1>
+        <p>Join a group, share your live GPS, and drive together.</p>
+      </div>
+      <button class="btn btn-primary" id="createGroupBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Group
+      </button>
+    </div>
+
+    <div class="groups-list" id="groupsList">
+      <div class="feed-loading"><div class="spinner"></div></div>
+    </div>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <a href="community.html" class="bnav-item" aria-label="Feed">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Feed</span>
+    </a>
+    <a href="groups.html" class="bnav-item active" aria-label="Groups">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Groups</span>
+    </a>
+    <a href="community.html" class="bnav-item bnav-post" aria-label="New post">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </a>
+    <a href="marketplace.html" class="bnav-item" aria-label="Marketplace">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <span>Market</span>
+    </a>
+    <a href="roads.html" class="bnav-item" aria-label="Roads Map">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+      <span>Roads</span>
+    </a>
+  </nav>
+
+  <!-- ═══ GROUP DETAIL MODAL ══════════════════════════════════ -->
+  <div class="modal-overlay" id="groupOverlay" role="dialog" aria-modal="true">
+    <div class="modal group-modal">
+      <div class="modal-header">
+        <h3 id="groupModalTitle">Group</h3>
+        <button class="modal-close" id="groupModalClose">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:0">
+        <div class="group-modal-inner">
+          <div class="group-modal-info" id="groupModalInfo"></div>
+          <div id="groupMap" class="group-map"></div>
+          <div class="group-modal-members" id="groupModalMembers"></div>
+          <div class="group-modal-actions" id="groupModalActions"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CREATE GROUP MODAL ══════════════════════════════════ -->
+  <div class="modal-overlay" id="createGroupOverlay" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Create a Group</h3>
+        <button class="modal-close" id="createGroupClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group"><input type="text" id="groupName" placeholder="Group name" maxlength="80" /></div>
+        <div class="form-group"><textarea id="groupDesc" placeholder="Describe your group…" rows="2" maxlength="300"></textarea></div>
+        <div class="form-group"><input type="text" id="groupMeeting" placeholder="Meeting point (e.g. Malibu, CA)" maxlength="100" /></div>
+        <div class="form-group"><input type="text" id="groupRoute" placeholder="Route name (optional)" maxlength="100" /></div>
+        <span class="field-error" id="createGroupError"></span>
+        <button class="btn btn-primary btn-full" id="submitGroupBtn">Create Group</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ AUTH MODAL ═══════════════════════════════════════════ -->
+  <div class="modal-overlay" id="authOverlay" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="authTitle">Sign In</h3>
+        <button class="modal-close" id="authClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="loginForm" novalidate>
+          <div class="form-group"><input type="email" id="loginEmail" placeholder="your@email.com" /><span class="field-error" id="loginEmailError"></span></div>
+          <div class="form-group"><input type="password" id="loginPassword" placeholder="Password" /><span class="field-error" id="loginPasswordError"></span></div>
+          <span class="field-error" id="loginError"></span>
+          <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        </form>
+        <form id="registerForm" novalidate style="display:none">
+          <div class="form-group"><input type="text" id="regName" placeholder="Your name" /><span class="field-error" id="regNameError"></span></div>
+          <div class="form-group"><input type="email" id="regEmail" placeholder="your@email.com" /><span class="field-error" id="regEmailError"></span></div>
+          <div class="form-group"><input type="password" id="regPassword" placeholder="Password (min 6 chars)" /><span class="field-error" id="regPasswordError"></span></div>
+          <span class="field-error" id="regError"></span>
+          <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+        </form>
+        <div class="auth-switch">
+          <span id="authSwitchText">Don't have an account?</span>
+          <button class="auth-switch-btn" id="authSwitchBtn">Sign Up</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="lib/leaflet.js"></script>
+  <script src="groups.js"></script>
+</body>
+</html>

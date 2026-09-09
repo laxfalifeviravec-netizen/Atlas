@@ -1,606 +1,474 @@
 /* ============================================================
-   Atlas — Community Page JS
+   Atlas — Community JS (Instagram-style feed)
    ============================================================ */
 
-const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:3001'
-  : '';
+const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001' : '';
 
-// ── Theme ─────────────────────────────────────────────────────
-const themeToggle = document.getElementById('themeToggle');
-const savedTheme  = localStorage.getItem('atlas-theme') || 'light';
+let token = localStorage.getItem('atlas-token');
+let currentUser = null;
+let posts = [];
+let page = 1;
+let totalPages = 1;
+let activePost = null;
+let allStories = [];
+let storyIndex = 0;
+let storyTimer = null;
+
+// ── Theme ──────────────────────────────────────────────────
+const savedTheme = localStorage.getItem('atlas-theme') || 'light';
 document.documentElement.setAttribute('data-theme', savedTheme);
-themeToggle.addEventListener('click', () => {
+document.getElementById('themeToggle').addEventListener('click', () => {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('atlas-theme', next);
 });
 
-// ── Navbar ────────────────────────────────────────────────────
-const navbar    = document.getElementById('navbar');
-const navToggle = document.getElementById('navToggle');
-const navLinks  = document.getElementById('navLinks');
-window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 10), { passive: true });
-navToggle.addEventListener('click', () => {
-  const open = navLinks.classList.toggle('open');
-  navToggle.classList.toggle('active', open);
-  navToggle.setAttribute('aria-expanded', open);
-});
-navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-  navLinks.classList.remove('open');
-  navToggle.classList.remove('active');
-}));
-
-// ── Back to top ───────────────────────────────────────────────
-const backToTop = document.getElementById('backToTop');
-window.addEventListener('scroll', () => backToTop.classList.toggle('visible', window.scrollY > 400), { passive: true });
-backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-
-// ── Auth state ────────────────────────────────────────────────
-let currentUser = null;
-let authToken   = localStorage.getItem('atlas-token') || null;
-
-function authHeaders() {
-  return authToken ? { Authorization: `Bearer ${authToken}` } : {};
-}
-
-async function fetchCurrentUser() {
-  if (!authToken) return;
+// ── Auth ───────────────────────────────────────────────────
+async function loadMe() {
+  if (!token) return renderNav(null);
   try {
-    const res  = await fetch(`${API}/api/auth/me`, { headers: authHeaders() });
-    if (!res.ok) { authToken = null; localStorage.removeItem('atlas-token'); return; }
-    const data = await res.json();
-    currentUser = data.user;
-  } catch {
-    // server not reachable
-  }
+    const res = await fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) { token = null; localStorage.removeItem('atlas-token'); return renderNav(null); }
+    const { user } = await res.json();
+    currentUser = user;
+    renderNav(user);
+  } catch { renderNav(null); }
 }
 
-function renderNavAuth() {
-  const navAuth = document.getElementById('navAuth');
-  if (!navAuth) return;
-  if (currentUser) {
-    navAuth.innerHTML = `
-      <button class="nav-user-btn">
-        <div class="avatar avatar-sm">${avatarInitials(currentUser.name)}</div>
-        ${currentUser.name.split(' ')[0]}
-      </button>
-      <button class="nav-signout-btn" id="signOutBtn">Sign Out</button>
-    `;
-    document.getElementById('signOutBtn').addEventListener('click', signOut);
+function renderNav(user) {
+  const el = document.getElementById('navAuth');
+  if (!el) return;
+  if (!user) {
+    el.innerHTML = `<button class="nav-signin-btn" id="navSignIn">Sign In</button>`;
+    document.getElementById('navSignIn').addEventListener('click', openAuth);
   } else {
-    navAuth.innerHTML = `<button class="nav-signin-btn" id="navSignInBtn">Sign In</button>`;
-    document.getElementById('navSignInBtn').addEventListener('click', () => openAuth('login'));
+    const init = user.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    el.innerHTML = `
+      <span class="nav-user-btn"><div class="avatar avatar-sm">${init}</div>${user.name.split(' ')[0]}</span>
+      <button class="nav-signout-btn" id="navSignOut">Sign Out</button>`;
+    document.getElementById('navSignOut').addEventListener('click', () => {
+      localStorage.removeItem('atlas-token'); token = null; currentUser = null; location.reload();
+    });
   }
 }
 
-function signOut() {
-  authToken   = null;
-  currentUser = null;
-  localStorage.removeItem('atlas-token');
-  renderNavAuth();
-  loadFeed(1, true);
-}
-
-function avatarInitials(name) {
-  return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
-}
-
-function avatarEl(name, avatarUrl, size = '') {
-  if (avatarUrl) return `<div class="avatar ${size}"><img src="${avatarUrl}" alt="${escHtml(name)}" /></div>`;
-  return `<div class="avatar ${size}">${avatarInitials(name)}</div>`;
-}
-
-// ── Feed state ────────────────────────────────────────────────
-let feedMode   = 'recent'; // 'recent' | 'top'
-let currentPage = 1;
-let totalPages  = 1;
-
-const feedGrid       = document.getElementById('feedGrid');
-const feedLoading    = document.getElementById('feedLoading');
-const feedEmpty      = document.getElementById('feedEmpty');
-const feedPagination = document.getElementById('feedPagination');
-const loadMoreBtn    = document.getElementById('loadMoreBtn');
-
-async function loadFeed(page = 1, reset = false) {
-  if (reset) { feedGrid.innerHTML = ''; currentPage = 1; }
-  feedLoading.style.display = 'flex';
-  feedEmpty.style.display   = 'none';
-  feedPagination.style.display = 'none';
-
+// ── Stories ────────────────────────────────────────────────
+async function loadStories() {
   try {
-    const sortParam = feedMode === 'top' ? '&sort=likes' : '';
-    const res  = await fetch(`${API}/api/posts?page=${page}&limit=12${sortParam}`, { headers: authHeaders() });
-    const data = await res.json();
-
-    totalPages = data.pages;
-
-    if (data.posts.length === 0 && page === 1) {
-      feedEmpty.style.display = 'flex';
-    } else {
-      data.posts.forEach(post => feedGrid.appendChild(buildPostCard(post)));
-    }
-
-    if (currentPage < totalPages) {
-      feedPagination.style.display = 'block';
-    }
-  } catch {
-    if (page === 1) feedEmpty.style.display = 'flex';
-  } finally {
-    feedLoading.style.display = 'none';
-  }
+    const res = await fetch(`${API}/api/stories`);
+    const { stories } = await res.json();
+    allStories = stories;
+    renderStories(stories);
+  } catch {}
 }
 
-loadMoreBtn.addEventListener('click', () => {
-  currentPage++;
-  loadFeed(currentPage);
-});
+function renderStories(stories) {
+  const scroll = document.getElementById('storiesScroll');
+  // Keep the add button
+  const addBtn = scroll.querySelector('.story-add');
+  // Clear others
+  scroll.querySelectorAll('.story-item:not(.story-add)').forEach(el => el.remove());
 
-// ── Feed tabs ─────────────────────────────────────────────────
-document.querySelectorAll('.feed-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.feed-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    feedMode = tab.dataset.feed;
-    loadFeed(1, true);
+  stories.forEach((s, i) => {
+    const initials = (s.user_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    const btn = document.createElement('button');
+    btn.className = 'story-item';
+    btn.innerHTML = `
+      <div class="story-avatar-wrap">
+        <div class="story-avatar-inner">${initials}</div>
+      </div>
+      <span>${(s.user_name||'').split(' ')[0] || 'Driver'}</span>`;
+    btn.addEventListener('click', () => openStoryViewer(i));
+    scroll.appendChild(btn);
   });
+}
+
+function openStoryViewer(idx) {
+  storyIndex = idx;
+  document.getElementById('storyOverlay').classList.add('open');
+  showStory(idx);
+}
+
+function showStory(idx) {
+  if (idx < 0 || idx >= allStories.length) { closeStoryViewer(); return; }
+  const s = allStories[idx];
+  document.getElementById('storyViewImg').src = s.image_url.startsWith('http') ? s.image_url : `${API}${s.image_url}`;
+  document.getElementById('storyInfo').innerHTML = `<strong>${s.user_name||'Driver'}</strong><span>${s.road_name||''}</span>`;
+  const bar = document.getElementById('storyProgressBar');
+  bar.style.transition = 'none'; bar.style.width = '0%';
+  requestAnimationFrame(() => {
+    bar.style.transition = 'width 5s linear'; bar.style.width = '100%';
+  });
+  clearTimeout(storyTimer);
+  storyTimer = setTimeout(() => showStory(idx + 1), 5000);
+}
+
+function closeStoryViewer() {
+  document.getElementById('storyOverlay').classList.remove('open');
+  clearTimeout(storyTimer);
+}
+
+document.getElementById('storyPrev').addEventListener('click', () => { clearTimeout(storyTimer); showStory(--storyIndex); });
+document.getElementById('storyNext').addEventListener('click', () => { clearTimeout(storyTimer); showStory(++storyIndex); });
+document.getElementById('storyClose').addEventListener('click', closeStoryViewer);
+
+// ── Story Upload ───────────────────────────────────────────
+const newStoryOverlay = document.getElementById('newStoryOverlay');
+const storyUploadZone = document.getElementById('storyUploadZone');
+const storyImageInput = document.getElementById('storyImageInput');
+const storyPreview    = document.getElementById('storyPreview');
+let storyFile = null;
+
+document.getElementById('addStoryBtn').addEventListener('click', () => {
+  if (!currentUser) return openAuth();
+  newStoryOverlay.classList.add('open');
+});
+document.getElementById('newStoryBtn').addEventListener('click', () => {
+  if (!currentUser) return openAuth();
+  newStoryOverlay.classList.add('open');
+});
+document.getElementById('newStoryClose').addEventListener('click', () => newStoryOverlay.classList.remove('open'));
+newStoryOverlay.addEventListener('click', e => { if (e.target === newStoryOverlay) newStoryOverlay.classList.remove('open'); });
+
+storyUploadZone.addEventListener('click', () => storyImageInput.click());
+storyImageInput.addEventListener('change', e => {
+  storyFile = e.target.files[0];
+  if (storyFile) {
+    const url = URL.createObjectURL(storyFile);
+    storyPreview.src = url; storyPreview.style.display = 'block';
+    storyUploadZone.style.display = 'none';
+  }
 });
 
-// ── Post card builder ─────────────────────────────────────────
-function buildPostCard(post) {
+document.getElementById('submitStoryBtn').addEventListener('click', async () => {
+  if (!storyFile) { document.getElementById('storyError').textContent = 'Please select an image.'; return; }
+  const fd = new FormData();
+  fd.append('image', storyFile);
+  fd.append('road_name', document.getElementById('storyRoadName').value.trim());
+  try {
+    const res = await fetch(`${API}/api/stories`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+    if (!res.ok) { const d = await res.json(); document.getElementById('storyError').textContent = d.error; return; }
+    newStoryOverlay.classList.remove('open');
+    storyFile = null; storyPreview.style.display = 'none'; storyUploadZone.style.display = '';
+    document.getElementById('storyRoadName').value = '';
+    await loadStories();
+  } catch { document.getElementById('storyError').textContent = 'Upload failed. Try again.'; }
+});
+
+// ── Feed ───────────────────────────────────────────────────
+async function loadFeed(reset = false) {
+  if (reset) { page = 1; posts = []; document.getElementById('feedList').innerHTML = ''; }
+  document.getElementById('feedLoading').style.display = 'flex';
+  try {
+    const res = await fetch(`${API}/api/posts?page=${page}&limit=10`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    const data = await res.json();
+    totalPages = data.pages;
+    posts = reset ? data.posts : [...posts, ...data.posts];
+    renderFeed(data.posts, reset);
+    document.getElementById('feedEmpty').style.display = posts.length === 0 ? 'flex' : 'none';
+    document.getElementById('feedLoadMore').style.display = page < totalPages ? 'flex' : 'none';
+  } catch {}
+  document.getElementById('feedLoading').style.display = 'none';
+}
+
+function renderFeed(newPosts, reset) {
+  const list = document.getElementById('feedList');
+  if (reset) list.innerHTML = '';
+  newPosts.forEach(p => list.appendChild(buildPostCard(p)));
+}
+
+function buildPostCard(p) {
+  const initials = (p.user_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  const imgSrc   = p.image_url.startsWith('http') ? p.image_url : `${API}${p.image_url}`;
+  const timeStr  = formatTime(p.created_at);
+
   const card = document.createElement('article');
   card.className = 'post-card';
-  card.setAttribute('tabindex', '0');
-  card.setAttribute('role', 'button');
-  card.setAttribute('aria-label', `View post by ${post.user_name}`);
-
   card.innerHTML = `
+    <div class="post-card-header">
+      <div class="post-avatar">${initials}</div>
+      <div class="post-card-meta">
+        <div class="post-card-username">${esc(p.user_name||'Driver')}</div>
+        <div class="post-card-road">${esc(p.road_name||p.region||'')}</div>
+      </div>
+    </div>
     <div class="post-card-img-wrap">
-      <img src="${post.image_url}" alt="${escHtml(post.road_name || 'Road photo')}" loading="lazy" />
-      <div class="post-card-overlay">
-        <div class="post-card-overlay-likes">
-          <svg viewBox="0 0 24 24" fill="#fff" stroke="none" width="16" height="16"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          ${post.likes}
-        </div>
-      </div>
+      <img src="${imgSrc}" alt="${esc(p.road_name||'Road photo')}" loading="lazy" />
     </div>
-    <div class="post-card-body">
-      <div class="post-card-author">
-        ${avatarEl(post.user_name, post.user_avatar, 'avatar-sm')}
-        <span class="post-card-author-name">${escHtml(post.user_name)}</span>
-      </div>
-      ${post.road_name ? `<div class="post-card-road">${escHtml(post.road_name)}</div>` : ''}
-      ${post.caption   ? `<p class="post-card-caption">${escHtml(post.caption)}</p>` : ''}
+    <div class="post-card-actions">
+      <button class="post-action-btn like-btn${p.liked?' liked':''}" data-id="${p.id}" data-liked="${p.liked}" aria-label="Like">
+        <svg viewBox="0 0 24 24" fill="${p.liked?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <span class="action-count like-count">${p.likes}</span>
+      </button>
+      <button class="post-action-btn comment-btn" data-id="${p.id}" aria-label="Comment">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </button>
+      <button class="post-action-btn share-btn" data-id="${p.id}" aria-label="Share">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
     </div>
-    <div class="post-card-footer">
-      <div class="post-card-stats">
-        <span class="post-stat">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          ${post.likes}
-        </span>
-      </div>
-      <span class="post-card-date">${timeAgo(post.created_at)}</span>
-    </div>
+    <div class="post-card-likes">${p.likes} like${p.likes===1?'':'s'}</div>
+    ${p.caption ? `<div class="post-card-caption"><strong>${esc(p.user_name||'')}</strong>${esc(p.caption)}</div>` : ''}
+    <div class="post-card-time">${timeStr}</div>
   `;
 
-  const open = () => openPostModal(post);
-  card.addEventListener('click', open);
-  card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') open(); });
+  card.querySelector('.like-btn').addEventListener('click', e => toggleLike(p, e.currentTarget, card));
+  card.querySelector('.comment-btn').addEventListener('click', () => openPostModal(p));
+  card.querySelector('.post-card-img-wrap img').addEventListener('dblclick', e => {
+    const btn = card.querySelector('.like-btn');
+    if (!p.liked) toggleLike(p, btn, card);
+  });
   return card;
 }
 
-// ── Post detail modal ─────────────────────────────────────────
-const postOverlay    = document.getElementById('postOverlay');
-const postModalClose = document.getElementById('postModalClose');
-let activePostId     = null;
+async function toggleLike(post, btn, card) {
+  if (!currentUser) return openAuth();
+  const wasLiked = btn.dataset.liked === 'true';
+  try {
+    const res = await fetch(`${API}/api/posts/${post.id}/like`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    post.liked = data.liked; post.likes = data.likes;
+    btn.dataset.liked = data.liked;
+    btn.classList.toggle('liked', data.liked);
+    btn.querySelector('svg').setAttribute('fill', data.liked ? 'currentColor' : 'none');
+    btn.querySelector('.like-count').textContent = data.likes;
+    card.querySelector('.post-card-likes').textContent = `${data.likes} like${data.likes===1?'':'s'}`;
+  } catch {}
+}
+
+document.getElementById('loadMoreBtn').addEventListener('click', () => { page++; loadFeed(); });
+document.getElementById('emptyPostBtn').addEventListener('click', openNewPost);
+
+// ── Post Modal ─────────────────────────────────────────────
+const postOverlay = document.getElementById('postOverlay');
 
 async function openPostModal(post) {
-  activePostId = post.id;
-  document.getElementById('postModalImg').src = post.image_url;
-  document.getElementById('postModalImg').alt = escHtml(post.road_name || 'Road photo');
-
-  document.getElementById('postModalAuthor').innerHTML = `
-    ${avatarEl(post.user_name, post.user_avatar, 'avatar-lg')}
-    <div class="post-modal-author-info">
-      <span class="post-modal-author-name">${escHtml(post.user_name)}</span>
-      <span class="post-modal-author-date">${timeAgo(post.created_at)}</span>
-    </div>
-  `;
-
-  const roadEl = document.getElementById('postModalRoad');
-  roadEl.innerHTML = post.road_name
-    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${escHtml(post.road_name)}${post.region ? ` · ${escHtml(post.region)}` : ''}`
-    : '';
-
+  activePost = post;
+  const imgSrc = post.image_url.startsWith('http') ? post.image_url : `${API}${post.image_url}`;
+  document.getElementById('postModalImg').src = imgSrc;
+  const initials = (post.user_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  document.getElementById('postModalAuthor').innerHTML = `<div class="post-avatar" style="display:inline-flex;margin-right:8px;">${initials}</div><strong>${esc(post.user_name||'Driver')}</strong>`;
+  document.getElementById('postModalRoad').textContent = post.road_name || post.region || '';
   document.getElementById('postModalCaption').textContent = post.caption || '';
-
-  renderPostActions(post);
+  document.getElementById('postModalActions').innerHTML = `
+    <button class="post-action-btn${post.liked?' liked':''}" id="modalLikeBtn" data-liked="${post.liked}">
+      <svg viewBox="0 0 24 24" fill="${post.liked?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      <span id="modalLikeCount">${post.likes} like${post.likes===1?'':'s'}</span>
+    </button>`;
+  document.getElementById('modalLikeBtn').addEventListener('click', async () => {
+    if (!currentUser) return openAuth();
+    const res = await fetch(`${API}/api/posts/${post.id}/like`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    post.liked = data.liked; post.likes = data.likes;
+    const btn = document.getElementById('modalLikeBtn');
+    btn.dataset.liked = data.liked;
+    btn.classList.toggle('liked', data.liked);
+    btn.querySelector('svg').setAttribute('fill', data.liked ? 'currentColor' : 'none');
+    document.getElementById('modalLikeCount').textContent = `${data.likes} like${data.likes===1?'':'s'}`;
+  });
   await loadComments(post.id);
-
   postOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
-  postModalClose.focus();
-}
-
-function renderPostActions(post) {
-  const actionsEl = document.getElementById('postModalActions');
-  const liked     = post.liked || false;
-  actionsEl.innerHTML = `
-    <button class="like-btn ${liked ? 'liked' : ''}" id="likeBtn" aria-label="Like post" aria-pressed="${liked}">
-      <svg viewBox="0 0 24 24" fill="${liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-      </svg>
-      <span id="likeCount">${post.likes}</span>
-    </button>
-  `;
-
-  document.getElementById('likeBtn').addEventListener('click', async () => {
-    if (!currentUser) { openAuth('login'); return; }
-    try {
-      const res  = await fetch(`${API}/api/posts/${post.id}/like`, { method: 'POST', headers: authHeaders() });
-      const data = await res.json();
-      post.liked = data.liked;
-      post.likes = data.likes;
-      renderPostActions(post);
-      // Update card in grid
-      updateCardLikes(post.id, data.likes);
-    } catch {}
-  });
-}
-
-function updateCardLikes(postId, likes) {
-  // update the stat in the feed card (if visible)
-  const cards = feedGrid.querySelectorAll('.post-card');
-  cards.forEach(card => {
-    // We don't store post id on card, so update all likes counts by text
-    // (re-render is simpler; for production we'd store data-id)
-  });
 }
 
 async function loadComments(postId) {
-  const commentsEl = document.getElementById('postModalComments');
-  commentsEl.innerHTML = '<div class="feed-loading" style="padding:1rem 0"><div class="spinner"></div></div>';
+  const box = document.getElementById('postModalComments');
+  box.innerHTML = '<div class="feed-loading" style="padding:12px"><div class="spinner" style="width:20px;height:20px;border-width:2px"></div></div>';
   try {
-    const res  = await fetch(`${API}/api/posts/${postId}/comments`);
-    const data = await res.json();
-    renderComments(data.comments);
-  } catch {
-    commentsEl.innerHTML = '';
-  }
+    const res = await fetch(`${API}/api/posts/${postId}/comments`);
+    const { comments } = await res.json();
+    box.innerHTML = comments.length === 0 ? '<p style="color:var(--c-text-2);font-size:13px">No comments yet.</p>' :
+      comments.map(c => `
+        <div class="comment-item">
+          <strong>${esc(c.user_name||'Driver')}</strong>${esc(c.body)}
+          <span class="comment-time">${formatTime(c.created_at)}</span>
+        </div>`).join('');
+  } catch { box.innerHTML = ''; }
 }
 
-function renderComments(comments) {
-  const el = document.getElementById('postModalComments');
-  if (!comments.length) {
-    el.innerHTML = '<p class="comments-empty">No comments yet. Be the first.</p>';
-    return;
-  }
-  el.innerHTML = comments.map(c => `
-    <div class="comment-item">
-      ${avatarEl(c.user_name, c.user_avatar, 'avatar-sm')}
-      <div class="comment-content">
-        <div class="comment-author">${escHtml(c.user_name)}</div>
-        <div class="comment-body">${escHtml(c.body)}</div>
-        <div class="comment-date">${timeAgo(c.created_at)}</div>
-      </div>
-    </div>
-  `).join('');
-}
+document.getElementById('postModalClose').addEventListener('click', () => {
+  postOverlay.classList.remove('open'); document.body.style.overflow = '';
+});
+postOverlay.addEventListener('click', e => {
+  if (e.target === postOverlay) { postOverlay.classList.remove('open'); document.body.style.overflow = ''; }
+});
 
-function closePostModal() {
-  postOverlay.classList.remove('open');
-  document.body.style.overflow = '';
-  activePostId = null;
-}
-
-postModalClose.addEventListener('click', closePostModal);
-postOverlay.addEventListener('click', e => { if (e.target === postOverlay) closePostModal(); });
-
-// Comment submit
 document.getElementById('postCommentForm').addEventListener('submit', async e => {
   e.preventDefault();
-  if (!currentUser) { openAuth('login'); return; }
+  if (!currentUser) return openAuth();
   const input = document.getElementById('postCommentInput');
-  const body  = input.value.trim();
+  const body = input.value.trim();
   if (!body) return;
   try {
-    const res  = await fetch(`${API}/api/posts/${activePostId}/comments`, {
+    const res = await fetch(`${API}/api/posts/${activePost.id}/comments`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ body }),
     });
-    if (!res.ok) return;
-    const data = await res.json();
-    input.value = '';
-    await loadComments(activePostId);
-    // scroll comments to bottom
-    const commentsEl = document.getElementById('postModalComments');
-    commentsEl.scrollTop = commentsEl.scrollHeight;
+    if (res.ok) { input.value = ''; await loadComments(activePost.id); }
   } catch {}
 });
 
-// ── New post modal ────────────────────────────────────────────
+// ── New Post Modal ─────────────────────────────────────────
 const newPostOverlay = document.getElementById('newPostOverlay');
-const newPostClose   = document.getElementById('newPostClose');
+const uploadZone = document.getElementById('uploadZone');
+const postImageInput = document.getElementById('postImageInput');
+const uploadPreview  = document.getElementById('uploadPreview');
+let postFile = null;
 
 function openNewPost() {
-  if (!currentUser) { openAuth('login', () => openNewPost()); return; }
-  document.getElementById('postImageInput').value = '';
-  document.getElementById('uploadPreview').style.display = 'none';
-  document.getElementById('uploadZone').style.display    = 'flex';
-  document.getElementById('postRoadName').value = '';
-  document.getElementById('postRegion').value   = '';
-  document.getElementById('postCaption').value  = '';
-  document.getElementById('newPostError').textContent = '';
+  if (!currentUser) return openAuth();
   newPostOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
-function closeNewPost() {
-  newPostOverlay.classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-newPostClose.addEventListener('click', closeNewPost);
-newPostOverlay.addEventListener('click', e => { if (e.target === newPostOverlay) closeNewPost(); });
-document.getElementById('heroPostBtn').addEventListener('click', openNewPost);
-document.getElementById('newPostBtn').addEventListener('click', openNewPost);
-document.getElementById('emptyPostBtn').addEventListener('click', openNewPost);
-
-// File upload zone
-const uploadZone     = document.getElementById('uploadZone');
-const postImageInput = document.getElementById('postImageInput');
-const uploadPreview  = document.getElementById('uploadPreview');
+document.getElementById('newPostClose').addEventListener('click', () => {
+  newPostOverlay.classList.remove('open'); document.body.style.overflow = '';
+});
+newPostOverlay.addEventListener('click', e => {
+  if (e.target === newPostOverlay) { newPostOverlay.classList.remove('open'); document.body.style.overflow = ''; }
+});
+document.getElementById('newPostBtnNav').addEventListener('click', openNewPost);
 
 uploadZone.addEventListener('click', () => postImageInput.click());
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor = 'var(--c-accent)'; });
+uploadZone.addEventListener('dragleave', () => { uploadZone.style.borderColor = ''; });
 uploadZone.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadZone.classList.remove('drag-over');
+  e.preventDefault(); uploadZone.style.borderColor = '';
   const file = e.dataTransfer.files[0];
-  if (file) showPreview(file);
+  if (file) setPostFile(file);
 });
-postImageInput.addEventListener('change', () => {
-  if (postImageInput.files[0]) showPreview(postImageInput.files[0]);
-});
+postImageInput.addEventListener('change', e => { if (e.target.files[0]) setPostFile(e.target.files[0]); });
 
-function showPreview(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    uploadPreview.src = e.target.result;
-    uploadPreview.style.display = 'block';
-    uploadZone.style.display    = 'none';
-  };
-  reader.readAsDataURL(file);
+function setPostFile(file) {
+  postFile = file;
+  uploadPreview.src = URL.createObjectURL(file);
+  uploadPreview.style.display = 'block';
+  uploadZone.style.display = 'none';
 }
 
 document.getElementById('submitPostBtn').addEventListener('click', async () => {
-  const file      = postImageInput.files[0];
-  const roadName  = document.getElementById('postRoadName').value.trim();
-  const region    = document.getElementById('postRegion').value;
-  const caption   = document.getElementById('postCaption').value.trim();
-  const errorEl   = document.getElementById('newPostError');
-  errorEl.textContent = '';
-
-  if (!file) { errorEl.textContent = 'Please select a photo.'; return; }
-  if (!roadName) { errorEl.textContent = 'Please enter the road name.'; return; }
-
+  const err = document.getElementById('newPostError');
+  if (!postFile) { err.textContent = 'Please select an image.'; return; }
+  err.textContent = '';
+  const fd = new FormData();
+  fd.append('image', postFile);
+  fd.append('caption',   document.getElementById('postCaption').value.trim());
+  fd.append('road_name', document.getElementById('postRoadName').value.trim());
+  fd.append('region',    document.getElementById('postRegion').value);
   const btn = document.getElementById('submitPostBtn');
-  btn.disabled = true;
-  btn.textContent = 'Uploading…';
-
+  btn.disabled = true; btn.textContent = 'Sharing…';
   try {
-    const form = new FormData();
-    form.append('image',     file);
-    form.append('road_name', roadName);
-    form.append('region',    region);
-    form.append('caption',   caption);
-
-    const res = await fetch(`${API}/api/posts`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: form,
-    });
-
+    const res = await fetch(`${API}/api/posts`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
     const data = await res.json();
-    if (!res.ok) { errorEl.textContent = data.error || 'Upload failed.'; return; }
-
-    closeNewPost();
-    feedGrid.prepend(buildPostCard(data.post));
-    feedEmpty.style.display = 'none';
-  } catch {
-    errorEl.textContent = 'Upload failed — is the server running?';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Share Road';
-  }
+    if (!res.ok) { err.textContent = data.error; return; }
+    newPostOverlay.classList.remove('open'); document.body.style.overflow = '';
+    // Reset
+    postFile = null; uploadPreview.style.display = 'none'; uploadZone.style.display = '';
+    document.getElementById('postCaption').value = '';
+    document.getElementById('postRoadName').value = '';
+    document.getElementById('postRegion').value = '';
+    await loadFeed(true);
+  } catch { err.textContent = 'Upload failed. Try again.'; }
+  finally { btn.disabled = false; btn.textContent = 'Share Road'; }
 });
 
-// ── Auth modal ────────────────────────────────────────────────
-const authOverlay  = document.getElementById('authOverlay');
-const authClose    = document.getElementById('authClose');
-let authMode       = 'login'; // 'login' | 'register'
-let afterAuthCb    = null;
+// ── Auth Modal ─────────────────────────────────────────────
+const authOverlay = document.getElementById('authOverlay');
+let authMode = 'login';
 
-function openAuth(mode = 'login', callback = null) {
-  authMode  = mode;
-  afterAuthCb = callback;
-  switchAuthMode(mode);
-  clearAuthErrors();
+function openAuth() {
   authOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
-  if (mode === 'login') document.getElementById('loginEmail').focus();
-  else document.getElementById('regName').focus();
 }
 
-function closeAuth() {
-  authOverlay.classList.remove('open');
-  document.body.style.overflow = '';
-}
+document.getElementById('authClose').addEventListener('click', () => {
+  authOverlay.classList.remove('open'); document.body.style.overflow = '';
+});
+authOverlay.addEventListener('click', e => {
+  if (e.target === authOverlay) { authOverlay.classList.remove('open'); document.body.style.overflow = ''; }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    authOverlay.classList.remove('open');
+    newPostOverlay.classList.remove('open');
+    postOverlay.classList.remove('open');
+    newStoryOverlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+});
 
-function switchAuthMode(mode) {
-  authMode = mode;
-  document.getElementById('authTitle').textContent      = mode === 'login' ? 'Sign In'         : 'Create Account';
-  document.getElementById('loginForm').style.display    = mode === 'login' ? ''                : 'none';
-  document.getElementById('registerForm').style.display = mode === 'login' ? 'none'            : '';
-  document.getElementById('authSwitchText').textContent = mode === 'login' ? "Don't have an account?" : 'Already have an account?';
-  document.getElementById('authSwitchBtn').textContent  = mode === 'login' ? 'Sign Up'         : 'Sign In';
-  clearAuthErrors();
-}
+document.getElementById('authSwitchBtn').addEventListener('click', () => {
+  authMode = authMode === 'login' ? 'register' : 'login';
+  document.getElementById('loginForm').style.display  = authMode === 'login' ? '' : 'none';
+  document.getElementById('registerForm').style.display = authMode === 'register' ? '' : 'none';
+  document.getElementById('authTitle').textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
+  document.getElementById('authSwitchText').textContent = authMode === 'login' ? 'Don\'t have an account?' : 'Already have one?';
+  document.getElementById('authSwitchBtn').textContent  = authMode === 'login' ? 'Sign Up' : 'Sign In';
+});
 
-function clearAuthErrors() {
-  ['loginEmailError','loginPasswordError','loginError','regNameError','regEmailError','regPasswordError','regError'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = '';
-  });
-}
-
-authClose.addEventListener('click', closeAuth);
-authOverlay.addEventListener('click', e => { if (e.target === authOverlay) closeAuth(); });
-document.getElementById('authSwitchBtn').addEventListener('click', () => switchAuthMode(authMode === 'login' ? 'register' : 'login'));
-
-// Login submit
 document.getElementById('loginForm').addEventListener('submit', async e => {
   e.preventDefault();
-  clearAuthErrors();
-  const email    = document.getElementById('loginEmail').value.trim();
+  const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
   let valid = true;
-  if (!email)    { document.getElementById('loginEmailError').textContent = 'Required.'; valid = false; }
+  document.getElementById('loginEmailError').textContent = '';
+  document.getElementById('loginPasswordError').textContent = '';
+  document.getElementById('loginError').textContent = '';
+  if (!email) { document.getElementById('loginEmailError').textContent = 'Required.'; valid = false; }
   if (!password) { document.getElementById('loginPasswordError').textContent = 'Required.'; valid = false; }
   if (!valid) return;
-
   try {
-    const res  = await fetch(`${API}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    const res = await fetch(`${API}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
     const data = await res.json();
     if (!res.ok) { document.getElementById('loginError').textContent = data.error; return; }
-    authToken   = data.token;
-    currentUser = data.user;
-    localStorage.setItem('atlas-token', authToken);
-    closeAuth();
-    renderNavAuth();
-    loadFeed(1, true);
-    if (afterAuthCb) { afterAuthCb(); afterAuthCb = null; }
-  } catch {
-    document.getElementById('loginError').textContent = 'Could not connect to server.';
-  }
+    token = data.token; currentUser = data.user;
+    localStorage.setItem('atlas-token', token);
+    authOverlay.classList.remove('open'); document.body.style.overflow = '';
+    renderNav(currentUser);
+  } catch { document.getElementById('loginError').textContent = 'Network error. Try again.'; }
 });
 
-// Register submit
 document.getElementById('registerForm').addEventListener('submit', async e => {
   e.preventDefault();
-  clearAuthErrors();
-  const name     = document.getElementById('regName').value.trim();
-  const email    = document.getElementById('regEmail').value.trim();
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
   const password = document.getElementById('regPassword').value;
   let valid = true;
-  if (!name)              { document.getElementById('regNameError').textContent = 'Required.'; valid = false; }
-  if (!email)             { document.getElementById('regEmailError').textContent = 'Required.'; valid = false; }
-  if (password.length < 6){ document.getElementById('regPasswordError').textContent = 'Min 6 characters.'; valid = false; }
+  ['regNameError','regEmailError','regPasswordError','regError'].forEach(id => document.getElementById(id).textContent = '');
+  if (!name) { document.getElementById('regNameError').textContent = 'Required.'; valid = false; }
+  if (!email) { document.getElementById('regEmailError').textContent = 'Required.'; valid = false; }
+  if (!password || password.length < 6) { document.getElementById('regPasswordError').textContent = 'Min 6 characters.'; valid = false; }
   if (!valid) return;
-
   try {
-    const res  = await fetch(`${API}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
-    });
+    const res = await fetch(`${API}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password }) });
     const data = await res.json();
     if (!res.ok) { document.getElementById('regError').textContent = data.error; return; }
-    authToken   = data.token;
-    currentUser = data.user;
-    localStorage.setItem('atlas-token', authToken);
-    closeAuth();
-    renderNavAuth();
-    loadFeed(1, true);
-    if (afterAuthCb) { afterAuthCb(); afterAuthCb = null; }
-  } catch {
-    document.getElementById('regError').textContent = 'Could not connect to server.';
-  }
+    token = data.token; currentUser = data.user;
+    localStorage.setItem('atlas-token', token);
+    authOverlay.classList.remove('open'); document.body.style.overflow = '';
+    renderNav(currentUser);
+  } catch { document.getElementById('regError').textContent = 'Network error. Try again.'; }
 });
 
-// Escape closes any open modal
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape') return;
-  if (authOverlay.classList.contains('open'))    closeAuth();
-  if (newPostOverlay.classList.contains('open')) closeNewPost();
-  if (postOverlay.classList.contains('open'))    closePostModal();
-});
-
-// ── Shared content modals (footer) ───────────────────────────
-const MODAL_CONTENT = {
-  about: {
-    title: 'About Atlas',
-    body: `<p>Atlas is the definitive guide to America's best driving roads — built by enthusiasts, for enthusiasts.</p>
-      <h4>Our Mission</h4><p>There are thousands of incredible roads in America that most drivers will never discover. Atlas exists to change that.</p>
-      <h4>What We Build</h4><ul><li>1,200+ mapped and rated driving roads across all 50 states</li><li>Real-time road condition alerts and seasonal closure tracking</li><li>Elevation profiles and technical difficulty ratings</li><li>Community-driven reviews from 85,000+ active drivers</li></ul>
-      <p style="margin-top:1.5rem;color:var(--color-text-muted);font-size:0.9rem;">Founded in 2022 &middot; Headquartered in Asheville, NC</p>`,
-  },
-  privacy: {
-    title: 'Privacy Policy',
-    body: `<p><em>Effective date: January 1, 2026</em></p><h4>Information We Collect</h4><p>Atlas collects only the information necessary to provide our services, including account data and anonymised usage analytics.</p><h4>We Never Sell Your Data</h4><p>Atlas does not sell, rent, or share your personal information with third parties for marketing purposes.</p><h4>Contact</h4><p>Questions? Email <a href="mailto:privacy@atlas.app">privacy@atlas.app</a>.</p>`,
-  },
-  terms: {
-    title: 'Terms of Service',
-    body: `<p><em>Effective date: January 1, 2026</em></p><h4>Acceptance</h4><p>By using Atlas, you agree to these terms. Subscriptions auto-renew until cancelled. You may cancel at any time.</p><h4>Contact</h4><p>Questions? Email <a href="mailto:legal@atlas.app">legal@atlas.app</a>.</p>`,
-  },
-};
-
-const modalOverlay = document.getElementById('modalOverlay');
-const modalTitle   = document.getElementById('modalTitle');
-const modalBody    = document.getElementById('modalBody');
-const modalClose   = document.getElementById('modalClose');
-
-function openModal(key) {
-  const content = MODAL_CONTENT[key];
-  if (!content) return;
-  modalTitle.textContent = content.title;
-  modalBody.innerHTML    = content.body;
-  modalOverlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
-  modalClose.focus();
+// ── Utils ──────────────────────────────────────────────────
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function closeModal() {
-  modalOverlay.classList.remove('open');
-  document.body.style.overflow = '';
+function formatTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts.includes('T') ? ts : ts + 'Z');
+  const diff = (Date.now() - d) / 1000;
+  if (diff < 60)   return 'just now';
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+  return `${Math.floor(diff/86400)}d ago`;
 }
 
-document.querySelectorAll('[data-modal]').forEach(link => {
-  link.addEventListener('click', e => { e.preventDefault(); openModal(link.dataset.modal); });
-});
-modalClose.addEventListener('click', closeModal);
-modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
-
-// ── Utilities ─────────────────────────────────────────────────
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function timeAgo(iso) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min  = Math.floor(diff / 60000);
-  if (min < 1)   return 'just now';
-  if (min < 60)  return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24)   return `${hr}h ago`;
-  const day = Math.floor(hr / 24);
-  if (day < 30)  return `${day}d ago`;
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-// ── Init ──────────────────────────────────────────────────────
+// ── Init ───────────────────────────────────────────────────
 (async () => {
-  await fetchCurrentUser();
-  renderNavAuth();
-  await loadFeed(1, true);
+  await loadMe();
+  await Promise.all([loadFeed(true), loadStories()]);
 })();

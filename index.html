@@ -3,11 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Atlas — America's Driving Roads</title>
+  <title>Atlas — America's Best Driving Roads</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="lib/leaflet.css" />
+  <meta name="description" content="Atlas maps America's 1,200+ best driving roads — mountain passes, canyon switchbacks, coastal cliffs. Discover, plan, and navigate legendary drives across all 50 states." />
+  <meta property="og:title" content="Atlas — America's Best Driving Roads" />
+  <meta property="og:description" content="1,200+ legendary driving roads mapped. Road ratings, elevation profiles, offline maps, and real-time conditions for serious driving enthusiasts." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
 </head>
 <body>
+
   <!-- Navigation -->
   <nav class="navbar" id="navbar">
     <div class="nav-container">
@@ -17,11 +26,12 @@
       </button>
       <ul class="nav-links" id="navLinks">
         <li><a href="#features">Features</a></li>
-        <li><a href="#explore">Explore Roads</a></li>
-        <li><a href="#stats">Stats</a></li>
+        <li><a href="#explore">Explore</a></li>
+        <li><a href="community.html">Community</a></li>
         <li><a href="pricing.html">Pricing</a></li>
         <li><a href="#contact">Contact</a></li>
       </ul>
+      <div class="nav-auth" id="navAuth"></div>
       <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
@@ -40,9 +50,9 @@
   <!-- Hero -->
   <section class="hero" id="hero">
     <div class="hero-content">
-      <span class="hero-badge">For Driving Enthusiasts</span>
-      <h1 class="hero-title">Find America's <span class="highlight">Best Driving Roads</span></h1>
-      <p class="hero-subtitle">Atlas maps over 1,200 legendary drives across all 50 states — from coastal cliffs to alpine passes. Your next great drive starts here.</p>
+      <span class="hero-badge">Built for Drivers</span>
+      <h1 class="hero-title">Find America's<br><span class="highlight">Best Driving Roads</span></h1>
+      <p class="hero-subtitle">95 legendary roads mapped across all 50 states — mountain passes, canyon switchbacks, and coastal cliffs. Your next great drive starts here.</p>
       <div class="hero-actions">
         <a href="#explore" class="btn btn-primary">Explore Roads</a>
         <a href="pricing.html" class="btn btn-secondary">View Plans</a>
@@ -61,18 +71,75 @@
         </div>
       </div>
     </div>
+
+    <!-- Tachometer visual -->
     <div class="hero-visual">
-      <div class="globe-container">
-        <div class="globe">
-          <div class="globe-ring ring-1"></div>
-          <div class="globe-ring ring-2"></div>
-          <div class="globe-ring ring-3"></div>
-          <div class="globe-dot dot-1"></div>
-          <div class="globe-dot dot-2"></div>
-          <div class="globe-dot dot-3"></div>
-          <div class="globe-dot dot-4"></div>
-          <div class="globe-dot dot-5"></div>
-        </div>
+      <div class="tacho-wrap">
+        <!-- SVG Tachometer. Center: 140,140. Arc radius: 118. Sweep 300° (120°→60° clockwise). -->
+        <svg class="tacho-svg" viewBox="0 0 280 280" aria-hidden="true">
+          <!-- Dial face -->
+          <circle cx="140" cy="140" r="136" fill="#0d0b09" stroke="#1a1614" stroke-width="1.5"/>
+
+          <!-- Full arc track background -->
+          <!-- Start θ=120°: (81,242)  End θ=60°: (199,242)  large-arc=1 sweep=1 (clockwise) -->
+          <path d="M 81 242 A 118 118 0 1 1 199 242"
+                fill="none" stroke="#1a1614" stroke-width="20" stroke-linecap="butt"/>
+
+          <!-- Normal range 0–7k RPM (87.5% of 300° = 262.5°, end θ=22.5°: (249,185)) -->
+          <path d="M 81 242 A 118 118 0 1 1 249 185"
+                fill="none" stroke="#dc2222" stroke-width="20" stroke-linecap="butt" opacity="0.9"/>
+
+          <!-- Redline 7k–8k (37.5°, from 22.5° to 60°) -->
+          <path d="M 249 185 A 118 118 0 0 1 199 242"
+                fill="none" stroke="#ff2020" stroke-width="20" stroke-linecap="butt"/>
+
+          <!-- Inner gloss ring -->
+          <circle cx="140" cy="140" r="105" fill="none" stroke="#1a1614" stroke-width="1"/>
+
+          <!-- Tick marks (outer r=126, inner r=110) -->
+          <!-- 0 RPM  θ=120° -->
+          <line x1="77" y1="249" x2="85" y2="235" stroke="#444" stroke-width="1.5"/>
+          <!-- 1k      θ=157.5° -->
+          <line x1="24" y1="188" x2="37" y2="182" stroke="#444" stroke-width="1.5"/>
+          <!-- 2k      θ=195° -->
+          <line x1="18" y1="107" x2="33" y2="111" stroke="#444" stroke-width="1.5"/>
+          <!-- 3k      θ=232.5° -->
+          <line x1="63" y1="40"  x2="72" y2="52"  stroke="#555" stroke-width="1.5"/>
+          <!-- 4k      θ=270° (12 o'clock) -->
+          <line x1="140" y1="14" x2="140" y2="30" stroke="#888" stroke-width="2"/>
+          <!-- 5k      θ=307.5° -->
+          <line x1="217" y1="40"  x2="208" y2="52"  stroke="#555" stroke-width="1.5"/>
+          <!-- 6k      θ=345° -->
+          <line x1="262" y1="107" x2="247" y2="111" stroke="#dc2222" stroke-width="1.5"/>
+          <!-- 7k      θ=22.5° (redline start) -->
+          <line x1="256" y1="188" x2="243" y2="182" stroke="#dc2222" stroke-width="1.5"/>
+          <!-- 8k      θ=60° -->
+          <line x1="203" y1="249" x2="195" y2="235" stroke="#ff2020" stroke-width="1.5"/>
+
+          <!-- RPM labels -->
+          <text x="69"  y="266" fill="#555" font-size="12" font-family="Barlow Condensed, sans-serif" text-anchor="middle" font-weight="700">0</text>
+          <text x="140" y="10"  fill="#888" font-size="12" font-family="Barlow Condensed, sans-serif" text-anchor="middle" font-weight="700">4</text>
+          <text x="211" y="266" fill="#ff3333" font-size="12" font-family="Barlow Condensed, sans-serif" text-anchor="middle" font-weight="700">8</text>
+
+          <!-- ×1000 RPM label -->
+          <text x="140" y="178" fill="#444" font-size="9" font-family="Barlow Condensed, sans-serif"
+                text-anchor="middle" letter-spacing="2" font-weight="700">×1000 RPM</text>
+
+          <!-- Needle — pointing to ~3500 RPM
+               43.75% of 300° = 131.25° from θ=120° → θ=251.25°
+               tip at r=98: x=140+98·cos(251.25°)=140-31.4=109, y=140+98·sin(251.25°)=140-92.8=47 -->
+          <line x1="140" y1="140" x2="109" y2="47"
+                stroke="#dc2222" stroke-width="3" stroke-linecap="round"/>
+          <!-- Counterweight -->
+          <line x1="140" y1="140" x2="146" y2="160"
+                stroke="#dc2222" stroke-width="4.5" stroke-linecap="round"/>
+
+          <!-- Center hub -->
+          <circle cx="140" cy="140" r="13" fill="#111" stroke="#2a2520" stroke-width="1.5"/>
+          <circle cx="140" cy="140" r="5"  fill="#dc2222"/>
+        </svg>
+
+        <!-- Floating road labels -->
         <div class="hero-road-label label-1">Tail of the Dragon</div>
         <div class="hero-road-label label-2">Pacific Coast Hwy</div>
         <div class="hero-road-label label-3">Beartooth Pass</div>
@@ -84,8 +151,10 @@
   <section class="features" id="features">
     <div class="container">
       <div class="section-header">
+        <span class="section-eyebrow">Platform</span>
         <h2>Built for the Drive</h2>
-        <p>Every feature is designed for drivers who care about the journey, not just the destination.</p>
+        <span class="rule-accent"></span>
+        <p>Every feature is engineered for drivers who care about the journey, not just the destination.</p>
       </div>
       <div class="features-grid">
         <div class="feature-card" data-index="0">
@@ -95,7 +164,7 @@
             </svg>
           </div>
           <h3>Road Ratings</h3>
-          <p>Community-sourced quality scores for every road — surface condition, twistiness, scenery, and traffic. Know what you're getting into before you leave the driveway.</p>
+          <p>Community-sourced scores covering surface condition, twistiness, scenery, and traffic. Know exactly what you're getting into before you leave the driveway.</p>
         </div>
         <div class="feature-card" data-index="1">
           <div class="feature-icon">
@@ -114,7 +183,7 @@
             </svg>
           </div>
           <h3>Road Conditions</h3>
-          <p>Real-time alerts for surface damage, seasonal closures, construction zones, and weather events. Never get caught out on a washed-out mountain pass.</p>
+          <p>Real-time alerts for surface damage, seasonal closures, construction zones, and weather. Never get caught out on a washed-out mountain pass again.</p>
         </div>
         <div class="feature-card" data-index="3">
           <div class="feature-icon">
@@ -124,7 +193,7 @@
             </svg>
           </div>
           <h3>Curated Guides</h3>
-          <p>Expert-written route guides for the best drives in every state — best time of year, recommended fuel stops, parking, and the must-stop lookouts.</p>
+          <p>Expert-written route guides for every state — best time of year, recommended fuel stops, parking spots, and the must-stop lookouts along the way.</p>
         </div>
         <div class="feature-card" data-index="4">
           <div class="feature-icon">
@@ -134,7 +203,7 @@
             </svg>
           </div>
           <h3>Offline Maps</h3>
-          <p>Download full road data before you head out. Atlas works perfectly in the most remote canyons and mountain passes where signal doesn't reach.</p>
+          <p>Download full road data before you head out. Atlas works perfectly in the most remote canyons and high passes where signal doesn't reach.</p>
         </div>
         <div class="feature-card" data-index="5">
           <div class="feature-icon">
@@ -145,7 +214,7 @@
             </svg>
           </div>
           <h3>Community</h3>
-          <p>85,000+ enthusiasts rating roads, posting condition updates, and sharing drive reports from their latest adventures across the country.</p>
+          <p>85,000+ enthusiasts rating roads, posting condition updates, and sharing drive reports from their latest adventures across all 50 states.</p>
         </div>
       </div>
     </div>
@@ -155,9 +224,16 @@
   <section class="explore" id="explore">
     <div class="container">
       <div class="section-header">
+        <span class="section-eyebrow">Map</span>
         <h2>Explore by Region</h2>
-        <p>Select a region to browse iconic roads, then click any road to see it on the map.</p>
+        <span class="rule-accent"></span>
+        <p>Select a region to browse iconic roads, then click any road to fly to it on the map.</p>
       </div>
+      <!-- Interactive Map — shown first so it's immediately visible -->
+      <div class="map-wrap">
+        <div id="atlasMap"></div>
+      </div>
+
       <div class="explore-wrapper">
         <div class="region-tabs">
           <button class="region-tab active" data-region="westcoast">West Coast</button>
@@ -177,24 +253,24 @@
               <ul class="region-highlights">
                 <li>CA · OR · WA · AK · HI</li>
                 <li>340+ roads mapped</li>
-                <li>Best season: May–Oct</li>
+                <li>Best: May–Oct</li>
               </ul>
             </div>
             <div class="region-places">
               <div class="place-card" data-lat="35.7" data-lng="-121.3" data-name="Pacific Coast Highway (Hwy 1)" tabindex="0" role="button">
                 <div class="place-color" style="background:#0ea5e9"></div>
                 <div class="place-details"><strong>Pacific Coast Highway</strong><span>Hwy 1, California — 656 mi</span></div>
-                <span class="place-map-hint">View on map →</span>
+                <span class="place-map-hint">View →</span>
               </div>
               <div class="place-card" data-lat="34.25" data-lng="-117.9" data-name="Angeles Crest Highway" tabindex="0" role="button">
                 <div class="place-color" style="background:#f97316"></div>
                 <div class="place-details"><strong>Angeles Crest Highway</strong><span>CA-2, California — 66 mi</span></div>
-                <span class="place-map-hint">View on map →</span>
+                <span class="place-map-hint">View →</span>
               </div>
-              <div class="place-card" data-lat="48.5" data-lng="-120.7" data-name="North Cascades Highway" tabindex="0" role="button">
-                <div class="place-color" style="background:#10b981"></div>
-                <div class="place-details"><strong>North Cascades Highway</strong><span>WA-20, Washington — 140 mi</span></div>
-                <span class="place-map-hint">View on map →</span>
+              <div class="place-card" data-lat="34.10" data-lng="-118.40" data-name="Mulholland Drive" tabindex="0" role="button">
+                <div class="place-color" style="background:#dc2222"></div>
+                <div class="place-details"><strong>Mulholland Drive</strong><span>Los Angeles, CA — canyon technical</span></div>
+                <span class="place-map-hint">View →</span>
               </div>
             </div>
           </div>
@@ -207,24 +283,24 @@
               <ul class="region-highlights">
                 <li>MT · WY · CO · ID · SD</li>
                 <li>280+ roads mapped</li>
-                <li>Best season: Jun–Sep</li>
+                <li>Best: Jun–Sep</li>
               </ul>
             </div>
             <div class="region-places">
               <div class="place-card" data-lat="45.03" data-lng="-109.54" data-name="Beartooth Highway" tabindex="0" role="button">
                 <div class="place-color" style="background:#e74c3c"></div>
                 <div class="place-details"><strong>Beartooth Highway</strong><span>US-212, MT/WY — 68 mi · 10,947 ft peak</span></div>
-                <span class="place-map-hint">View on map →</span>
+                <span class="place-map-hint">View →</span>
               </div>
-              <div class="place-card" data-lat="48.70" data-lng="-113.73" data-name="Going-to-the-Sun Road" tabindex="0" role="button">
-                <div class="place-color" style="background:#9b59b6"></div>
-                <div class="place-details"><strong>Going-to-the-Sun Road</strong><span>Glacier NP, Montana — 50 mi</span></div>
-                <span class="place-map-hint">View on map →</span>
+              <div class="place-card" data-lat="38.84" data-lng="-105.04" data-name="Pikes Peak Highway" tabindex="0" role="button">
+                <div class="place-color" style="background:#dc2222"></div>
+                <div class="place-details"><strong>Pikes Peak Highway</strong><span>Colorado — 19 mi · Race-proven climb</span></div>
+                <span class="place-map-hint">View →</span>
               </div>
               <div class="place-card" data-lat="37.9" data-lng="-107.73" data-name="Million Dollar Highway" tabindex="0" role="button">
                 <div class="place-color" style="background:#f39c12"></div>
                 <div class="place-details"><strong>Million Dollar Highway</strong><span>US-550, Colorado — 25 mi · No guardrails</span></div>
-                <span class="place-map-hint">View on map →</span>
+                <span class="place-map-hint">View →</span>
               </div>
             </div>
           </div>
@@ -237,24 +313,24 @@
               <ul class="region-highlights">
                 <li>UT · NV · AZ · NM · TX</li>
                 <li>310+ roads mapped</li>
-                <li>Best season: Mar–May, Sep–Nov</li>
+                <li>Best: Mar–May, Sep–Nov</li>
               </ul>
             </div>
             <div class="region-places">
               <div class="place-card" data-lat="37.77" data-lng="-111.56" data-name="Highway 12, Utah" tabindex="0" role="button">
                 <div class="place-color" style="background:#e67e22"></div>
                 <div class="place-details"><strong>Highway 12</strong><span>Utah — 124 mi · America's most scenic road</span></div>
-                <span class="place-map-hint">View on map →</span>
+                <span class="place-map-hint">View →</span>
               </div>
-              <div class="place-card" data-lat="37.50" data-lng="-115.37" data-name="Extraterrestrial Highway (NV-375)" tabindex="0" role="button">
-                <div class="place-color" style="background:#2ecc71"></div>
-                <div class="place-details"><strong>Extraterrestrial Highway</strong><span>NV-375, Nevada — 98 mi · Dead straight</span></div>
-                <span class="place-map-hint">View on map →</span>
+              <div class="place-card" data-lat="29.83" data-lng="-99.55" data-name="Twisted Sisters (TX FM-336/337)" tabindex="0" role="button">
+                <div class="place-color" style="background:#dc2222"></div>
+                <div class="place-details"><strong>Twisted Sisters</strong><span>TX FM-336/337 — Hill Country cult classic</span></div>
+                <span class="place-map-hint">View →</span>
               </div>
-              <div class="place-card" data-lat="34.84" data-lng="-111.76" data-name="Oak Creek Canyon (Hwy 89A)" tabindex="0" role="button">
+              <div class="place-card" data-lat="37.29" data-lng="-109.96" data-name="Moki Dugway (UT-261)" tabindex="0" role="button">
                 <div class="place-color" style="background:#e74c3c"></div>
-                <div class="place-details"><strong>Oak Creek Canyon</strong><span>AZ-89A, Arizona — 14 mi · Switchback heaven</span></div>
-                <span class="place-map-hint">View on map →</span>
+                <div class="place-details"><strong>Moki Dugway</strong><span>UT-261 — 3 mi · Hairpin gravel switchbacks</span></div>
+                <span class="place-map-hint">View →</span>
               </div>
             </div>
           </div>
@@ -263,28 +339,28 @@
           <div class="region-panel" data-region="southeast">
             <div class="region-info">
               <h3>Southeast</h3>
-              <p>The Tail of the Dragon is a pilgrimage for every driving enthusiast — 318 curves in 11 miles, zero intersections, zero distractions. Pair it with the Cherohala for the best driving weekend in America.</p>
+              <p>The Tail of the Dragon is a pilgrimage for every driving enthusiast — 318 curves in 11 miles, zero intersections. Pair it with the Cherohala Skyway for the best driving weekend in America.</p>
               <ul class="region-highlights">
                 <li>NC · TN · VA · FL · MS</li>
                 <li>290+ roads mapped</li>
-                <li>Best season: Apr–Nov</li>
+                <li>Best: Apr–Nov</li>
               </ul>
             </div>
             <div class="region-places">
               <div class="place-card" data-lat="35.47" data-lng="-83.98" data-name="Tail of the Dragon (US-129)" tabindex="0" role="button">
-                <div class="place-color" style="background:#e74c3c"></div>
+                <div class="place-color" style="background:#dc2222"></div>
                 <div class="place-details"><strong>Tail of the Dragon</strong><span>US-129, NC/TN — 11 mi · 318 curves</span></div>
-                <span class="place-map-hint">View on map →</span>
+                <span class="place-map-hint">View →</span>
               </div>
-              <div class="place-card" data-lat="36.08" data-lng="-79.5" data-name="Blue Ridge Parkway" tabindex="0" role="button">
-                <div class="place-color" style="background:#27ae60"></div>
-                <div class="place-details"><strong>Blue Ridge Parkway</strong><span>VA/NC — 469 mi · America's Favourite Drive</span></div>
-                <span class="place-map-hint">View on map →</span>
+              <div class="place-card" data-lat="35.27" data-lng="-83.42" data-name="Moonshiner 28 (NC-28)" tabindex="0" role="button">
+                <div class="place-color" style="background:#e74c3c"></div>
+                <div class="place-details"><strong>Moonshiner 28</strong><span>NC-28 — technical mountain switchbacks</span></div>
+                <span class="place-map-hint">View →</span>
               </div>
               <div class="place-card" data-lat="35.38" data-lng="-84.2" data-name="Cherohala Skyway" tabindex="0" role="button">
                 <div class="place-color" style="background:#3498db"></div>
                 <div class="place-details"><strong>Cherohala Skyway</strong><span>TN/NC — 43 mi · Ridge-top cruising</span></div>
-                <span class="place-map-hint">View on map →</span>
+                <span class="place-map-hint">View →</span>
               </div>
             </div>
           </div>
@@ -293,28 +369,28 @@
           <div class="region-panel" data-region="northeast">
             <div class="region-info">
               <h3>Northeast</h3>
-              <p>Blazing fall foliage lines the Kancamagus every October, turning a great drive into a bucket-list spectacle. Skyline Drive in Virginia is the crown jewel of the East — 105 miles of ridge-top perfection.</p>
+              <p>Blazing fall foliage lines the Kancamagus every October, turning a great drive into a bucket-list spectacle. Smugglers Notch is so tight boulders literally touch the road.</p>
               <ul class="region-highlights">
                 <li>NH · MA · VT · ME · VA</li>
                 <li>195+ roads mapped</li>
-                <li>Best season: Sep–Oct</li>
+                <li>Best: Sep–Oct</li>
               </ul>
             </div>
             <div class="region-places">
               <div class="place-card" data-lat="44.05" data-lng="-71.4" data-name="Kancamagus Highway" tabindex="0" role="button">
                 <div class="place-color" style="background:#f1c40f"></div>
                 <div class="place-details"><strong>Kancamagus Highway</strong><span>NH-112, New Hampshire — 35 mi</span></div>
-                <span class="place-map-hint">View on map →</span>
+                <span class="place-map-hint">View →</span>
+              </div>
+              <div class="place-card" data-lat="44.56" data-lng="-72.79" data-name="Smugglers Notch (VT-108)" tabindex="0" role="button">
+                <div class="place-color" style="background:#dc2222"></div>
+                <div class="place-details"><strong>Smugglers Notch</strong><span>VT-108 — boulders in the road, seriously</span></div>
+                <span class="place-map-hint">View →</span>
               </div>
               <div class="place-card" data-lat="38.5" data-lng="-78.5" data-name="Skyline Drive" tabindex="0" role="button">
                 <div class="place-color" style="background:#8e44ad"></div>
                 <div class="place-details"><strong>Skyline Drive</strong><span>Shenandoah NP, Virginia — 105 mi</span></div>
-                <span class="place-map-hint">View on map →</span>
-              </div>
-              <div class="place-card" data-lat="43.9" data-lng="-72.9" data-name="Vermont Route 100" tabindex="0" role="button">
-                <div class="place-color" style="background:#16a085"></div>
-                <div class="place-details"><strong>Vermont Route 100</strong><span>VT-100, Vermont — 216 mi · Fall foliage</span></div>
-                <span class="place-map-hint">View on map →</span>
+                <span class="place-map-hint">View →</span>
               </div>
             </div>
           </div>
@@ -323,36 +399,32 @@
           <div class="region-panel" data-region="midwest">
             <div class="region-info">
               <h3>Midwest</h3>
-              <p>Often overlooked but full of surprises. The Ozarks deliver genuine switchbacks and technical bends. The Great River Road traces the Mississippi for hundreds of miles through river bluffs and historic river towns.</p>
+              <p>Often overlooked but full of surprises. The Ozarks deliver genuine switchbacks and technical bends. Brockway Mountain Drive in Michigan's Copper Country is a hidden enthusiast gem.</p>
               <ul class="region-highlights">
-                <li>WI · MN · IA · AR · MO</li>
+                <li>WI · MN · IA · AR · MO · MI</li>
                 <li>180+ roads mapped</li>
-                <li>Best season: May–Oct</li>
+                <li>Best: May–Oct</li>
               </ul>
             </div>
             <div class="region-places">
               <div class="place-card" data-lat="35.75" data-lng="-93.4" data-name="Ozark Highlands Scenic Byway" tabindex="0" role="button">
                 <div class="place-color" style="background:#e67e22"></div>
                 <div class="place-details"><strong>Ozark Highlands Scenic Byway</strong><span>Arkansas — 165 mi · Real switchbacks</span></div>
-                <span class="place-map-hint">View on map →</span>
+                <span class="place-map-hint">View →</span>
+              </div>
+              <div class="place-card" data-lat="47.47" data-lng="-88.08" data-name="Brockway Mountain Drive (MI)" tabindex="0" role="button">
+                <div class="place-color" style="background:#dc2222"></div>
+                <div class="place-details"><strong>Brockway Mountain Drive</strong><span>Michigan UP — copper country ridge road</span></div>
+                <span class="place-map-hint">View →</span>
               </div>
               <div class="place-card" data-lat="44.0" data-lng="-91.5" data-name="Great River Road" tabindex="0" role="button">
                 <div class="place-color" style="background:#2980b9"></div>
                 <div class="place-details"><strong>Great River Road</strong><span>WI/MN — 250 mi · Mississippi bluffs</span></div>
-                <span class="place-map-hint">View on map →</span>
-              </div>
-              <div class="place-card" data-lat="42.05" data-lng="-96.05" data-name="Loess Hills Parkway" tabindex="0" role="button">
-                <div class="place-color" style="background:#27ae60"></div>
-                <div class="place-details"><strong>Loess Hills Parkway</strong><span>Iowa — 220 mi · Hidden gem</span></div>
-                <span class="place-map-hint">View on map →</span>
+                <span class="place-map-hint">View →</span>
               </div>
             </div>
           </div>
 
-        </div>
-        <!-- Interactive Map -->
-        <div class="map-wrap">
-          <div id="atlasMap"></div>
         </div>
       </div>
     </div>
@@ -382,15 +454,107 @@
     </div>
   </section>
 
+  <!-- Testimonials -->
+  <section class="testimonials" id="testimonials">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-eyebrow">Drivers</span>
+        <h2>What They're Saying</h2>
+        <span class="rule-accent"></span>
+      </div>
+      <div class="testimonials-grid">
+        <div class="testimonial-card">
+          <div class="star-row">
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <p class="testimonial-text">Found Mulholland Drive on a Tuesday at 6am through Atlas. Zero traffic. Best hour of driving I've had all year in the Cayman. The road detail page told me exactly what to expect — that's the feature that got me to subscribe.</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">JM</div>
+            <div>
+              <div class="author-name">Jake M.</div>
+              <div class="author-detail">Los Angeles, CA · Porsche Cayman GT4</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="star-row">
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <p class="testimonial-text">Road condition alerts saved me from two wasted drives last season. Tail of the Dragon section alone is worth the subscription — the Atlas community updates are faster and more accurate than any DOT website I've tried.</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">SK</div>
+            <div>
+              <div class="author-name">Sarah K.</div>
+              <div class="author-detail">Charlotte, NC · BMW M4 Competition</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="star-row">
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <p class="testimonial-text">Drove up to Colorado and timed Beartooth opening perfectly using Atlas's seasonal alert. The offline maps worked the whole way through the park — zero signal for 80 miles, not a single hiccup. Worth it just for that trip.</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">MR</div>
+            <div>
+              <div class="author-name">Marcus R.</div>
+              <div class="author-detail">Denver, CO · Chevrolet Corvette Z06</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="star-row">
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <p class="testimonial-text">Planned a 4-day Ozarks trip entirely from Atlas. Offline maps through zero signal for 90 miles, and the driver tips for each road were genuinely useful — not generic filler. It's the only app I open before a driving trip now.</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">TH</div>
+            <div>
+              <div class="author-name">Tom H.</div>
+              <div class="author-detail">Austin, TX · Ford Mustang Shelby GT500</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Search Section -->
   <section class="search-section" id="search">
     <div class="container">
       <div class="section-header">
+        <span class="section-eyebrow">Discover</span>
         <h2>Find Your Next Drive</h2>
-        <p>Search by road name, state, or type — or use your location to discover what's nearby.</p>
+        <span class="rule-accent"></span>
+        <p>Search by road name, state, or type — or use your location to find what's nearby.</p>
+      </div>
+      <div class="filter-row">
+        <button class="filter-chip active" data-type="All">All Types</button>
+        <button class="filter-chip" data-type="Mountain">Mountain</button>
+        <button class="filter-chip" data-type="Technical">Technical</button>
+        <button class="filter-chip" data-type="Canyon">Canyon</button>
+        <button class="filter-chip" data-type="Coastal">Coastal</button>
+        <button class="filter-chip" data-type="Scenic">Scenic</button>
+        <button class="filter-chip" data-type="Desert">Desert</button>
       </div>
       <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search roads, highways, mountain passes..." autocomplete="off" aria-label="Search roads" />
+        <input type="text" id="searchInput" placeholder="Search roads, passes, canyons…" autocomplete="off" aria-label="Search roads" />
         <button class="search-btn locate-btn" id="locateBtn" aria-label="Use my current location" title="Find roads near me">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
@@ -411,7 +575,9 @@
   <section class="contact" id="contact">
     <div class="container">
       <div class="section-header">
+        <span class="section-eyebrow">Contact</span>
         <h2>Get In Touch</h2>
+        <span class="rule-accent"></span>
         <p>Have a road to suggest, a bug to report, or want to partner with us? We'd love to hear from you.</p>
       </div>
       <form class="contact-form" id="contactForm" novalidate>
@@ -439,7 +605,7 @@
         </div>
         <div class="form-group">
           <label for="message">Message</label>
-          <textarea id="message" name="message" rows="5" placeholder="Your message..." required></textarea>
+          <textarea id="message" name="message" rows="5" placeholder="Your message…" required></textarea>
           <span class="field-error" id="messageError"></span>
         </div>
         <button type="submit" class="btn btn-primary btn-full">Send Message</button>
@@ -447,9 +613,26 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
-          Message sent! We'll get back to you soon.
+          Message sent — we'll get back to you soon.
         </div>
       </form>
+    </div>
+  </section>
+
+  <!-- Newsletter -->
+  <section class="newsletter">
+    <div class="container">
+      <div class="newsletter-inner">
+        <div class="newsletter-eyebrow">Stay In The Know</div>
+        <h2>The Road Report</h2>
+        <p>Monthly dispatch of new road additions, seasonal openings, community top picks, and driving weekends worth planning around.</p>
+        <form class="newsletter-form" id="newsletterForm" novalidate>
+          <input type="email" placeholder="your@email.com" required autocomplete="email" />
+          <button type="submit">Subscribe</button>
+        </form>
+        <p class="newsletter-note">No spam. Unsubscribe any time. One email per month, max.</p>
+        <div class="newsletter-success" id="newsletterSuccess">You're on the list. We'll be in touch. ✓</div>
+      </div>
     </div>
   </section>
 
@@ -493,6 +676,14 @@
     </div>
   </footer>
 
+  <!-- Road detail modal -->
+  <div class="road-modal-overlay" id="roadModal" role="dialog" aria-modal="true" aria-label="Road details">
+    <div class="road-modal">
+      <div class="road-modal-inner" id="roadModalInner"></div>
+    </div>
+  </div>
+  <span id="roadModalClose" style="display:none"></span>
+
   <!-- Modal -->
   <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal">
@@ -511,7 +702,16 @@
     </svg>
   </button>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN/WLI=" crossorigin=""></script>
+  <!-- Cookie consent -->
+  <div class="cookie-banner" id="cookieBanner" role="region" aria-label="Cookie consent">
+    <p class="cookie-text">We use cookies to remember your preferences and improve your experience. <a href="#" data-modal="cookies">Learn more</a>.</p>
+    <div class="cookie-actions">
+      <button class="cookie-btn cookie-btn-accept" id="cookieAccept">Accept</button>
+      <button class="cookie-btn cookie-btn-decline" id="cookieDecline">Decline</button>
+    </div>
+  </div>
+
+  <script src="lib/leaflet.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

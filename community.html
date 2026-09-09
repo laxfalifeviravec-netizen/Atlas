@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atlas — Community</title>
+  <meta name="description" content="The Atlas community — share your best driving road shots, discover roads through other enthusiasts' lenses, and connect with 85,000+ drivers." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="community.css" />
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo">Atlas</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html#features">Features</a></li>
+        <li><a href="index.html#explore">Explore Roads</a></li>
+        <li><a href="community.html" class="active">Community</a></li>
+        <li><a href="pricing.html">Pricing</a></li>
+        <li><a href="index.html#contact">Contact</a></li>
+      </ul>
+      <div class="nav-auth" id="navAuth">
+        <!-- injected by community.js -->
+      </div>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="community-hero">
+    <div class="container">
+      <span class="hero-badge">Enthusiasts Only</span>
+      <h1>The Road Community</h1>
+      <p>Share your shots, discover roads through other drivers' eyes, and connect with 85,000+ enthusiasts.</p>
+      <button class="btn btn-primary" id="heroPostBtn">Share Your Road</button>
+    </div>
+  </section>
+
+  <!-- Feed -->
+  <section class="community-feed-section">
+    <div class="container">
+
+      <!-- Feed toolbar -->
+      <div class="feed-toolbar">
+        <div class="feed-tabs">
+          <button class="feed-tab active" data-feed="recent">Recent</button>
+          <button class="feed-tab" data-feed="top">Top Liked</button>
+        </div>
+        <button class="btn btn-primary btn-sm" id="newPostBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Post
+        </button>
+      </div>
+
+      <!-- Grid -->
+      <div class="feed-grid" id="feedGrid">
+        <!-- populated by community.js -->
+      </div>
+
+      <!-- Load more -->
+      <div class="feed-pagination" id="feedPagination" style="display:none">
+        <button class="btn btn-secondary-dark" id="loadMoreBtn">Load More</button>
+      </div>
+
+      <!-- Empty / loading states -->
+      <div class="feed-empty" id="feedEmpty" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <p>No posts yet. Be the first to share a road.</p>
+        <button class="btn btn-primary" id="emptyPostBtn">Share Your Road</button>
+      </div>
+
+      <div class="feed-loading" id="feedLoading">
+        <div class="spinner"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Back to top -->
+  <button class="back-to-top" id="backToTop" aria-label="Back to top">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="18 15 12 9 6 15"/>
+    </svg>
+  </button>
+
+  <!-- ══ POST DETAIL MODAL ══════════════════════════════════════ -->
+  <div class="modal-overlay" id="postOverlay" role="dialog" aria-modal="true" aria-label="Post detail">
+    <div class="post-modal">
+      <button class="modal-close" id="postModalClose" aria-label="Close">&times;</button>
+      <div class="post-modal-image-wrap">
+        <img id="postModalImg" src="" alt="" />
+      </div>
+      <div class="post-modal-sidebar">
+        <div class="post-modal-author" id="postModalAuthor"></div>
+        <div class="post-modal-road" id="postModalRoad"></div>
+        <p class="post-modal-caption" id="postModalCaption"></p>
+        <div class="post-modal-comments" id="postModalComments"></div>
+        <div class="post-modal-actions" id="postModalActions"></div>
+        <form class="post-modal-comment-form" id="postCommentForm">
+          <input type="text" id="postCommentInput" placeholder="Add a comment…" autocomplete="off" />
+          <button type="submit" class="btn btn-primary btn-sm">Post</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ NEW POST MODAL ════════════════════════════════════════ -->
+  <div class="modal-overlay" id="newPostOverlay" role="dialog" aria-modal="true" aria-labelledby="newPostTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="newPostTitle">Share a Road</h3>
+        <button class="modal-close" id="newPostClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="postImageInput" accept="image/*" style="display:none" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <p>Click or drag to upload a photo</p>
+          <span>JPEG, PNG, WebP up to 8 MB</span>
+        </div>
+        <img id="uploadPreview" src="" alt="" style="display:none" class="upload-preview" />
+        <div class="form-group">
+          <input type="text" id="postRoadName" placeholder="Road name (e.g. Tail of the Dragon)" maxlength="100" />
+        </div>
+        <div class="form-group">
+          <select id="postRegion">
+            <option value="">Select region…</option>
+            <option>West Coast</option>
+            <option>Mountain West</option>
+            <option>Southwest</option>
+            <option>Midwest</option>
+            <option>Southeast</option>
+            <option>Northeast</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <textarea id="postCaption" placeholder="Tell the story of this road…" rows="3" maxlength="500"></textarea>
+        </div>
+        <span class="field-error" id="newPostError"></span>
+        <button class="btn btn-primary btn-full" id="submitPostBtn">Share Road</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ AUTH MODAL ════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="authOverlay" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="authTitle">Sign In</h3>
+        <button class="modal-close" id="authClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Sign in form -->
+        <form id="loginForm" novalidate>
+          <div class="form-group">
+            <input type="email" id="loginEmail" placeholder="your@email.com" autocomplete="email" />
+            <span class="field-error" id="loginEmailError"></span>
+          </div>
+          <div class="form-group">
+            <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password" />
+            <span class="field-error" id="loginPasswordError"></span>
+          </div>
+          <span class="field-error" id="loginError"></span>
+          <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        </form>
+        <!-- Register form -->
+        <form id="registerForm" novalidate style="display:none">
+          <div class="form-group">
+            <input type="text" id="regName" placeholder="Your name" autocomplete="name" />
+            <span class="field-error" id="regNameError"></span>
+          </div>
+          <div class="form-group">
+            <input type="email" id="regEmail" placeholder="your@email.com" autocomplete="email" />
+            <span class="field-error" id="regEmailError"></span>
+          </div>
+          <div class="form-group">
+            <input type="password" id="regPassword" placeholder="Password (min 6 characters)" autocomplete="new-password" />
+            <span class="field-error" id="regPasswordError"></span>
+          </div>
+          <span class="field-error" id="regError"></span>
+          <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+        </form>
+        <div class="auth-switch">
+          <span id="authSwitchText">Don't have an account?</span>
+          <button class="auth-switch-btn" id="authSwitchBtn">Sign Up</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <span class="footer-logo">Atlas</span>
+      <nav class="footer-links">
+        <a href="#" data-modal="about">About</a>
+        <a href="community.html">Community</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="#" data-modal="privacy">Privacy</a>
+        <a href="#" data-modal="terms">Terms</a>
+      </nav>
+      <span class="footer-copy">&copy; 2026 Atlas. All rights reserved.</span>
+    </div>
+  </footer>
+
+  <!-- Shared modal overlay (about / privacy / terms) -->
+  <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle"></h3>
+        <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="community.js"></script>
+</body>
+</html>

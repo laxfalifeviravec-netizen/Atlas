@@ -491,5 +491,16 @@ body {
 .story-user-name { color: #fff; font-size: 13px; font-weight: 600; }
 .story-user-time { color: rgba(255,255,255,0.7); font-size: 11px; }
 
+/* ── Map tile dark-mode inversion (free OSM, no API key) ───── */
+[data-theme="dark"] .leaflet-tile-pane,
+[data-theme="dark"] #roadsMap .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) saturate(0.85);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.85) saturate(0.85);
+  }
+}
+
 /* ── Utility ───────────────────────────────────────────────── */
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }

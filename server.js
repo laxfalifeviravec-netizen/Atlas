@@ -131,6 +131,12 @@ const MIGRATION_SQL = `
     returns void language sql as $$ update posts set likes = greatest(0, likes - 1) where id = pid; $$;
   create or replace function increment_road_likes(rid bigint)
     returns void language sql as $$ update roads set likes = likes + 1 where id = rid; $$;
+  create table if not exists follows (
+    follower_id bigint references users(id) on delete cascade,
+    following_id bigint references users(id) on delete cascade,
+    created_at timestamptz default now(),
+    primary key (follower_id, following_id)
+  );
 `;
 
 async function runMigrations() {
@@ -204,6 +210,7 @@ const mem = {
   users: [], posts: [], comments: [],
   postLikes: new Set(), groups: [], groupMembers: [],
   groupLocations: [], groupRoutes: [], listings: [], roads: [], stories: [],
+  follows: [], // { follower_id, following_id }
   ids: { user:1, post:1, comment:1, group:1, route:1, listing:1, road:1, story:1 },
 };
 let seeded = false;
@@ -292,16 +299,147 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Edit profile ──────────────────────────────────────────────
+app.patch('/api/auth/me', requireAuth, upload.single('avatar'), async (req, res) => {
+  try {
+    const { name, bio } = req.body;
+    const updates = {};
+    if (name?.trim()) updates.name = name.trim();
+    if (bio !== undefined) updates.bio = bio.trim();
+    if (req.file) {
+      const url = await uploadImage(req.file);
+      if (url) updates.avatar = url;
+    }
+    if (!Object.keys(updates).length) return res.status(400).json({ error: 'Nothing to update.' });
+
+    if (supabase) {
+      const { data: user, error } = await supabase.from('users')
+        .update(updates).eq('id', req.user.id)
+        .select('id,name,email,avatar,bio,plan,created_at').single();
+      if (error) throw error;
+      return res.json({ user });
+    } else {
+      const u = mem.users.find(u => u.id === req.user.id);
+      if (!u) return res.status(404).json({ error: 'User not found.' });
+      Object.assign(u, updates);
+      const { password_hash: _, ...safe } = u;
+      return res.json({ user: safe });
+    }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── User profiles ─────────────────────────────────────────────
+app.get('/api/users/:id', optionalAuth, async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id);
+    const viewerId = req.user?.id || null;
+
+    if (supabase) {
+      const { data: user } = await supabase.from('users')
+        .select('id,name,avatar,bio,plan,created_at').eq('id', targetId).maybeSingle();
+      if (!user) return res.status(404).json({ error: 'User not found.' });
+
+      const [{ count: postCount }, { count: followerCount }, { count: followingCount }] = await Promise.all([
+        supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', targetId),
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', targetId),
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', targetId),
+      ]);
+
+      let isFollowing = false;
+      if (viewerId && viewerId !== targetId) {
+        const { data: f } = await supabase.from('follows')
+          .select('follower_id').eq('follower_id', viewerId).eq('following_id', targetId).maybeSingle();
+        isFollowing = !!f;
+      }
+
+      return res.json({ user: { ...user, post_count: postCount||0, follower_count: followerCount||0, following_count: followingCount||0, is_following: isFollowing } });
+    } else {
+      const u = mem.users.find(u => u.id === targetId);
+      if (!u) return res.status(404).json({ error: 'User not found.' });
+      const { password_hash: _, ...safe } = u;
+      const postCount = mem.posts.filter(p => p.user_id === targetId).length;
+      const followerCount = mem.follows.filter(f => f.following_id === targetId).length;
+      const followingCount = mem.follows.filter(f => f.follower_id === targetId).length;
+      const isFollowing = viewerId ? mem.follows.some(f => f.follower_id === viewerId && f.following_id === targetId) : false;
+      return res.json({ user: { ...safe, post_count: postCount, follower_count: followerCount, following_count: followingCount, is_following: isFollowing } });
+    }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/users/:id/posts', optionalAuth, async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id);
+    const page  = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(30, parseInt(req.query.limit) || 18);
+    const from  = (page - 1) * limit;
+
+    if (supabase) {
+      const { data: posts, count } = await supabase.from('posts')
+        .select('id,image_url,likes,created_at', { count: 'exact' })
+        .eq('user_id', targetId)
+        .order('created_at', { ascending: false })
+        .range(from, from + limit - 1);
+      return res.json({ posts: posts || [], total: count || 0 });
+    } else {
+      const all = mem.posts.filter(p => p.user_id === targetId)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at));
+      return res.json({ posts: all.slice(from, from + limit), total: all.length });
+    }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Follow / unfollow ─────────────────────────────────────────
+app.post('/api/follow/:id', requireAuth, async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id);
+    if (targetId === req.user.id) return res.status(400).json({ error: 'Cannot follow yourself.' });
+
+    if (supabase) {
+      const { error } = await supabase.from('follows')
+        .upsert({ follower_id: req.user.id, following_id: targetId }, { onConflict: 'follower_id,following_id' });
+      if (error) throw error;
+    } else {
+      const exists = mem.follows.some(f => f.follower_id === req.user.id && f.following_id === targetId);
+      if (!exists) mem.follows.push({ follower_id: req.user.id, following_id: targetId });
+    }
+    return res.json({ following: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/follow/:id', requireAuth, async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id);
+    if (supabase) {
+      await supabase.from('follows').delete()
+        .eq('follower_id', req.user.id).eq('following_id', targetId);
+    } else {
+      mem.follows = mem.follows.filter(f => !(f.follower_id === req.user.id && f.following_id === targetId));
+    }
+    return res.json({ following: false });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Posts ─────────────────────────────────────────────────────
 app.get('/api/posts', optionalAuth, async (req, res) => {
   try {
     const page  = Math.max(1, parseInt(req.query.page)  || 1);
     const limit = Math.min(24, parseInt(req.query.limit) || 12);
     const from  = (page - 1) * limit;
+    const feedMode = req.query.feed; // 'following' or undefined
 
     if (supabase) {
-      const { data: posts, count } = await supabase.from('posts')
-        .select('*,users(name,avatar)', { count: 'exact' })
+      let query = supabase.from('posts').select('*,users(name,avatar)', { count: 'exact' });
+
+      if (feedMode === 'following' && req.user) {
+        // Get IDs this user follows
+        const { data: follows } = await supabase.from('follows')
+          .select('following_id').eq('follower_id', req.user.id);
+        const ids = (follows || []).map(f => f.following_id);
+        if (ids.length === 0) return res.json({ posts: [], total: 0, page, pages: 0 });
+        query = query.in('user_id', ids);
+      }
+
+      const { data: posts, count } = await query
         .order('created_at', { ascending: false })
         .range(from, from + limit - 1);
 
@@ -328,12 +466,18 @@ app.get('/api/posts', optionalAuth, async (req, res) => {
     } else {
       await maybeMemSeed();
       const uid = req.user?.id;
-      const sorted = [...mem.posts].sort((a, b) => b.created_at.localeCompare(a.created_at));
+      let all = [...mem.posts];
+      if (feedMode === 'following' && uid) {
+        const followingIds = mem.follows.filter(f => f.follower_id === uid).map(f => f.following_id);
+        if (followingIds.length === 0) return res.json({ posts: [], total: 0, page, pages: 0 });
+        all = all.filter(p => followingIds.includes(p.user_id));
+      }
+      const sorted = all.sort((a, b) => b.created_at.localeCompare(a.created_at));
       const slice = sorted.slice(from, from + limit).map(p => {
         const u = mem.users.find(u => u.id === p.user_id) || {};
         return { ...p, user_name: u.name||'', user_avatar: u.avatar||null, liked: uid ? mem.postLikes.has(`${uid}-${p.id}`) : false };
       });
-      return res.json({ posts: slice, total: mem.posts.length, page, pages: Math.ceil(mem.posts.length / limit) });
+      return res.json({ posts: slice, total: sorted.length, page, pages: Math.ceil(sorted.length / limit) });
     }
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

@@ -14,6 +14,7 @@ let activePost = null;
 let allStories = [];
 let storyIndex = 0;
 let storyTimer = null;
+let feedMode = 'forYou'; // 'forYou' | 'following'
 
 // ── Theme ──────────────────────────────────────────────────
 const savedTheme = localStorage.getItem('atlas-theme');
@@ -45,7 +46,7 @@ function renderNav(user) {
   } else {
     const init = user.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
     el.innerHTML = `
-      <span class="nav-user-btn"><div class="avatar avatar-sm">${init}</div>${user.name.split(' ')[0]}</span>
+      <a href="profile.html?id=${user.id}" class="nav-user-btn"><div class="avatar avatar-sm">${init}</div></a>
       <button class="nav-signout-btn" id="navSignOut">Sign Out</button>`;
     document.getElementById('navSignOut').addEventListener('click', () => {
       localStorage.removeItem('atlas-token'); token = null; currentUser = null; location.reload();
@@ -192,12 +193,37 @@ document.getElementById('submitStoryBtn').addEventListener('click', async () => 
   } catch { document.getElementById('storyError').textContent = 'Upload failed. Try again.'; }
 });
 
+// ── Feed tabs ──────────────────────────────────────────────
+function renderFeedTabs() {
+  const el = document.getElementById('feedTabs');
+  if (!el) return;
+  el.querySelectorAll('.feed-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.mode === feedMode);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const tabs = document.getElementById('feedTabs');
+  if (tabs) {
+    tabs.addEventListener('click', e => {
+      const tab = e.target.closest('.feed-tab');
+      if (!tab) return;
+      const mode = tab.dataset.mode;
+      if (mode === 'following' && !currentUser) return openAuth();
+      feedMode = mode;
+      renderFeedTabs();
+      loadFeed(true);
+    });
+  }
+});
+
 // ── Feed ───────────────────────────────────────────────────
 async function loadFeed(reset = false) {
   if (reset) { page = 1; posts = []; document.getElementById('feedList').innerHTML = ''; }
   document.getElementById('feedLoading').style.display = 'flex';
   try {
-    const res = await fetch(`${API}/api/posts?page=${page}&limit=10`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    const feedParam = feedMode === 'following' ? '&feed=following' : '';
+    const res = await fetch(`${API}/api/posts?page=${page}&limit=10${feedParam}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
     const data = await res.json();
     totalPages = data.pages;
     posts = reset ? data.posts : [...posts, ...data.posts];
@@ -223,9 +249,9 @@ function buildPostCard(p) {
   card.className = 'post-card';
   card.innerHTML = `
     <div class="post-card-header">
-      <div class="post-avatar">${initials}</div>
+      <a href="profile.html?id=${p.user_id}" class="post-avatar" style="text-decoration:none;color:inherit;">${initials}</a>
       <div class="post-card-meta">
-        <div class="post-card-username">${esc(p.user_name||'Driver')}</div>
+        <a href="profile.html?id=${p.user_id}" class="post-card-username" style="text-decoration:none;color:inherit;">${esc(p.user_name||'Driver')}</a>
         <div class="post-card-road">${esc(p.road_name||p.region||'')}</div>
       </div>
     </div>

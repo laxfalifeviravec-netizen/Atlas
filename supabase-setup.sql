@@ -118,6 +118,14 @@ create table if not exists roads (
   created_at  timestamptz default now()
 );
 
+-- Follows
+create table if not exists follows (
+  follower_id  bigint references users(id) on delete cascade,
+  following_id bigint references users(id) on delete cascade,
+  created_at   timestamptz default now(),
+  primary key (follower_id, following_id)
+);
+
 -- ── RPC helpers for like counters ──────────────────────────────
 create or replace function increment_likes(pid bigint)
 returns void language sql as $$
@@ -146,3 +154,4 @@ alter table group_locations disable row level security;
 alter table group_routes   disable row level security;
 alter table listings       disable row level security;
 alter table roads          disable row level security;
+alter table follows        disable row level security;

@@ -1,0 +1,27 @@
+{
+  "name": "Atlas — Driving Community",
+  "short_name": "Atlas",
+  "description": "The social network for driving enthusiasts. Share roads, join groups, find gear.",
+  "start_url": "/community.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0C0C0F",
+  "theme_color": "#0C0C0F",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["social", "sports", "navigation"],
+  "lang": "en-US"
+}

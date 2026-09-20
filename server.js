@@ -50,8 +50,14 @@ const MIGRATION_SQL = `
     road_name text default '',
     region text default '',
     likes integer default 0,
+    mod_title text default '',
+    mod_price text default '',
+    mod_url text default '',
     created_at timestamptz default now()
   );
+  alter table posts add column if not exists mod_title text default '';
+  alter table posts add column if not exists mod_price text default '';
+  alter table posts add column if not exists mod_url   text default '';
   create table if not exists post_likes (
     user_id bigint references users(id) on delete cascade,
     post_id bigint references posts(id) on delete cascade,
@@ -485,21 +491,24 @@ app.get('/api/posts', optionalAuth, async (req, res) => {
 app.post('/api/posts', requireAuth, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'An image is required.' });
-    const { caption = '', road_name = '', region = '' } = req.body;
+    const { caption = '', road_name = '', region = '', mod_title = '', mod_price = '', mod_url = '' } = req.body;
 
     if (supabase) {
       const image_url = await uploadImage(req.file);
       if (!image_url) return res.status(500).json({ error: 'Image upload failed.' });
       const { data: post, error } = await supabase.from('posts')
         .insert({ user_id: req.user.id, image_url, caption: caption.trim(),
-          road_name: road_name.trim(), region: region.trim() })
+          road_name: road_name.trim(), region: region.trim(),
+          mod_title: mod_title.trim(), mod_price: mod_price.trim(), mod_url: mod_url.trim() })
         .select('*,users(name,avatar)').single();
       if (error) throw error;
       return res.status(201).json({ post: { ...post, user_name: post.users?.name||'', liked: false } });
     } else {
       const image_url = `/api/mem-img/${Date.now()}`;
       const post = { id: mem.ids.post++, user_id: req.user.id, image_url, caption: caption.trim(),
-        road_name: road_name.trim(), region: region.trim(), likes: 0, created_at: nowIso() };
+        road_name: road_name.trim(), region: region.trim(),
+        mod_title: mod_title.trim(), mod_price: mod_price.trim(), mod_url: mod_url.trim(),
+        likes: 0, created_at: nowIso() };
       mem.posts.push(post);
       const u = mem.users.find(u => u.id === req.user.id) || {};
       return res.status(201).json({ post: { ...post, user_name: u.name||'', liked: false } });
@@ -930,6 +939,31 @@ app.delete('/api/roads/:id', requireAuth, async (req, res) => {
       mem.roads.splice(idx, 1);
     }
     res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Shop (posts with mods) ────────────────────────────────────
+app.get('/api/shop', async (req, res) => {
+  try {
+    const userId = req.user?.id || null;
+    if (supabase) {
+      const { data, error } = await supabase.from('posts')
+        .select('*,users(name,avatar)')
+        .neq('mod_title', '')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      const likedSet = new Set();
+      if (userId) {
+        const { data: lk } = await supabase.from('post_likes').select('post_id').eq('user_id', userId);
+        (lk||[]).forEach(l => likedSet.add(l.post_id));
+      }
+      return res.json({ posts: data.map(p => ({ ...p, user_name: p.users?.name||'', user_avatar: p.users?.avatar||null, liked: likedSet.has(p.id) })) });
+    } else {
+      await maybeMemSeed();
+      const posts = mem.posts.filter(p => p.mod_title).sort((a,b) => new Date(b.created_at)-new Date(a.created_at)).slice(0, 50);
+      return res.json({ posts: posts.map(p => { const u = mem.users.find(u => u.id === p.user_id)||{}; return { ...p, user_name: u.name||'', user_avatar: u.avatar||null, liked: false }; }) });
+    }
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

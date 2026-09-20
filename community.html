@@ -48,12 +48,6 @@
     </div>
   </div>
 
-  <!-- Feed tabs -->
-  <div class="feed-tabs" id="feedTabs">
-    <button class="feed-tab active" data-mode="forYou">For You</button>
-    <button class="feed-tab" data-mode="following">Following</button>
-  </div>
-
   <!-- Feed -->
   <main class="feed-main" id="feedMain">
     <div class="feed-loading" id="feedLoading"><div class="spinner"></div></div>
@@ -74,20 +68,20 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       <span>Feed</span>
     </a>
-    <a href="groups.html" class="bnav-item" aria-label="Groups">
+    <a href="following.html" class="bnav-item" aria-label="Following">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <span>Groups</span>
+      <span>Following</span>
     </a>
     <button class="bnav-item bnav-post" id="newPostBtnNav" aria-label="New post">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
-    <a href="marketplace.html" class="bnav-item" aria-label="Marketplace">
+    <a href="shop.html" class="bnav-item" aria-label="Shop">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-      <span>Market</span>
+      <span>Shop</span>
     </a>
-    <a href="roads.html" class="bnav-item" aria-label="Roads Map">
+    <a href="roads.html" class="bnav-item" aria-label="Map">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-      <span>Roads</span>
+      <span>Map</span>
     </a>
   </nav>
 
@@ -141,6 +135,21 @@
         <div class="form-group">
           <textarea id="postCaption" placeholder="Tell the story of this road…" rows="3" maxlength="500"></textarea>
         </div>
+        <!-- Mod attachment -->
+        <details class="mod-details" id="modDetails">
+          <summary class="mod-summary">+ Attach a mod / part</summary>
+          <div class="mod-fields">
+            <div class="form-group">
+              <input type="text" id="postModTitle" placeholder="Part or mod name" maxlength="100" />
+            </div>
+            <div class="form-group">
+              <input type="text" id="postModPrice" placeholder="Price (e.g. $299)" maxlength="40" />
+            </div>
+            <div class="form-group">
+              <input type="url" id="postModUrl" placeholder="Link (optional)" maxlength="500" />
+            </div>
+          </div>
+        </details>
         <span class="field-error" id="newPostError"></span>
         <button class="btn btn-primary btn-full" id="submitPostBtn">Share Road</button>
       </div>

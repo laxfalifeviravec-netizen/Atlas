@@ -258,6 +258,76 @@ body {
 .post-card-caption strong { font-weight: 600; margin-right: 5px; }
 .post-card-time { padding: 0 12px 12px; font-size: 10px; color: var(--c-text-2); text-transform: uppercase; letter-spacing: 0.5px; }
 
+/* ── Mod card (attached to posts) ─────────────────────────── */
+.post-mod-card {
+  margin: 4px 12px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(228, 165, 48, 0.06);
+  border: 1px solid rgba(228, 165, 48, 0.18);
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+
+.post-mod-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+
+.post-mod-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--c-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.post-mod-price {
+  font-family: var(--font-head);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-accent);
+  letter-spacing: 0.2px;
+}
+
+.post-mod-link {
+  flex-shrink: 0;
+  background: var(--c-accent);
+  color: #0C0C0F;
+  border-radius: 5px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 11px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.post-mod-link:hover { background: var(--c-accent-h); }
+
+/* ── Mod details / expand ─────────────────────────────────── */
+.mod-details {
+  margin: 4px 0;
+}
+
+.mod-summary {
+  font-size: 13px;
+  color: var(--c-accent);
+  cursor: pointer;
+  padding: 6px 0;
+  list-style: none;
+  user-select: none;
+}
+
+.mod-summary::-webkit-details-marker { display: none; }
+
+.mod-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+}
+
 /* ── Bottom Navigation ─────────────────────────────────────── */
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0;

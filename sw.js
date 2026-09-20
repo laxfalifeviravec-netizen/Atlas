@@ -3,26 +3,25 @@
    Caches the app shell so it loads instantly and works offline.
    ============================================================ */
 
-const CACHE = 'atlas-v1';
+const CACHE = 'atlas-v4';
 
 const APP_SHELL = [
   '/',
+  '/index.html',
   '/community.html',
   '/community.css',
   '/community.js',
+  '/following.html',
+  '/following.js',
+  '/shop.html',
+  '/shop.css',
+  '/shop.js',
   '/profile.html',
   '/profile.css',
   '/profile.js',
-  '/marketplace.html',
-  '/marketplace.css',
-  '/marketplace.js',
-  '/groups.html',
-  '/groups.css',
-  '/groups.js',
   '/roads.html',
   '/roads.css',
   '/roads.js',
-  '/styles.css',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',

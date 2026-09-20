@@ -2,7 +2,7 @@
   "name": "Atlas — Driving Community",
   "short_name": "Atlas",
   "description": "The social network for driving enthusiasts. Share roads, join groups, find gear.",
-  "start_url": "/community.html",
+  "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0C0C0F",

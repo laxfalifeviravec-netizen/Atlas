@@ -81,42 +81,84 @@ function onMapClick(e) {
 }
 
 // ── Load Roads ─────────────────────────────────────────────
+let curatedRoads = [];
+
 async function loadRoads() {
   try {
-    const res = await fetch(`${API}/api/roads`);
-    const { roads } = await res.json();
+    const [communityRes, curatedRes] = await Promise.all([
+      fetch(`${API}/api/roads`),
+      fetch(`${API}/api/roads/curated`),
+    ]);
+    const { roads } = await communityRes.json();
     allRoads = roads;
-    document.getElementById('roadCount').textContent = `${roads.length} road${roads.length===1?'':'s'} mapped`;
-    renderRoadList(roads);
+    if (curatedRes.ok) {
+      const data = await curatedRes.json();
+      curatedRoads = data.roads || [];
+    }
+    const total = roads.length + curatedRoads.length;
+    document.getElementById('roadCount').textContent = `${total} road${total===1?'':'s'} mapped`;
+    renderRoadList(roads, curatedRoads);
     renderRoadPolylines(roads);
+    renderCuratedPolylines(curatedRoads);
   } catch {}
 }
 
-function renderRoadList(roads) {
+function renderRoadList(communityRoads, curatedList) {
   const list = document.getElementById('roadsList');
   list.innerHTML = '';
-  if (roads.length === 0) {
-    list.innerHTML = '<p style="padding:16px;color:var(--c-text-2);font-size:13px">No roads yet. Add the first one!</p>';
-    return;
+
+  if (curatedList && curatedList.length > 0) {
+    const header = document.createElement('div');
+    header.style.cssText = 'padding:8px 12px 4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c-text-2)';
+    header.textContent = 'Atlas Roads';
+    list.appendChild(header);
+
+    curatedList.forEach(r => {
+      const diffLabel = ['', 'Easy', 'Easy', 'Moderate', 'Hard', 'Expert'][r.difficulty] || 'Moderate';
+      const item = document.createElement('div');
+      item.className = 'road-item';
+      item.innerHTML = `
+        <div class="road-item-name">${esc(r.name)}</div>
+        ${r.description ? `<div style="font-size:12px;color:var(--c-text-2);margin:2px 0 4px;line-height:1.4">${esc(r.description)}</div>` : ''}
+        <div class="road-item-meta">
+          <span class="road-diff diff-${diffLabel}">${diffLabel}</span>
+          ${r.state ? `<span class="road-item-region">${esc(r.state)}</span>` : ''}
+          <span style="font-size:11px;color:var(--c-text-2)">${r.length_mi} mi</span>
+        </div>`;
+      item.addEventListener('click', () => flyToRoad({ points: r.geometry, id: `curated-${r.id}`, ...r }));
+      list.appendChild(item);
+    });
   }
-  roads.forEach(r => {
-    const item = document.createElement('div');
-    item.className = 'road-item';
-    item.innerHTML = `
-      <div class="road-item-name">${esc(r.name)}</div>
-      ${r.description ? `<div style="font-size:12px;color:var(--c-text-2);margin:2px 0 4px;line-height:1.4">${esc(r.description)}</div>` : ''}
-      <div class="road-item-meta">
-        <span class="road-diff diff-${r.difficulty}">${r.difficulty}</span>
-        ${r.region ? `<span class="road-item-region">${esc(r.region)}</span>` : ''}
-        <span class="road-item-likes">
-          <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          ${r.likes||0}
-        </span>
-        <span class="road-item-by">by ${esc(r.submitted_by||'Driver')}</span>
-      </div>`;
-    item.addEventListener('click', () => flyToRoad(r));
-    list.appendChild(item);
-  });
+
+  if (communityRoads.length > 0) {
+    const header = document.createElement('div');
+    header.style.cssText = 'padding:8px 12px 4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c-text-2);margin-top:8px';
+    header.textContent = 'Community Roads';
+    list.appendChild(header);
+
+    communityRoads.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'road-item';
+      item.innerHTML = `
+        <div class="road-item-name">${esc(r.name)}</div>
+        ${r.description ? `<div style="font-size:12px;color:var(--c-text-2);margin:2px 0 4px;line-height:1.4">${esc(r.description)}</div>` : ''}
+        <div class="road-item-meta">
+          <span class="road-diff diff-${r.difficulty}">${r.difficulty}</span>
+          ${r.region ? `<span class="road-item-region">${esc(r.region)}</span>` : ''}
+          <span class="road-item-likes">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            ${r.likes||0}
+          </span>
+          <span class="road-item-by">by ${esc(r.submitted_by||'Driver')}</span>
+        </div>`;
+      item.addEventListener('click', () => flyToRoad(r));
+      list.appendChild(item);
+    });
+  }
+
+  if (communityRoads.length === 0 && (!curatedList || curatedList.length === 0)) {
+    list.innerHTML = '<p style="padding:16px;color:var(--c-text-2);font-size:13px">No roads yet. Add the first one!</p>';
+  }
 }
 
 function renderRoadPolylines(roads) {
@@ -149,12 +191,45 @@ function renderRoadPolylines(roads) {
   });
 }
 
+const CURATED_DIFF_COLORS = { 1: '#22c55e', 2: '#22c55e', 3: '#f59e0b', 4: '#f97316', 5: '#dc2222' };
+let curatedPolylines = {};
+
+function renderCuratedPolylines(roads) {
+  Object.values(curatedPolylines).forEach(p => p.remove());
+  curatedPolylines = {};
+
+  roads.forEach(r => {
+    if (!r.geometry || r.geometry.length < 2) return;
+    const color = CURATED_DIFF_COLORS[r.difficulty] || '#dc2222';
+    const diffLabel = ['', 'Easy', 'Easy', 'Moderate', 'Hard', 'Expert'][r.difficulty] || 'Moderate';
+    const line = L.polyline(r.geometry, { color, weight: 5, opacity: 0.9 }).addTo(roadsMap);
+
+    const popupHtml = `
+      <div class="road-popup">
+        <h4>${esc(r.name)}</h4>
+        ${r.description ? `<p>${esc(r.description)}</p>` : ''}
+        <div class="popup-meta">
+          <span class="road-diff diff-${diffLabel}">${diffLabel}</span>
+          ${r.state ? `<span style="font-size:11px;color:#888">${esc(r.state)}</span>` : ''}
+        </div>
+        <p style="font-size:11px;color:#888;margin-top:4px">${r.length_mi} mi · ${r.type}</p>
+      </div>`;
+    line.bindPopup(popupHtml);
+    curatedPolylines[`curated-${r.id}`] = line;
+
+    L.circleMarker(r.geometry[0], {
+      radius: 5, color, fillColor: color, fillOpacity: 1, weight: 2
+    }).addTo(roadsMap).bindPopup(popupHtml);
+  });
+}
+
 function flyToRoad(road) {
-  if (!road.points || road.points.length === 0) return;
-  const bounds = L.latLngBounds(road.points);
+  const pts = road.points || road.geometry;
+  if (!pts || pts.length === 0) return;
+  const bounds = L.latLngBounds(pts);
   roadsMap.fitBounds(bounds, { padding: [60, 60] });
-  if (roadPolylines[road.id]) roadPolylines[road.id].openPopup();
-  // Close sidebar on mobile
+  const poly = roadPolylines[road.id] || curatedPolylines[road.id];
+  if (poly) poly.openPopup();
   document.getElementById('roadsSidebar').classList.remove('open');
 }
 

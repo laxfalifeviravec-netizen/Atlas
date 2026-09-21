@@ -573,6 +573,36 @@ try {
   if (el) el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--color-text-muted);font-family:var(--font-body)">Map unavailable — check your connection</div>';
 }
 
+// ── Curated road polylines ────────────────────────────────────
+const DIFF_LINE_COLORS = { 1: '#22c55e', 2: '#22c55e', 3: '#f59e0b', 4: '#f97316', 5: '#dc2222' };
+
+async function loadCuratedRoads() {
+  if (!atlasMap) return;
+  try {
+    const res = await fetch(`${API}/api/roads/curated`);
+    if (!res.ok) return;
+    const { roads } = await res.json();
+    roads.forEach(road => {
+      if (!road.geometry || road.geometry.length < 2) return;
+      const color = DIFF_LINE_COLORS[road.difficulty] || '#dc2222';
+      const line = L.polyline(road.geometry, { color, weight: 4, opacity: 0.85 }).addTo(atlasMap);
+      const popup = `<strong>${road.name}</strong><br><span style="color:#6b7280;font-size:0.85em">${road.type} · ${road.region} · ${road.length_mi} mi</span>`;
+      line.bindPopup(popup);
+      line.on('click', () => {
+        const place = PLACES.find(p => p.name === road.name) || {
+          name: road.name, type: road.type, region: road.region,
+          lat: road.lat, lng: road.lng,
+        };
+        openRoadModal(place);
+      });
+    });
+  } catch (e) {
+    console.warn('Could not load curated roads:', e);
+  }
+}
+
+loadCuratedRoads();
+
 // Wire up place card clicks
 document.querySelectorAll('.place-card').forEach(card => {
   const lat  = parseFloat(card.dataset.lat);

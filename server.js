@@ -381,6 +381,20 @@ app.delete('/api/marketplace/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Curated Roads route ───────────────────────────────────────
+const CURATED_ROADS_PATH = path.join(__dirname, 'data', 'roads.json');
+let curatedRoadsCache = null;
+
+app.get('/api/roads/curated', (req, res) => {
+  if (curatedRoadsCache) return res.json({ roads: curatedRoadsCache });
+  try {
+    curatedRoadsCache = JSON.parse(fs.readFileSync(CURATED_ROADS_PATH, 'utf8'));
+    res.json({ roads: curatedRoadsCache });
+  } catch (e) {
+    res.status(500).json({ error: 'Could not load curated roads.' });
+  }
+});
+
 // ── Community Roads routes ────────────────────────────────────
 app.get('/api/roads', (req, res) => {
   res.json({ roads: roads.map(r => {

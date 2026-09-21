@@ -1,6 +1,4 @@
-/* ============================================================
-   Atlas — Community JS (Instagram-style feed)
-   ============================================================ */
+/* Atlas — Following Feed */
 
 const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
   ? 'http://localhost:3001' : '';
@@ -12,10 +10,7 @@ let posts = [];
 let page = 1;
 let totalPages = 1;
 let activePost = null;
-let allStories = [];
-let storyIndex = 0;
-let storyTimer = null;
-let feedMode = 'forYou'; // 'forYou' | 'following'
+let postFile = null;
 
 // ── Theme ──────────────────────────────────────────────────
 const savedTheme = localStorage.getItem('atlas-theme');
@@ -28,7 +23,7 @@ document.getElementById('themeToggle').addEventListener('click', () => {
 
 // ── Auth ───────────────────────────────────────────────────
 async function loadMe() {
-  if (!token) return renderNav(null);
+  if (!token) return location.replace('index.html');
   try {
     const res = await fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) { token = null; localStorage.removeItem('atlas-token'); location.replace('index.html'); return; }
@@ -42,189 +37,26 @@ function renderNav(user) {
   const el = document.getElementById('navAuth');
   if (!el) return;
   if (!user) {
-    el.innerHTML = `<button class="nav-signin-btn" id="navSignIn">Sign In</button>`;
-    document.getElementById('navSignIn').addEventListener('click', openAuth);
+    el.innerHTML = `<a href="index.html" class="nav-signin-btn">Sign In</a>`;
   } else {
     const init = user.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
     el.innerHTML = `
       <a href="profile.html?id=${user.id}" class="nav-user-btn"><div class="avatar avatar-sm">${init}</div></a>
       <button class="nav-signout-btn" id="navSignOut">Sign Out</button>`;
     document.getElementById('navSignOut').addEventListener('click', () => {
-      localStorage.removeItem('atlas-token'); token = null; currentUser = null; location.replace('index.html');
+      localStorage.removeItem('atlas-token'); location.replace('index.html');
     });
   }
 }
-
-// ── Stories ────────────────────────────────────────────────
-async function loadStories() {
-  try {
-    const res = await fetch(`${API}/api/stories`);
-    const { stories } = await res.json();
-    allStories = stories;
-    renderStories(stories);
-  } catch {}
-}
-
-function renderStories(stories) {
-  const scroll = document.getElementById('storiesScroll');
-  // Keep the add button
-  const addBtn = scroll.querySelector('.story-add');
-  // Clear others
-  scroll.querySelectorAll('.story-item:not(.story-add)').forEach(el => el.remove());
-
-  stories.forEach((s, i) => {
-    const initials = (s.user_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-    const btn = document.createElement('button');
-    btn.className = 'story-item';
-    btn.innerHTML = `
-      <div class="story-avatar-wrap">
-        <div class="story-avatar-inner">${initials}</div>
-      </div>
-      <span>${(s.user_name||'').split(' ')[0] || 'Driver'}</span>`;
-    btn.addEventListener('click', () => openStoryViewer(i));
-    scroll.appendChild(btn);
-  });
-}
-
-function openStoryViewer(idx) {
-  storyIndex = idx;
-  document.getElementById('storyOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  buildStoryBars();
-  showStory(idx);
-}
-
-function buildStoryBars() {
-  const barsEl = document.getElementById('storyBars');
-  if (!barsEl) return;
-  barsEl.innerHTML = allStories.map(() =>
-    `<div class="story-bar-seg"><div class="story-bar-fill"></div></div>`
-  ).join('');
-}
-
-function showStory(idx) {
-  if (idx < 0 || idx >= allStories.length) { closeStoryViewer(); return; }
-  storyIndex = idx;
-  const s = allStories[idx];
-  document.getElementById('storyViewImg').src = s.image_url.startsWith('http') ? s.image_url : `${API}${s.image_url}`;
-  document.getElementById('storyInfo').innerHTML = s.road_name ? `<span>${esc(s.road_name)}</span>` : '';
-
-  // User header
-  const initials = (s.user_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-  const timeAgo = formatTime(s.created_at);
-  const userHdr = document.getElementById('storyUserHeader');
-  if (userHdr) {
-    userHdr.innerHTML = `
-      <div class="story-user-avatar">${initials}</div>
-      <div>
-        <div class="story-user-name">${esc(s.user_name||'Driver')}</div>
-        <div class="story-user-time">${timeAgo}</div>
-      </div>`;
-  }
-
-  // Progress bars — mark past as done, reset current, clear future
-  const fills = document.querySelectorAll('.story-bar-fill');
-  fills.forEach((f, i) => {
-    f.style.transition = 'none';
-    if (i < idx) { f.style.width = '100%'; f.classList.add('done'); }
-    else if (i === idx) {
-      f.classList.remove('done'); f.style.width = '0%';
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          f.style.transition = 'width 5s linear'; f.style.width = '100%';
-        });
-      });
-    } else { f.classList.remove('done'); f.style.width = '0%'; }
-  });
-
-  clearTimeout(storyTimer);
-  storyTimer = setTimeout(() => showStory(idx + 1), 5100);
-}
-
-function closeStoryViewer() {
-  document.getElementById('storyOverlay').classList.remove('open');
-  document.body.style.overflow = '';
-  clearTimeout(storyTimer);
-}
-
-document.getElementById('storyPrev').addEventListener('click', () => { clearTimeout(storyTimer); showStory(storyIndex - 1); });
-document.getElementById('storyNext').addEventListener('click', () => { clearTimeout(storyTimer); showStory(storyIndex + 1); });
-document.getElementById('storyClose').addEventListener('click', closeStoryViewer);
-
-// ── Story Upload ───────────────────────────────────────────
-const newStoryOverlay = document.getElementById('newStoryOverlay');
-const storyUploadZone = document.getElementById('storyUploadZone');
-const storyImageInput = document.getElementById('storyImageInput');
-const storyPreview    = document.getElementById('storyPreview');
-let storyFile = null;
-
-document.getElementById('addStoryBtn').addEventListener('click', () => {
-  if (!currentUser) return openAuth();
-  newStoryOverlay.classList.add('open');
-});
-document.getElementById('newStoryBtn').addEventListener('click', () => {
-  if (!currentUser) return openAuth();
-  newStoryOverlay.classList.add('open');
-});
-document.getElementById('newStoryClose').addEventListener('click', () => newStoryOverlay.classList.remove('open'));
-newStoryOverlay.addEventListener('click', e => { if (e.target === newStoryOverlay) newStoryOverlay.classList.remove('open'); });
-
-storyUploadZone.addEventListener('click', () => storyImageInput.click());
-storyImageInput.addEventListener('change', e => {
-  storyFile = e.target.files[0];
-  if (storyFile) {
-    const url = URL.createObjectURL(storyFile);
-    storyPreview.src = url; storyPreview.style.display = 'block';
-    storyUploadZone.style.display = 'none';
-  }
-});
-
-document.getElementById('submitStoryBtn').addEventListener('click', async () => {
-  if (!storyFile) { document.getElementById('storyError').textContent = 'Please select an image.'; return; }
-  const fd = new FormData();
-  fd.append('image', storyFile);
-  fd.append('road_name', document.getElementById('storyRoadName').value.trim());
-  try {
-    const res = await fetch(`${API}/api/stories`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
-    if (!res.ok) { const d = await res.json(); document.getElementById('storyError').textContent = d.error; return; }
-    newStoryOverlay.classList.remove('open');
-    storyFile = null; storyPreview.style.display = 'none'; storyUploadZone.style.display = '';
-    document.getElementById('storyRoadName').value = '';
-    await loadStories();
-  } catch { document.getElementById('storyError').textContent = 'Upload failed. Try again.'; }
-});
-
-// ── Feed tabs ──────────────────────────────────────────────
-function renderFeedTabs() {
-  const el = document.getElementById('feedTabs');
-  if (!el) return;
-  el.querySelectorAll('.feed-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.mode === feedMode);
-  });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  const tabs = document.getElementById('feedTabs');
-  if (tabs) {
-    tabs.addEventListener('click', e => {
-      const tab = e.target.closest('.feed-tab');
-      if (!tab) return;
-      const mode = tab.dataset.mode;
-      if (mode === 'following' && !currentUser) return openAuth();
-      feedMode = mode;
-      renderFeedTabs();
-      loadFeed(true);
-    });
-  }
-});
 
 // ── Feed ───────────────────────────────────────────────────
 async function loadFeed(reset = false) {
   if (reset) { page = 1; posts = []; document.getElementById('feedList').innerHTML = ''; }
   document.getElementById('feedLoading').style.display = 'flex';
   try {
-    const feedParam = feedMode === 'following' ? '&feed=following' : '';
-    const res = await fetch(`${API}/api/posts?page=${page}&limit=10${feedParam}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    const res = await fetch(`${API}/api/posts?page=${page}&limit=10&feed=following`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
     const data = await res.json();
     totalPages = data.pages;
     posts = reset ? data.posts : [...posts, ...data.posts];
@@ -267,9 +99,6 @@ function buildPostCard(p) {
       <button class="post-action-btn comment-btn" data-id="${p.id}" aria-label="Comment">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </button>
-      <button class="post-action-btn share-btn" data-id="${p.id}" aria-label="Share">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-      </button>
     </div>
     <div class="post-card-likes">${p.likes} like${p.likes===1?'':'s'}</div>
     ${p.caption ? `<div class="post-card-caption"><strong>${esc(p.user_name||'')}</strong> ${esc(p.caption)}</div>` : ''}
@@ -285,16 +114,11 @@ function buildPostCard(p) {
 
   card.querySelector('.like-btn').addEventListener('click', e => toggleLike(p, e.currentTarget, card));
   card.querySelector('.comment-btn').addEventListener('click', () => openPostModal(p));
-  card.querySelector('.post-card-img-wrap img').addEventListener('dblclick', e => {
-    const btn = card.querySelector('.like-btn');
-    if (!p.liked) toggleLike(p, btn, card);
-  });
   return card;
 }
 
 async function toggleLike(post, btn, card) {
-  if (!currentUser) return openAuth();
-  const wasLiked = btn.dataset.liked === 'true';
+  if (!currentUser) return location.replace('index.html');
   try {
     const res = await fetch(`${API}/api/posts/${post.id}/like`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
     const data = await res.json();
@@ -308,7 +132,6 @@ async function toggleLike(post, btn, card) {
 }
 
 document.getElementById('loadMoreBtn').addEventListener('click', () => { page++; loadFeed(); });
-document.getElementById('emptyPostBtn').addEventListener('click', openNewPost);
 
 // ── Post Modal ─────────────────────────────────────────────
 const postOverlay = document.getElementById('postOverlay');
@@ -327,7 +150,7 @@ async function openPostModal(post) {
       <span id="modalLikeCount">${post.likes} like${post.likes===1?'':'s'}</span>
     </button>`;
   document.getElementById('modalLikeBtn').addEventListener('click', async () => {
-    if (!currentUser) return openAuth();
+    if (!currentUser) return location.replace('index.html');
     const res = await fetch(`${API}/api/posts/${post.id}/like`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
     const data = await res.json();
     post.liked = data.liked; post.likes = data.likes;
@@ -351,7 +174,7 @@ async function loadComments(postId) {
     box.innerHTML = comments.length === 0 ? '<p style="color:var(--c-text-2);font-size:13px">No comments yet.</p>' :
       comments.map(c => `
         <div class="comment-item">
-          <strong>${esc(c.user_name||'Driver')}</strong>${esc(c.body)}
+          <strong>${esc(c.user_name||'Driver')}</strong> ${esc(c.body)}
           <span class="comment-time">${formatTime(c.created_at)}</span>
         </div>`).join('');
   } catch { box.innerHTML = ''; }
@@ -366,7 +189,7 @@ postOverlay.addEventListener('click', e => {
 
 document.getElementById('postCommentForm').addEventListener('submit', async e => {
   e.preventDefault();
-  if (!currentUser) return openAuth();
+  if (!currentUser) return location.replace('index.html');
   const input = document.getElementById('postCommentInput');
   const body = input.value.trim();
   if (!body) return;
@@ -385,10 +208,9 @@ const newPostOverlay = document.getElementById('newPostOverlay');
 const uploadZone = document.getElementById('uploadZone');
 const postImageInput = document.getElementById('postImageInput');
 const uploadPreview  = document.getElementById('uploadPreview');
-let postFile = null;
 
 function openNewPost() {
-  if (!currentUser) return openAuth();
+  if (!currentUser) return location.replace('index.html');
   newPostOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -437,7 +259,6 @@ document.getElementById('submitPostBtn').addEventListener('click', async () => {
     const data = await res.json();
     if (!res.ok) { err.textContent = data.error; return; }
     newPostOverlay.classList.remove('open'); document.body.style.overflow = '';
-    // Reset
     postFile = null; uploadPreview.style.display = 'none'; uploadZone.style.display = '';
     document.getElementById('postCaption').value = '';
     document.getElementById('postRoadName').value = '';
@@ -452,14 +273,9 @@ document.getElementById('submitPostBtn').addEventListener('click', async () => {
   finally { btn.disabled = false; btn.textContent = 'Share Road'; }
 });
 
-// ── Auth Modal ─────────────────────────────────────────────
+// ── Auth modal (fallback for expired tokens) ───────────────
 const authOverlay = document.getElementById('authOverlay');
 let authMode = 'login';
-
-function openAuth() {
-  authOverlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
 
 document.getElementById('authClose').addEventListener('click', () => {
   authOverlay.classList.remove('open'); document.body.style.overflow = '';
@@ -469,10 +285,7 @@ authOverlay.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    authOverlay.classList.remove('open');
-    newPostOverlay.classList.remove('open');
-    postOverlay.classList.remove('open');
-    newStoryOverlay.classList.remove('open');
+    [authOverlay, newPostOverlay, postOverlay].forEach(el => el.classList.remove('open'));
     document.body.style.overflow = '';
   }
 });
@@ -482,7 +295,7 @@ document.getElementById('authSwitchBtn').addEventListener('click', () => {
   document.getElementById('loginForm').style.display  = authMode === 'login' ? '' : 'none';
   document.getElementById('registerForm').style.display = authMode === 'register' ? '' : 'none';
   document.getElementById('authTitle').textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
-  document.getElementById('authSwitchText').textContent = authMode === 'login' ? 'Don\'t have an account?' : 'Already have one?';
+  document.getElementById('authSwitchText').textContent = authMode === 'login' ? "Don't have an account?" : 'Already have one?';
   document.getElementById('authSwitchBtn').textContent  = authMode === 'login' ? 'Sign Up' : 'Sign In';
 });
 
@@ -490,13 +303,8 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
-  let valid = true;
-  document.getElementById('loginEmailError').textContent = '';
-  document.getElementById('loginPasswordError').textContent = '';
-  document.getElementById('loginError').textContent = '';
-  if (!email) { document.getElementById('loginEmailError').textContent = 'Required.'; valid = false; }
-  if (!password) { document.getElementById('loginPasswordError').textContent = 'Required.'; valid = false; }
-  if (!valid) return;
+  ['loginEmailError','loginPasswordError','loginError'].forEach(id => document.getElementById(id).textContent = '');
+  if (!email || !password) return;
   try {
     const res = await fetch(`${API}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
     const data = await res.json();
@@ -504,9 +312,8 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
     token = data.token; currentUser = data.user;
     localStorage.setItem('atlas-token', token);
     authOverlay.classList.remove('open'); document.body.style.overflow = '';
-    renderNav(currentUser);
-    loadFeed(true);
-  } catch { document.getElementById('loginError').textContent = 'Network error. Try again.'; }
+    renderNav(currentUser); loadFeed(true);
+  } catch { document.getElementById('loginError').textContent = 'Network error.'; }
 });
 
 document.getElementById('registerForm').addEventListener('submit', async e => {
@@ -514,12 +321,8 @@ document.getElementById('registerForm').addEventListener('submit', async e => {
   const name = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();
   const password = document.getElementById('regPassword').value;
-  let valid = true;
   ['regNameError','regEmailError','regPasswordError','regError'].forEach(id => document.getElementById(id).textContent = '');
-  if (!name) { document.getElementById('regNameError').textContent = 'Required.'; valid = false; }
-  if (!email) { document.getElementById('regEmailError').textContent = 'Required.'; valid = false; }
-  if (!password || password.length < 6) { document.getElementById('regPasswordError').textContent = 'Min 6 characters.'; valid = false; }
-  if (!valid) return;
+  if (!name || !email || !password || password.length < 6) return;
   try {
     const res = await fetch(`${API}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password }) });
     const data = await res.json();
@@ -527,9 +330,8 @@ document.getElementById('registerForm').addEventListener('submit', async e => {
     token = data.token; currentUser = data.user;
     localStorage.setItem('atlas-token', token);
     authOverlay.classList.remove('open'); document.body.style.overflow = '';
-    renderNav(currentUser);
-    loadFeed(true);
-  } catch { document.getElementById('regError').textContent = 'Network error. Try again.'; }
+    renderNav(currentUser); loadFeed(true);
+  } catch { document.getElementById('regError').textContent = 'Network error.'; }
 });
 
 // ── Utils ──────────────────────────────────────────────────
@@ -541,8 +343,8 @@ function formatTime(ts) {
   if (!ts) return '';
   const d = new Date(ts.includes('T') ? ts : ts + 'Z');
   const diff = (Date.now() - d) / 1000;
-  if (diff < 60)   return 'just now';
-  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 60)    return 'just now';
+  if (diff < 3600)  return `${Math.floor(diff/60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
   return `${Math.floor(diff/86400)}d ago`;
 }
@@ -550,5 +352,5 @@ function formatTime(ts) {
 // ── Init ───────────────────────────────────────────────────
 (async () => {
   await loadMe();
-  await Promise.all([loadFeed(true), loadStories()]);
+  await loadFeed(true);
 })();

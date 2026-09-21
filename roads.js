@@ -18,8 +18,8 @@ let pendingPolyline = null;
 const DIFF_COLORS = { Easy: '#22c55e', Moderate: '#f59e0b', Hard: '#f97316', Expert: '#dc2222' };
 
 // ── Theme ──────────────────────────────────────────────────
-const savedTheme = localStorage.getItem('atlas-theme') || 'light';
-document.documentElement.setAttribute('data-theme', savedTheme);
+const savedTheme = localStorage.getItem('atlas-theme');
+if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
 document.getElementById('themeToggle').addEventListener('click', () => {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);

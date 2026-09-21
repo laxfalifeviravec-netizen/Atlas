@@ -165,6 +165,46 @@
       font-size: 13px;
       color: var(--c-text-2);
     }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--c-text-2);
+      font-size: 12px;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--c-border);
+    }
+
+    .btn-google {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: #fff;
+      color: #1f1f1f;
+      border: none;
+      border-radius: 8px;
+      font-family: var(--font-ui);
+      font-size: 15px;
+      font-weight: 500;
+      padding: 12px;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.15s, transform 0.08s;
+    }
+
+    .btn-google:hover { background: #f0f0f0; }
+    .btn-google:active { transform: scale(0.98); }
+    .btn-google:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-google svg { flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -176,6 +216,13 @@
     </div>
 
     <div class="auth-box">
+      <!-- Google Sign-In -->
+      <button class="btn-google" id="googleBtn">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+        Continue with Google
+      </button>
+      <div class="auth-divider">or</div>
+
       <div class="auth-tabs">
         <button class="auth-tab active" id="tabLogin">Sign In</button>
         <button class="auth-tab" id="tabRegister">Create Account</button>
@@ -282,6 +329,62 @@
       if (!loginPan.classList.contains('hidden')) document.getElementById('loginBtn').click();
       else document.getElementById('registerBtn').click();
     });
+
+    // ── Google Sign-In ──────────────────────────────────────────
+    async function handleGoogleCredential(credential) {
+      const btn = document.getElementById('googleBtn');
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+      try {
+        const r = await fetch('/api/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ credential }),
+        });
+        const d = await r.json();
+        if (!r.ok) {
+          btn.disabled = false;
+          btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg> Continue with Google`;
+          document.getElementById('loginErr').textContent = d.error || 'Google sign-in failed.';
+          return;
+        }
+        localStorage.setItem('atlas-token', d.token);
+        location.replace('community.html');
+      } catch {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg> Continue with Google`;
+        document.getElementById('loginErr').textContent = 'Network error. Try again.';
+      }
+    }
+
+    // Click opens Google One Tap / popup via GIS
+    document.getElementById('googleBtn').addEventListener('click', () => {
+      if (typeof google === 'undefined' || !google.accounts) {
+        document.getElementById('loginErr').textContent = 'Google sign-in not available. Check your connection.';
+        return;
+      }
+      google.accounts.id.prompt();
+    });
+
+    // GIS callback (credential from One Tap or button)
+    window.__googleCallback = (response) => {
+      handleGoogleCredential(response.credential);
+    };
+  </script>
+  <!-- Google Identity Services — loaded after page script so __googleCallback is defined first -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <div id="g_id_onload"
+       data-client_id=""
+       data-callback="__googleCallback"
+       data-auto_prompt="false"
+       style="display:none"></div>
+  <script>
+    // Set client_id from meta tag (injected by server or env) or window global
+    // Falls back to a placeholder so the GIS script doesn't error
+    fetch('/api/auth/google-client-id').then(r => r.json()).then(d => {
+      const el = document.getElementById('g_id_onload');
+      if (d.clientId) el.setAttribute('data-client_id', d.clientId);
+    }).catch(() => {});
   </script>
   <script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js")); }</script>
 </body>

@@ -18,6 +18,7 @@ const SUPABASE_URL   = process.env.SUPABASE_URL   || '';
 const SUPABASE_KEY   = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
 const DATABASE_URL   = process.env.DATABASE_URL   || '';
 const IS_VERCEL      = !!process.env.VERCEL;
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 
 // ── Supabase client ───────────────────────────────────────────
 let supabase = null;
@@ -36,12 +37,14 @@ const MIGRATION_SQL = `
     id bigserial primary key,
     name text not null,
     email text unique not null,
-    password_hash text not null,
+    password_hash text default '',
+    google_id text unique,
     avatar text,
     bio text default '',
     plan text default 'Explorer',
     created_at timestamptz default now()
   );
+  alter table users add column if not exists google_id text unique;
   create table if not exists posts (
     id bigserial primary key,
     user_id bigint references users(id) on delete cascade,
@@ -281,6 +284,74 @@ app.post('/api/auth/login', async (req, res) => {
       const user = mem.users.find(u => u.email === email.toLowerCase());
       if (!user || !await bcrypt.compare(password, user.password_hash))
         return res.status(401).json({ error: 'Invalid email or password.' });
+      const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+      const { password_hash: _, ...safe } = user;
+      return res.json({ token, user: safe });
+    }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/auth/google-client-id', (req, res) => {
+  res.json({ clientId: GOOGLE_CLIENT_ID || null });
+});
+
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ error: 'Google credential is required.' });
+    if (!GOOGLE_CLIENT_ID) return res.status(501).json({ error: 'Google sign-in is not configured.' });
+
+    // Verify the ID token with Google
+    const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+    if (!verifyRes.ok) return res.status(401).json({ error: 'Invalid Google credential.' });
+    const payload = await verifyRes.json();
+
+    if (payload.aud !== GOOGLE_CLIENT_ID) return res.status(401).json({ error: 'Token audience mismatch.' });
+    if (!payload.email_verified || payload.email_verified === 'false')
+      return res.status(401).json({ error: 'Google email is not verified.' });
+
+    const { sub: googleId, email, name: googleName, picture } = payload;
+    const displayName = googleName || email.split('@')[0];
+
+    if (supabase) {
+      // Try to find by google_id first, then by email
+      let { data: user } = await supabase.from('users')
+        .select('id,name,email,avatar,bio,plan,created_at')
+        .eq('google_id', googleId).maybeSingle();
+
+      if (!user) {
+        // Try by email (link existing account)
+        const { data: byEmail } = await supabase.from('users')
+          .select('id,name,email,avatar,bio,plan,created_at')
+          .eq('email', email.toLowerCase()).maybeSingle();
+        if (byEmail) {
+          // Link google_id to existing account
+          await supabase.from('users').update({ google_id: googleId }).eq('id', byEmail.id);
+          user = byEmail;
+        } else {
+          // Create new account
+          const { data: newUser, error } = await supabase.from('users')
+            .insert({ name: displayName, email: email.toLowerCase(), google_id: googleId,
+              avatar: picture || null, plan: 'Explorer' })
+            .select('id,name,email,avatar,bio,plan,created_at').single();
+          if (error) throw error;
+          user = newUser;
+        }
+      }
+
+      const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+      return res.json({ token, user });
+    } else {
+      // In-memory fallback
+      let user = mem.users.find(u => u.google_id === googleId || u.email === email.toLowerCase());
+      if (!user) {
+        user = { id: mem.ids.user++, name: displayName, email: email.toLowerCase(),
+          google_id: googleId, password_hash: '', avatar: picture || null,
+          bio: '', plan: 'Explorer', created_at: nowIso() };
+        mem.users.push(user);
+      } else if (!user.google_id) {
+        user.google_id = googleId;
+      }
       const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
       const { password_hash: _, ...safe } = user;
       return res.json({ token, user: safe });

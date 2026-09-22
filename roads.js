@@ -85,7 +85,7 @@ let curatedRoads = [];
 
 // Snap waypoints to real roads via OSRM (browser-side, cached in localStorage)
 async function snapToRoad(id, waypoints) {
-  const cacheKey = `atlas-road-snap-v1-${id}`;
+  const cacheKey = `atlas-road-snap-v2-${id}`;
   try {
     const cached = localStorage.getItem(cacheKey);
     if (cached) return JSON.parse(cached);

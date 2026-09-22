@@ -30,17 +30,20 @@ const resendClient = RESEND_KEY ? new Resend(RESEND_KEY) : null;
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many attempts. Try again in 15 minutes.' },
-  skip: () => !IS_VERCEL, // only enforce in production
+  skip: () => !IS_VERCEL,
+  validate: { xForwardedForHeader: false },
 });
 const forgotLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many reset requests. Try again in an hour.' },
   skip: () => !IS_VERCEL,
+  validate: { xForwardedForHeader: false },
 });
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many requests. Slow down.' },
   skip: () => !IS_VERCEL,
+  validate: { xForwardedForHeader: false },
 });
 
 // ── Supabase ──────────────────────────────────────────────────
@@ -103,6 +106,7 @@ let _seeded = false;
 function now() { return new Date().toISOString(); }
 
 // ── Middleware ────────────────────────────────────────────────
+app.set('trust proxy', 1); // Vercel / any reverse proxy
 app.use(cors());
 app.use(express.json());
 app.use(apiLimiter);

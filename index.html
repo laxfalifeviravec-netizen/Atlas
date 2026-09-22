@@ -205,6 +205,27 @@
     .btn-google:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .btn-google svg { flex-shrink: 0; }
+
+    .forgot-link {
+      background: none; border: none; color: var(--c-text-2);
+      font-family: var(--font-ui); font-size: 13px; cursor: pointer;
+      text-align: right; padding: 0; text-decoration: underline;
+      align-self: flex-end; transition: color 0.15s;
+    }
+    .forgot-link:hover { color: var(--c-text); }
+
+    .back-link {
+      background: none; border: none; color: var(--c-text-2);
+      font-family: var(--font-ui); font-size: 13px; cursor: pointer;
+      padding: 0; text-decoration: underline; align-self: flex-start;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--c-text); }
+
+    .success-msg {
+      font-size: 14px; color: #4ade80; text-align: center;
+      line-height: 1.5; padding: 4px 0;
+    }
   </style>
 </head>
 <body>
@@ -238,8 +259,35 @@
           <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password" />
           <span class="field-error" id="loginPassErr"></span>
         </div>
+        <button class="forgot-link" id="forgotLink">Forgot password?</button>
         <span class="global-error" id="loginErr"></span>
         <button class="btn-primary" id="loginBtn" data-label="Sign In">Sign In</button>
+      </div>
+
+      <!-- Forgot password -->
+      <div class="form-panel hidden" id="forgotPanel">
+        <button class="back-link" id="backToLogin">← Back to sign in</button>
+        <div class="form-group">
+          <input type="email" id="forgotEmail" placeholder="Your account email" autocomplete="email" />
+          <span class="field-error" id="forgotEmailErr"></span>
+        </div>
+        <span class="global-error" id="forgotErr"></span>
+        <div class="success-msg hidden" id="forgotSuccess">Check your inbox — a reset link is on its way.</div>
+        <button class="btn-primary" id="forgotBtn" data-label="Send Reset Link">Send Reset Link</button>
+      </div>
+
+      <!-- Reset password (shown when ?reset=TOKEN in URL) -->
+      <div class="form-panel hidden" id="resetPanel">
+        <div class="form-group">
+          <input type="password" id="resetPassword" placeholder="New password (min 6 chars)" autocomplete="new-password" />
+          <span class="field-error" id="resetPassErr"></span>
+        </div>
+        <div class="form-group">
+          <input type="password" id="resetConfirm" placeholder="Confirm new password" autocomplete="new-password" />
+          <span class="field-error" id="resetConfirmErr"></span>
+        </div>
+        <span class="global-error" id="resetErr"></span>
+        <button class="btn-primary" id="resetBtn" data-label="Set New Password">Set New Password</button>
       </div>
 
       <!-- Register -->
@@ -267,19 +315,47 @@
   <script>
     if (localStorage.getItem('culture-token')) location.replace('community.html');
 
+    const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+
+    // ── Check for ?reset=TOKEN ──────────────────────────────────
+    const resetToken = new URLSearchParams(location.search).get('reset');
+    if (resetToken) {
+      // Hide tabs + google, show only reset panel
+      document.querySelector('.btn-google')?.style.setProperty('display', 'none');
+      document.querySelector('.auth-divider')?.style.setProperty('display', 'none');
+      document.querySelector('.auth-tabs')?.style.setProperty('display', 'none');
+      document.getElementById('loginPanel').classList.add('hidden');
+    }
+
     const tabLogin = document.getElementById('tabLogin');
     const tabReg   = document.getElementById('tabRegister');
     const loginPan = document.getElementById('loginPanel');
     const regPan   = document.getElementById('registerPanel');
 
+    const forgotPan = document.getElementById('forgotPanel');
+    const resetPan  = document.getElementById('resetPanel');
+
+    function showPanel(name) {
+      loginPan.classList.toggle('hidden',  name !== 'login');
+      regPan.classList.toggle('hidden',    name !== 'register');
+      forgotPan.classList.toggle('hidden', name !== 'forgot');
+      resetPan.classList.toggle('hidden',  name !== 'reset');
+    }
+
+    if (resetToken) showPanel('reset'); // URL has reset token
+
     tabLogin.addEventListener('click', () => {
       tabLogin.classList.add('active'); tabReg.classList.remove('active');
-      loginPan.classList.remove('hidden'); regPan.classList.add('hidden');
+      showPanel('login');
     });
     tabReg.addEventListener('click', () => {
       tabReg.classList.add('active'); tabLogin.classList.remove('active');
-      regPan.classList.remove('hidden'); loginPan.classList.add('hidden');
+      showPanel('register');
     });
+
+    document.getElementById('forgotLink').addEventListener('click', () => showPanel('forgot'));
+    document.getElementById('backToLogin').addEventListener('click', () => showPanel('login'));
 
     function setLoading(btn, loading) {
       btn.disabled = loading;
@@ -295,7 +371,7 @@
       const btn = document.getElementById('loginBtn');
       setLoading(btn, true);
       try {
-        const r = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password: pass }) });
+        const r = await fetch(`${API}/api/auth/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password: pass }) });
         const d = await r.json();
         if (!r.ok) { document.getElementById('loginErr').textContent = d.error || 'Sign in failed.'; return; }
         localStorage.setItem('culture-token', d.token);
@@ -315,7 +391,7 @@
       const btn = document.getElementById('registerBtn');
       setLoading(btn, true);
       try {
-        const r = await fetch('/api/auth/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, email, password: pass }) });
+        const r = await fetch(`${API}/api/auth/register`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, email, password: pass }) });
         const d = await r.json();
         if (!r.ok) { document.getElementById('regErr').textContent = d.error || 'Registration failed.'; return; }
         localStorage.setItem('culture-token', d.token);
@@ -324,10 +400,50 @@
       finally { setLoading(btn, false); }
     });
 
+    // ── Forgot password ─────────────────────────────────────────
+    document.getElementById('forgotBtn').addEventListener('click', async () => {
+      const email = document.getElementById('forgotEmail').value.trim();
+      document.getElementById('forgotEmailErr').textContent = '';
+      document.getElementById('forgotErr').textContent = '';
+      document.getElementById('forgotSuccess').classList.add('hidden');
+      if (!email) { document.getElementById('forgotEmailErr').textContent = 'Email is required.'; return; }
+      const btn = document.getElementById('forgotBtn');
+      setLoading(btn, true);
+      try {
+        const r = await fetch(`${API}/api/auth/forgot-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
+        const d = await r.json();
+        if (!r.ok) { document.getElementById('forgotErr').textContent = d.error || 'Something went wrong.'; return; }
+        document.getElementById('forgotSuccess').classList.remove('hidden');
+        btn.style.display = 'none';
+      } catch { document.getElementById('forgotErr').textContent = 'Network error. Try again.'; }
+      finally { setLoading(btn, false); }
+    });
+
+    // ── Reset password ──────────────────────────────────────────
+    document.getElementById('resetBtn')?.addEventListener('click', async () => {
+      const pass    = document.getElementById('resetPassword').value;
+      const confirm = document.getElementById('resetConfirm').value;
+      ['resetPassErr','resetConfirmErr','resetErr'].forEach(id => document.getElementById(id).textContent = '');
+      if (!pass || pass.length < 6) { document.getElementById('resetPassErr').textContent = 'At least 6 characters.'; return; }
+      if (pass !== confirm) { document.getElementById('resetConfirmErr').textContent = 'Passwords don\'t match.'; return; }
+      const btn = document.getElementById('resetBtn');
+      setLoading(btn, true);
+      try {
+        const r = await fetch(`${API}/api/auth/reset-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: resetToken, password: pass }) });
+        const d = await r.json();
+        if (!r.ok) { document.getElementById('resetErr').textContent = d.error || 'Reset failed. Request a new link.'; return; }
+        localStorage.setItem('culture-token', d.token);
+        location.replace('community.html');
+      } catch { document.getElementById('resetErr').textContent = 'Network error. Try again.'; }
+      finally { setLoading(btn, false); }
+    });
+
     document.addEventListener('keydown', e => {
       if (e.key !== 'Enter') return;
-      if (!loginPan.classList.contains('hidden')) document.getElementById('loginBtn').click();
-      else document.getElementById('registerBtn').click();
+      if (!loginPan.classList.contains('hidden'))   document.getElementById('loginBtn').click();
+      else if (!regPan.classList.contains('hidden')) document.getElementById('registerBtn').click();
+      else if (!forgotPan.classList.contains('hidden')) document.getElementById('forgotBtn').click();
+      else if (!resetPan.classList.contains('hidden'))  document.getElementById('resetBtn').click();
     });
 
     // ── Google Sign-In ──────────────────────────────────────────

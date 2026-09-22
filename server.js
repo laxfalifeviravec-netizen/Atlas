@@ -5,18 +5,43 @@
    local dev without credentials.
    ============================================================ */
 
-const express  = require('express');
-const bcrypt   = require('bcryptjs');
-const jwt      = require('jsonwebtoken');
-const multer   = require('multer');
-const cors     = require('cors');
-const path     = require('path');
-const fs       = require('fs');
+const express    = require('express');
+const bcrypt     = require('bcryptjs');
+const jwt        = require('jsonwebtoken');
+const multer     = require('multer');
+const cors       = require('cors');
+const path       = require('path');
+const fs         = require('fs');
+const crypto     = require('crypto');
+const rateLimit  = require('express-rate-limit');
+const { Resend } = require('resend');
 
 const app = express();
 const PORT       = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'culture-jwt-secret-change-in-production';
 const IS_VERCEL  = !!process.env.VERCEL;
+const APP_URL    = process.env.APP_URL || 'https://culture.vercel.app';
+const RESEND_KEY = process.env.RESEND_API_KEY || '';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Culture <noreply@culture.app>';
+
+const resendClient = RESEND_KEY ? new Resend(RESEND_KEY) : null;
+
+// ── Rate limiters ─────────────────────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Too many attempts. Try again in 15 minutes.' },
+  skip: () => !IS_VERCEL, // only enforce in production
+});
+const forgotLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Too many reset requests. Try again in an hour.' },
+  skip: () => !IS_VERCEL,
+});
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Too many requests. Slow down.' },
+  skip: () => !IS_VERCEL,
+});
 
 // ── Supabase ──────────────────────────────────────────────────
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
@@ -80,6 +105,7 @@ function now() { return new Date().toISOString(); }
 // ── Middleware ────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json());
+app.use(apiLimiter);
 if (!IS_VERCEL) app.use(express.static(path.join(__dirname)));
 if (!USE_SUPABASE) app.use('/uploads', express.static(UPLOADS_DIR));
 
@@ -508,10 +534,42 @@ const db = {
     if (_roads[idx].user_id !== userId) return { error: 'forbidden' };
     _roads.splice(idx, 1); return { ok: true };
   },
+
+  // ── Password resets ──
+  _resetTokens: new Map(), // in-memory fallback: token → { email, expires_at }
+  async createResetToken(email) {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires_at = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+    if (USE_SUPABASE) {
+      // Invalidate any existing unused tokens for this email
+      await sb.from('password_resets').update({ used: true }).eq('email', email.toLowerCase()).eq('used', false);
+      await sb.from('password_resets').insert({ token, email: email.toLowerCase(), expires_at });
+    } else {
+      // Clean up old tokens for this email
+      for (const [k, v] of this._resetTokens) { if (v.email === email.toLowerCase()) this._resetTokens.delete(k); }
+      this._resetTokens.set(token, { email: email.toLowerCase(), expires_at });
+    }
+    return token;
+  },
+  async consumeResetToken(token) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('password_resets').select('*')
+        .eq('token', token).eq('used', false).single();
+      if (!data) return null;
+      if (new Date(data.expires_at) < new Date()) return null;
+      await sb.from('password_resets').update({ used: true }).eq('token', token);
+      return data.email;
+    }
+    const entry = this._resetTokens.get(token);
+    if (!entry) return null;
+    if (new Date(entry.expires_at) < new Date()) { this._resetTokens.delete(token); return null; }
+    this._resetTokens.delete(token);
+    return entry.email;
+  },
 };
 
 // ── Auth routes ───────────────────────────────────────────────
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   try {
     const { name, email, password } = req.body;
     if (!name || !email || !password)
@@ -532,7 +590,7 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password are required.' });
@@ -567,6 +625,61 @@ app.patch('/api/auth/me', requireAuth, upload.single('avatar'), async (req, res)
     const user = await db.updateUser(req.user.id, fields);
     if (!user) return res.status(404).json({ error: 'User not found.' });
     res.json({ user: safeUser(user), token: makeToken(user) });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/auth/forgot-password', forgotLimiter, async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required.' });
+    // Always respond OK — don't reveal whether email exists
+    const user = await db.findUserByEmail(email);
+    if (user) {
+      const token = await db.createResetToken(email);
+      const link  = `${APP_URL}?reset=${token}`;
+      if (resendClient) {
+        await resendClient.emails.send({
+          from: FROM_EMAIL,
+          to: email.toLowerCase(),
+          subject: 'Reset your Culture password',
+          html: `
+            <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#0C0C0F;color:#EDEBE6;border-radius:12px">
+              <h1 style="font-size:28px;font-weight:800;letter-spacing:-0.5px;margin:0 0 8px">Culture</h1>
+              <p style="color:#888;font-size:14px;margin:0 0 32px">The driving enthusiast community</p>
+              <h2 style="font-size:18px;font-weight:600;margin:0 0 12px">Reset your password</h2>
+              <p style="color:#bbb;font-size:14px;line-height:1.6;margin:0 0 24px">
+                Click the button below to set a new password. This link expires in 1 hour.
+              </p>
+              <a href="${link}" style="display:inline-block;background:#E4A530;color:#0C0C0F;font-weight:700;font-size:15px;padding:13px 28px;border-radius:8px;text-decoration:none">
+                Reset Password
+              </a>
+              <p style="color:#555;font-size:12px;margin:24px 0 0">
+                If you didn't request this, ignore this email — your password won't change.<br/>
+                Link expires: ${new Date(Date.now() + 60 * 60 * 1000).toUTCString()}
+              </p>
+            </div>`,
+        });
+      } else {
+        // No email provider — log to console for local dev
+        console.log(`[DEV] Password reset link for ${email}: ${link}`);
+      }
+    }
+    res.json({ ok: true, message: 'If that email exists, a reset link is on its way.' });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ error: 'Token and password are required.' });
+    if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    const email = await db.consumeResetToken(token);
+    if (!email) return res.status(400).json({ error: 'This reset link is invalid or has expired.' });
+    const user = await db.findUserByEmail(email);
+    if (!user) return res.status(404).json({ error: 'Account not found.' });
+    const password_hash = await bcrypt.hash(password, 10);
+    const updated = await db.updateUser(user.id, { password_hash });
+    res.json({ token: makeToken(updated), user: safeUser(updated) });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 

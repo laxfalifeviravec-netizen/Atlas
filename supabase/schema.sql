@@ -125,6 +125,17 @@ create table if not exists roads (
   created_at  timestamptz default now()
 );
 
+-- Password reset tokens
+create table if not exists password_resets (
+  token      text primary key,
+  email      text not null,
+  expires_at timestamptz not null,
+  used       boolean default false,
+  created_at timestamptz default now()
+);
+
+create index if not exists password_resets_email_idx on password_resets(email);
+
 -- ── Storage ────────────────────────────────────────────────────
 -- Run this in the Supabase dashboard → Storage → New bucket:
 --   Name: uploads

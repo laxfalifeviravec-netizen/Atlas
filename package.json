@@ -13,10 +13,12 @@
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
     "jsonwebtoken": "^9.0.3",
     "leaflet": "^1.9.4",
     "multer": "^2.1.1",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "resend": "^6.28.1"
   },
   "devDependencies": {
     "sharp": "^0.35.4"

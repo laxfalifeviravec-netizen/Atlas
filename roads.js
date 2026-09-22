@@ -83,6 +83,33 @@ function onMapClick(e) {
 // ── Load Roads ─────────────────────────────────────────────
 let curatedRoads = [];
 
+// Snap waypoints to real roads via OSRM (browser-side, cached in localStorage)
+async function snapToRoad(id, waypoints) {
+  const cacheKey = `atlas-road-snap-v1-${id}`;
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) return JSON.parse(cached);
+  } catch {}
+
+  try {
+    // OSRM expects lon,lat — our geometry is [lat,lng], so swap
+    const coords = waypoints.map(([lat, lng]) => `${lng},${lat}`).join(';');
+    const res = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) return waypoints;
+    const data = await res.json();
+    if (data.code !== 'Ok' || !data.routes?.[0]) return waypoints;
+    // Convert back to [lat,lng]
+    const snapped = data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+    try { localStorage.setItem(cacheKey, JSON.stringify(snapped)); } catch {}
+    return snapped;
+  } catch {
+    return waypoints;
+  }
+}
+
 async function loadRoads() {
   try {
     const [communityRes, curatedRes] = await Promise.all([
@@ -99,7 +126,7 @@ async function loadRoads() {
     document.getElementById('roadCount').textContent = `${total} road${total===1?'':'s'} mapped`;
     renderRoadList(roads, curatedRoads);
     renderRoadPolylines(roads);
-    renderCuratedPolylines(curatedRoads);
+    await renderCuratedPolylines(curatedRoads);
   } catch {}
 }
 
@@ -194,15 +221,29 @@ function renderRoadPolylines(roads) {
 const CURATED_DIFF_COLORS = { 1: '#22c55e', 2: '#22c55e', 3: '#f59e0b', 4: '#f97316', 5: '#dc2222' };
 let curatedPolylines = {};
 
-function renderCuratedPolylines(roads) {
+async function renderCuratedPolylines(roads) {
   Object.values(curatedPolylines).forEach(p => p.remove());
   curatedPolylines = {};
 
+  // Snap all roads to real roads in batches of 4 to avoid rate-limiting
+  const BATCH = 4;
+  for (let i = 0; i < roads.length; i += BATCH) {
+    const batch = roads.slice(i, i + BATCH);
+    await Promise.all(batch.map(async r => {
+      if (!r.geometry || r.geometry.length < 2) return;
+      const snapped = await snapToRoad(r.id, r.geometry);
+      r._snappedGeometry = snapped;
+    }));
+    // Small pause between batches to be polite to OSRM
+    if (i + BATCH < roads.length) await new Promise(res => setTimeout(res, 300));
+  }
+
   roads.forEach(r => {
     if (!r.geometry || r.geometry.length < 2) return;
+    const pts = r._snappedGeometry || r.geometry;
     const color = CURATED_DIFF_COLORS[r.difficulty] || '#dc2222';
     const diffLabel = ['', 'Easy', 'Easy', 'Moderate', 'Hard', 'Expert'][r.difficulty] || 'Moderate';
-    const line = L.polyline(r.geometry, { color, weight: 5, opacity: 0.9 }).addTo(roadsMap);
+    const line = L.polyline(pts, { color, weight: 5, opacity: 0.9 }).addTo(roadsMap);
 
     const popupHtml = `
       <div class="road-popup">
@@ -217,14 +258,14 @@ function renderCuratedPolylines(roads) {
     line.bindPopup(popupHtml);
     curatedPolylines[`curated-${r.id}`] = line;
 
-    L.circleMarker(r.geometry[0], {
+    L.circleMarker(pts[0], {
       radius: 5, color, fillColor: color, fillOpacity: 1, weight: 2
     }).addTo(roadsMap).bindPopup(popupHtml);
   });
 }
 
 function flyToRoad(road) {
-  const pts = road.points || road.geometry;
+  const pts = road._snappedGeometry || road.points || road.geometry;
   if (!pts || pts.length === 0) return;
   const bounds = L.latLngBounds(pts);
   roadsMap.fitBounds(bounds, { padding: [60, 60] });

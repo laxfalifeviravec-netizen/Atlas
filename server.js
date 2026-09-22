@@ -1,5 +1,5 @@
 /* ============================================================
-   Culture — API Server
+   One Culture — API Server
    Uses Supabase (Postgres + Storage) when SUPABASE_URL and
    SUPABASE_SERVICE_KEY are set; falls back to in-memory for
    local dev without credentials.
@@ -22,7 +22,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'culture-jwt-secret-change-in-produ
 const IS_VERCEL  = !!process.env.VERCEL;
 const APP_URL    = process.env.APP_URL || 'https://culture.vercel.app';
 const RESEND_KEY = process.env.RESEND_API_KEY || '';
-const FROM_EMAIL = process.env.FROM_EMAIL || 'Culture <noreply@culture.app>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Culture <noreply@one-culture.app>';
 
 const resendClient = RESEND_KEY ? new Resend(RESEND_KEY) : null;
 
@@ -644,7 +644,7 @@ app.post('/api/auth/forgot-password', forgotLimiter, async (req, res) => {
           subject: 'Reset your Culture password',
           html: `
             <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#0C0C0F;color:#EDEBE6;border-radius:12px">
-              <h1 style="font-size:28px;font-weight:800;letter-spacing:-0.5px;margin:0 0 8px">Culture</h1>
+              <h1 style="font-size:28px;font-weight:800;letter-spacing:-0.5px;margin:0 0 8px">One Culture</h1>
               <p style="color:#888;font-size:14px;margin:0 0 32px">The driving enthusiast community</p>
               <h2 style="font-size:18px;font-weight:600;margin:0 0 12px">Reset your password</h2>
               <p style="color:#bbb;font-size:14px;line-height:1.6;margin:0 0 24px">
@@ -936,8 +936,8 @@ async function seed() {
 
   const password_hash = await bcrypt.hash('culture123', 10);
   const teamUser = await db.createUser({
-    name: 'Culture Team', email: 'team@culture.app',
-    password_hash, avatar: null, bio: 'The official Culture account.', plan: 'Explorer',
+    name: 'One Culture Team', email: 'team@one-culture.app',
+    password_hash, avatar: null, bio: 'The official One Culture account.', plan: 'Explorer',
   });
 
   const demoPosts = [
@@ -962,12 +962,12 @@ async function seed() {
   }
 
   const demoListings = [
-    { title: 'Porsche 911 GT3 RS — Track Ready', price: '$289,000', category: 'Cars', description: '2023 GT3 RS, Weissach Package, 1,200 miles. Immaculate.', contact: 'team@culture.app', image_url: null },
-    { title: 'BMW M3 Competition — Frozen Isle Green', price: '$82,500', category: 'Cars', description: '2022 F80 M3 Competition, 6-speed manual. Carbon seats, track package.', contact: 'team@culture.app', image_url: null },
-    { title: 'Akrapovič Titanium Exhaust — 992 GT3', price: '$4,200', category: 'Mods', description: 'Full titanium slip-on system. Near new, under 500 miles.', contact: 'team@culture.app', image_url: null },
-    { title: 'Michelin Pilot Cup 2 R — 305/30/20 (set of 2)', price: '$1,100', category: 'Wheels', description: 'Rear tires for 992. 7/10 tread remaining.', contact: 'team@culture.app', image_url: null },
-    { title: 'Racepak IQ3 Street Dash Logger', price: '$650', category: 'Electronics', description: 'Full digital dash with GPS lap timing and 0-60 timer.', contact: 'team@culture.app', image_url: null },
-    { title: 'Brembo GT Brake Kit — M4 Front', price: '$3,800', category: 'Mods', description: 'Six-piston Brembo GT kit for F8x M3/M4. Barely used.', contact: 'team@culture.app', image_url: null },
+    { title: 'Porsche 911 GT3 RS — Track Ready', price: '$289,000', category: 'Cars', description: '2023 GT3 RS, Weissach Package, 1,200 miles. Immaculate.', contact: 'team@one-culture.app', image_url: null },
+    { title: 'BMW M3 Competition — Frozen Isle Green', price: '$82,500', category: 'Cars', description: '2022 F80 M3 Competition, 6-speed manual. Carbon seats, track package.', contact: 'team@one-culture.app', image_url: null },
+    { title: 'Akrapovič Titanium Exhaust — 992 GT3', price: '$4,200', category: 'Mods', description: 'Full titanium slip-on system. Near new, under 500 miles.', contact: 'team@one-culture.app', image_url: null },
+    { title: 'Michelin Pilot Cup 2 R — 305/30/20 (set of 2)', price: '$1,100', category: 'Wheels', description: 'Rear tires for 992. 7/10 tread remaining.', contact: 'team@one-culture.app', image_url: null },
+    { title: 'Racepak IQ3 Street Dash Logger', price: '$650', category: 'Electronics', description: 'Full digital dash with GPS lap timing and 0-60 timer.', contact: 'team@one-culture.app', image_url: null },
+    { title: 'Brembo GT Brake Kit — M4 Front', price: '$3,800', category: 'Mods', description: 'Six-piston Brembo GT kit for F8x M3/M4. Barely used.', contact: 'team@one-culture.app', image_url: null },
   ];
   for (const l of demoListings) {
     await db.createListing({ user_id: teamUser.id, ...l });
@@ -975,7 +975,7 @@ async function seed() {
 }
 
 if (require.main === module) {
-  seed().then(() => app.listen(PORT, () => console.log(`Culture API running on http://localhost:${PORT}`))).catch(console.error);
+  seed().then(() => app.listen(PORT, () => console.log(`One Culture API running on http://localhost:${PORT}`))).catch(console.error);
 } else {
   seed().catch(console.error);
   module.exports = app;

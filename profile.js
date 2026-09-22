@@ -1,5 +1,5 @@
 /* ============================================================
-   Culture — Profile Page JS
+   One Culture — Profile Page JS
    ============================================================ */
 
 const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
@@ -69,7 +69,7 @@ function renderProfile(user) {
   document.getElementById('profileLoading').style.display = 'none';
   document.getElementById('profileContent').style.display = '';
   document.getElementById('headerName').textContent = user.name;
-  document.title = `${user.name} — Culture`;
+  document.title = `${user.name} — One Culture`;
 
   // Avatar
   const avatarEl = document.getElementById('profileAvatar');

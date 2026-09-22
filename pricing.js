@@ -1,5 +1,5 @@
 /* ============================================================
-   Culture — Pricing Page JS
+   One Culture — Pricing Page JS
    ============================================================ */
 
 const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -156,9 +156,9 @@ signupForm.addEventListener('submit', e => {
     document.getElementById('signupEmailError').textContent = 'Please enter a valid email.'; valid = false;
   } else { document.getElementById('signupEmailError').textContent = ''; }
   if (!valid) return;
-  const accounts = JSON.parse(localStorage.getItem('atlas-accounts') || '[]');
+  const accounts = JSON.parse(localStorage.getItem('culture-accounts') || '[]');
   accounts.push({ name, email, plan: signupPlan.textContent, date: new Date().toISOString() });
-  localStorage.setItem('atlas-accounts', JSON.stringify(accounts));
+  localStorage.setItem('culture-accounts', JSON.stringify(accounts));
   signupForm.style.display = 'none';
   signupSuccess.classList.add('visible');
   setTimeout(closeSignup, 3000);
@@ -174,11 +174,11 @@ backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 's
 // ── Modals (shared content) ───────────────────────────────────
 const MODAL_CONTENT = {
   about: {
-    title: 'About Culture',
+    title: 'About One Culture',
     body: `
-      <p>Culture is the definitive guide to America's best driving roads — built by enthusiasts, for enthusiasts.</p>
+      <p>One Culture is the definitive guide to America's best driving roads — built by enthusiasts, for enthusiasts.</p>
       <h4>Our Mission</h4>
-      <p>There are thousands of incredible roads in America that most drivers will never discover. Culture exists to change that.</p>
+      <p>There are thousands of incredible roads in America that most drivers will never discover. One Culture exists to change that.</p>
       <h4>What We Build</h4>
       <ul>
         <li>1,200+ mapped and rated driving roads across all 50 states</li>
@@ -213,15 +213,15 @@ const MODAL_CONTENT = {
   },
   privacy: {
     title: 'Privacy Policy',
-    body: `<p><em>Effective date: January 1, 2026</em></p><h4>Information We Collect</h4><p>Culture collects only the information necessary to provide our services, including account data and anonymised usage analytics.</p><h4>We Never Sell Your Data</h4><p>Culture does not sell, rent, or share your personal information with third parties for marketing purposes.</p><h4>Contact</h4><p>Questions? Email <a href="mailto:privacy@culture.app">privacy@culture.app</a>.</p>`,
+    body: `<p><em>Effective date: January 1, 2026</em></p><h4>Information We Collect</h4><p>One Culture collects only the information necessary to provide our services, including account data and anonymised usage analytics.</p><h4>We Never Sell Your Data</h4><p>One Culture does not sell, rent, or share your personal information with third parties for marketing purposes.</p><h4>Contact</h4><p>Questions? Email <a href="mailto:privacy@one-culture.app">privacy@one-culture.app</a>.</p>`,
   },
   terms: {
     title: 'Terms of Service',
-    body: `<p><em>Effective date: January 1, 2026</em></p><h4>Acceptance</h4><p>By using Culture, you agree to these terms. Subscriptions auto-renew until cancelled. You may cancel at any time.</p><h4>Contact</h4><p>Questions? Email <a href="mailto:legal@culture.app">legal@culture.app</a>.</p>`,
+    body: `<p><em>Effective date: January 1, 2026</em></p><h4>Acceptance</h4><p>By using One Culture, you agree to these terms. Subscriptions auto-renew until cancelled. You may cancel at any time.</p><h4>Contact</h4><p>Questions? Email <a href="mailto:legal@one-culture.app">legal@one-culture.app</a>.</p>`,
   },
   cookies: {
     title: 'Cookie Policy',
-    body: `<p><em>Effective date: January 1, 2026</em></p><h4>What We Use</h4><table class="modal-table"><thead><tr><th>Cookie</th><th>Purpose</th><th>Duration</th></tr></thead><tbody><tr><td>culture-theme</td><td>Light/dark mode preference</td><td>1 year</td></tr></tbody></table><p>Questions? Email <a href="mailto:privacy@culture.app">privacy@culture.app</a>.</p>`,
+    body: `<p><em>Effective date: January 1, 2026</em></p><h4>What We Use</h4><table class="modal-table"><thead><tr><th>Cookie</th><th>Purpose</th><th>Duration</th></tr></thead><tbody><tr><td>culture-theme</td><td>Light/dark mode preference</td><td>1 year</td></tr></tbody></table><p>Questions? Email <a href="mailto:privacy@one-culture.app">privacy@one-culture.app</a>.</p>`,
   },
 };
 

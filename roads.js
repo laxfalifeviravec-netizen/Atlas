@@ -1,5 +1,5 @@
 /* ============================================================
-   Culture — Community Roads Map JS
+   One Culture — Community Roads Map JS
    ============================================================ */
 
 const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')

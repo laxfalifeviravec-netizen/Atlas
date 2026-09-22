@@ -1,5 +1,5 @@
 /* ============================================================
-   Culture — App JS
+   One Culture — App JS
    ============================================================ */
 
 const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -680,10 +680,10 @@ contactForm.addEventListener('submit', e => {
   const subjectLabel = subjectEl.options[subjectEl.selectedIndex].text || 'General Inquiry';
   const messageVal = document.getElementById('message').value.trim();
 
-  const mailSubject = encodeURIComponent(`[Culture] ${subjectLabel}`);
+  const mailSubject = encodeURIComponent(`[One Culture] ${subjectLabel}`);
   const mailBody    = encodeURIComponent(`From: ${nameVal} <${emailVal}>\n\n${messageVal}`);
 
-  window.location.href = `mailto:hello@culture.app?subject=${mailSubject}&body=${mailBody}`;
+  window.location.href = `mailto:hello@one-culture.app?subject=${mailSubject}&body=${mailBody}`;
 
   setTimeout(() => {
     contactForm.reset();
@@ -870,9 +870,9 @@ if (roadModalOverlay) roadModalOverlay.addEventListener('click', e => { if (e.ta
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && roadModalOverlay && roadModalOverlay.classList.contains('open')) closeRoadModal(); });
 
 // ── Saved roads (localStorage) ────────────────────────────────
-function getSavedRoads() { return JSON.parse(localStorage.getItem('atlas-saved') || '[]'); }
-function saveRoad(name)   { const s = getSavedRoads(); if (!s.includes(name)) { s.push(name); localStorage.setItem('atlas-saved', JSON.stringify(s)); } }
-function unsaveRoad(name) { localStorage.setItem('atlas-saved', JSON.stringify(getSavedRoads().filter(n => n !== name))); }
+function getSavedRoads() { return JSON.parse(localStorage.getItem('culture-saved') || '[]'); }
+function saveRoad(name)   { const s = getSavedRoads(); if (!s.includes(name)) { s.push(name); localStorage.setItem('culture-saved', JSON.stringify(s)); } }
+function unsaveRoad(name) { localStorage.setItem('culture-saved', JSON.stringify(getSavedRoads().filter(n => n !== name))); }
 function isRoadSaved(name){ return getSavedRoads().includes(name); }
 
 // ── Type filter chips ─────────────────────────────────────────
@@ -932,8 +932,8 @@ if (newsletterForm) {
     e.preventDefault();
     const email = newsletterForm.querySelector('input[type="email"]').value.trim();
     if (!email) return;
-    const emails = JSON.parse(localStorage.getItem('atlas-newsletter') || '[]');
-    if (!emails.includes(email)) { emails.push(email); localStorage.setItem('atlas-newsletter', JSON.stringify(emails)); }
+    const emails = JSON.parse(localStorage.getItem('culture-newsletter') || '[]');
+    if (!emails.includes(email)) { emails.push(email); localStorage.setItem('culture-newsletter', JSON.stringify(emails)); }
     newsletterForm.style.display = 'none';
     document.getElementById('newsletterSuccess').classList.add('visible');
   });
@@ -941,14 +941,14 @@ if (newsletterForm) {
 
 // ── Cookie consent ────────────────────────────────────────────
 const cookieBanner = document.getElementById('cookieBanner');
-if (cookieBanner && !localStorage.getItem('atlas-cookie-consent')) {
+if (cookieBanner && !localStorage.getItem('culture-cookie-consent')) {
   setTimeout(() => cookieBanner.classList.add('visible'), 1500);
   document.getElementById('cookieAccept').addEventListener('click', () => {
-    localStorage.setItem('atlas-cookie-consent', '1');
+    localStorage.setItem('culture-cookie-consent', '1');
     cookieBanner.classList.remove('visible');
   });
   document.getElementById('cookieDecline').addEventListener('click', () => {
-    localStorage.setItem('atlas-cookie-consent', '0');
+    localStorage.setItem('culture-cookie-consent', '0');
     cookieBanner.classList.remove('visible');
   });
 }
@@ -967,11 +967,11 @@ backToTop.addEventListener('click', () => {
 // ── Modals ────────────────────────────────────────────────────
 const MODAL_CONTENT = {
   about: {
-    title: 'About Culture',
+    title: 'About One Culture',
     body: `
-      <p>Culture is the definitive guide to America's best driving roads — built by enthusiasts, for enthusiasts. We map, rate, and document the roads that make driving worth doing.</p>
+      <p>One Culture is the definitive guide to America's best driving roads — built by enthusiasts, for enthusiasts. We map, rate, and document the roads that make driving worth doing.</p>
       <h4>Our Mission</h4>
-      <p>There are thousands of incredible roads in America that most drivers will never discover. Culture exists to change that. We believe the best drive of your life is still out there, and we're here to help you find it.</p>
+      <p>There are thousands of incredible roads in America that most drivers will never discover. One Culture exists to change that. We believe the best drive of your life is still out there, and we're here to help you find it.</p>
       <h4>What We Build</h4>
       <ul>
         <li>1,200+ mapped and rated driving roads across all 50 states</li>
@@ -981,7 +981,7 @@ const MODAL_CONTENT = {
         <li>Offline-first maps that work in the deepest canyons</li>
       </ul>
       <h4>Our Community</h4>
-      <p>Culture is powered by a community of sports car owners, motorcycle riders, classic car enthusiasts, and anyone who believes a great road is worth going out of your way for. Every review, rating, and road report comes from real drivers who've been there.</p>
+      <p>One Culture is powered by a community of sports car owners, motorcycle riders, classic car enthusiasts, and anyone who believes a great road is worth going out of your way for. Every review, rating, and road report comes from real drivers who've been there.</p>
       <p style="margin-top:1.5rem;color:var(--color-text-muted);font-size:0.9rem;">Founded in 2022 &middot; Headquartered in Asheville, NC &middot; Near the Tail of the Dragon</p>
     `,
   },
@@ -1017,10 +1017,10 @@ const MODAL_CONTENT = {
     body: `
       <p><em>Effective date: January 1, 2026</em></p>
       <h4>Information We Collect</h4>
-      <p>Culture collects only the information necessary to provide our services. This includes account information you provide, location data when you use navigation features (with your permission), and anonymised usage analytics to improve the product.</p>
+      <p>One Culture collects only the information necessary to provide our services. This includes account information you provide, location data when you use navigation features (with your permission), and anonymised usage analytics to improve the product.</p>
       <h4>How We Use Your Data</h4>
       <ul>
-        <li>To provide and improve Culture services</li>
+        <li>To provide and improve One Culture services</li>
         <li>To personalise your exploration experience</li>
         <li>To send product updates you've opted in to</li>
         <li>To ensure the security of your account</li>
@@ -1028,11 +1028,11 @@ const MODAL_CONTENT = {
       <h4>Data Storage &amp; Security</h4>
       <p>All personal data is encrypted at rest and in transit using AES-256 and TLS 1.3. Location history is stored locally on your device by default and only synced to our servers with explicit consent.</p>
       <h4>We Never Sell Your Data</h4>
-      <p>Culture does not sell, rent, or share your personal information with third parties for marketing purposes. Full stop.</p>
+      <p>One Culture does not sell, rent, or share your personal information with third parties for marketing purposes. Full stop.</p>
       <h4>Your Rights</h4>
-      <p>You may request access to, correction of, or deletion of your personal data at any time by contacting <a href="mailto:privacy@culture.app">privacy@culture.app</a>.</p>
+      <p>You may request access to, correction of, or deletion of your personal data at any time by contacting <a href="mailto:privacy@one-culture.app">privacy@one-culture.app</a>.</p>
       <h4>Contact</h4>
-      <p>Questions? Email us at <a href="mailto:privacy@culture.app">privacy@culture.app</a>.</p>
+      <p>Questions? Email us at <a href="mailto:privacy@one-culture.app">privacy@one-culture.app</a>.</p>
     `,
   },
   terms: {
@@ -1040,9 +1040,9 @@ const MODAL_CONTENT = {
     body: `
       <p><em>Effective date: January 1, 2026</em></p>
       <h4>Acceptance of Terms</h4>
-      <p>By accessing or using Culture, you agree to be bound by these Terms of Service. If you do not agree, please do not use our services.</p>
+      <p>By accessing or using One Culture, you agree to be bound by these Terms of Service. If you do not agree, please do not use our services.</p>
       <h4>Use of Service</h4>
-      <p>Culture grants you a limited, non-exclusive, non-transferable licence to use our platform for personal, non-commercial exploration and navigation purposes.</p>
+      <p>One Culture grants you a limited, non-exclusive, non-transferable licence to use our platform for personal, non-commercial exploration and navigation purposes.</p>
       <h4>Prohibited Activities</h4>
       <ul>
         <li>Scraping or bulk downloading of map data</li>
@@ -1051,13 +1051,13 @@ const MODAL_CONTENT = {
         <li>Submitting false or misleading location data</li>
       </ul>
       <h4>Intellectual Property</h4>
-      <p>All Culture content, including maps, designs, and software, is owned by Culture or its licensors. Map data is provided under OpenStreetMap's ODbL licence where applicable.</p>
+      <p>All One Culture content, including maps, designs, and software, is owned by One Culture or its licensors. Map data is provided under OpenStreetMap's ODbL licence where applicable.</p>
       <h4>Limitation of Liability</h4>
-      <p>Culture is provided "as is". We are not liable for navigation errors, inaccurate map data, or any consequences of relying solely on Culture for navigation in safety-critical situations.</p>
+      <p>One Culture is provided "as is". We are not liable for navigation errors, inaccurate map data, or any consequences of relying solely on One Culture for navigation in safety-critical situations.</p>
       <h4>Changes to Terms</h4>
-      <p>We may update these terms with reasonable notice. Continued use of Culture after updates constitutes acceptance.</p>
+      <p>We may update these terms with reasonable notice. Continued use of One Culture after updates constitutes acceptance.</p>
       <h4>Contact</h4>
-      <p>Questions? Email <a href="mailto:legal@culture.app">legal@culture.app</a>.</p>
+      <p>Questions? Email <a href="mailto:legal@one-culture.app">legal@one-culture.app</a>.</p>
     `,
   },
   cookies: {
@@ -1078,9 +1078,9 @@ const MODAL_CONTENT = {
       <h4>Third-Party Cookies</h4>
       <p>Our map tiles are served by CARTO. They may set their own cookies subject to <a href="https://carto.com/privacy" target="_blank" rel="noopener">CARTO's Privacy Policy</a>.</p>
       <h4>Managing Cookies</h4>
-      <p>You can control cookies through your browser settings. Note that disabling cookies may affect some Culture features.</p>
+      <p>You can control cookies through your browser settings. Note that disabling cookies may affect some One Culture features.</p>
       <h4>Contact</h4>
-      <p>Questions? Email <a href="mailto:privacy@culture.app">privacy@culture.app</a>.</p>
+      <p>Questions? Email <a href="mailto:privacy@one-culture.app">privacy@one-culture.app</a>.</p>
     `,
   },
 };

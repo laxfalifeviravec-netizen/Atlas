@@ -1,5 +1,5 @@
 /* ============================================================
-   Culture — Service Worker
+   One Culture — Service Worker
    Caches the app shell so it loads instantly and works offline.
    ============================================================ */
 

@@ -1,5 +1,5 @@
 /* ============================================================
-   Culture — Community JS (Instagram-style feed)
+   One Culture — Community JS (Instagram-style feed)
    ============================================================ */
 
 const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')

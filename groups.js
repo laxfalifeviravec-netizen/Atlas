@@ -1,5 +1,5 @@
 /* ============================================================
-   Culture — Groups JS (live GPS driving groups)
+   One Culture — Groups JS (live GPS driving groups)
    ============================================================ */
 
 const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')

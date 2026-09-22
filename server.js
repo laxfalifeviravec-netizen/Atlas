@@ -124,7 +124,7 @@ app.post('/api/auth/register', async (req, res) => {
     password: hash, avatar: null, bio: '', plan: 'Explorer', created_at: now(),
   };
   users.push(user);
-  const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+  const token = jwt.sign({ id: user.id, email: user.email, name: user.name, avatar: user.avatar, plan: user.plan }, JWT_SECRET, { expiresIn: '30d' });
   res.status(201).json({ token, user: safeUser(user) });
 });
 
@@ -135,13 +135,17 @@ app.post('/api/auth/login', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
   const match = await bcrypt.compare(password, user.password);
   if (!match) return res.status(401).json({ error: 'Invalid email or password.' });
-  const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+  const token = jwt.sign({ id: user.id, email: user.email, name: user.name, avatar: user.avatar, plan: user.plan }, JWT_SECRET, { expiresIn: '30d' });
   res.json({ token, user: safeUser(user) });
 });
 
 app.get('/api/auth/me', requireAuth, (req, res) => {
   const user = users.find(u => u.id === req.user.id);
-  if (!user) return res.status(404).json({ error: 'User not found.' });
+  // Fall back to token payload when in-memory store was cleared (cold start)
+  if (!user) {
+    const { id, email, name, avatar, plan } = req.user;
+    return res.json({ user: { id, email, name: name || '', avatar: avatar || null, bio: '', plan: plan || 'Explorer' } });
+  }
   res.json({ user: safeUser(user) });
 });
 

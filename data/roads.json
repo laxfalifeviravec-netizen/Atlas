@@ -10,24 +10,65 @@
     "surface": "Excellent",
     "best_season": "Year-round",
     "status": "open",
-    "description": "The crown jewel of American coastal driving. 656 miles of ocean bluffs, sea stacks, and sweeping curves from LA to the Oregon border — with Bixby Bridge as the defining stop.",
+    "description": "The crown jewel of American coastal driving. 656 miles of ocean bluffs, sea stacks, and sweeping curves from LA to the Oregon border \u2014 with Bixby Bridge as the defining stop.",
     "tip": "Drive south-to-north for the best ocean views on your side of the road. Midweek mornings are almost traffic-free.",
-    "tags": ["coastal", "scenic", "long-distance", "convertible-friendly"],
-    "lat": 35.70,
-    "lng": -121.30,
+    "tags": [
+      "coastal",
+      "scenic",
+      "long-distance",
+      "convertible-friendly"
+    ],
+    "lat": 35.7,
+    "lng": -121.3,
     "geometry": [
-      [34.00, -118.50],
-      [34.46, -120.05],
-      [35.20, -120.80],
-      [35.55, -121.10],
-      [35.70, -121.30],
-      [36.00, -121.50],
-      [36.38, -121.90],
-      [37.29, -122.41],
-      [38.00, -122.98],
-      [38.52, -123.22],
-      [39.20, -123.80],
-      [40.24, -124.07]
+      [
+        34.0,
+        -118.5
+      ],
+      [
+        34.46,
+        -120.05
+      ],
+      [
+        35.2,
+        -120.8
+      ],
+      [
+        35.55,
+        -121.1
+      ],
+      [
+        35.7,
+        -121.3
+      ],
+      [
+        36.0,
+        -121.5
+      ],
+      [
+        36.38,
+        -121.9
+      ],
+      [
+        37.29,
+        -122.41
+      ],
+      [
+        38.0,
+        -122.98
+      ],
+      [
+        38.52,
+        -123.22
+      ],
+      [
+        39.2,
+        -123.8
+      ],
+      [
+        40.24,
+        -124.07
+      ]
     ]
   },
   {
@@ -39,20 +80,43 @@
     "length_mi": 66,
     "difficulty": 3,
     "surface": "Good",
-    "best_season": "Apr–Nov",
+    "best_season": "Apr\u2013Nov",
     "status": "seasonal",
-    "description": "A rapid climb from the LA basin to 7,902 ft through the San Gabriel Mountains. Genuinely technical switchbacks with almost no traffic — a sports car driver's secret hiding in plain sight.",
-    "tip": "Check Caltrans for closures after rain — debris is common. Sunrise runs give you the mountain to yourself.",
-    "tags": ["switchbacks", "mountain", "technical", "sports-car"],
+    "description": "A rapid climb from the LA basin to 7,902 ft through the San Gabriel Mountains. Genuinely technical switchbacks with almost no traffic \u2014 a sports car driver's secret hiding in plain sight.",
+    "tip": "Check Caltrans for closures after rain \u2014 debris is common. Sunrise runs give you the mountain to yourself.",
+    "tags": [
+      "switchbacks",
+      "mountain",
+      "technical",
+      "sports-car"
+    ],
     "lat": 34.25,
-    "lng": -117.90,
+    "lng": -117.9,
     "geometry": [
-      [34.21, -118.10],
-      [34.25, -117.95],
-      [34.30, -117.80],
-      [34.38, -117.70],
-      [34.38, -117.55],
-      [34.29, -117.40]
+      [
+        34.21,
+        -118.1
+      ],
+      [
+        34.25,
+        -117.95
+      ],
+      [
+        34.3,
+        -117.8
+      ],
+      [
+        34.38,
+        -117.7
+      ],
+      [
+        34.38,
+        -117.55
+      ],
+      [
+        34.29,
+        -117.4
+      ]
     ]
   },
   {
@@ -66,17 +130,37 @@
     "surface": "Good",
     "best_season": "Year-round",
     "status": "open",
-    "description": "The ridge road running the spine of the Santa Monica Mountains above Los Angeles. Technical canyon-carving with city views in both directions — a 21-mile proving ground in the middle of a metropolis.",
+    "description": "The ridge road running the spine of the Santa Monica Mountains above Los Angeles. Technical canyon-carving with city views in both directions \u2014 a 21-mile proving ground in the middle of a metropolis.",
     "tip": "Go at dawn on a weekday. By 9am you share it with Ubers, cyclists, and distracted sightseers.",
-    "tags": ["technical", "canyon", "city-views", "sports-car"],
-    "lat": 34.10,
-    "lng": -118.40,
+    "tags": [
+      "technical",
+      "canyon",
+      "city-views",
+      "sports-car"
+    ],
+    "lat": 34.1,
+    "lng": -118.4,
     "geometry": [
-      [34.08, -118.77],
-      [34.09, -118.60],
-      [34.10, -118.45],
-      [34.11, -118.30],
-      [34.13, -118.08]
+      [
+        34.08,
+        -118.77
+      ],
+      [
+        34.09,
+        -118.6
+      ],
+      [
+        34.1,
+        -118.45
+      ],
+      [
+        34.11,
+        -118.3
+      ],
+      [
+        34.13,
+        -118.08
+      ]
     ]
   },
   {
@@ -88,20 +172,43 @@
     "length_mi": 39,
     "difficulty": 3,
     "surface": "Excellent",
-    "best_season": "Jun–Oct",
+    "best_season": "Jun\u2013Oct",
     "status": "seasonal",
     "description": "The highest paved crossing in the Sierra Nevada at 9,945 ft, cutting through Yosemite's high country of polished granite and subalpine lakes.",
-    "tip": "Usually opens late May–June. Check NPS. Tenaya Lake section is worth stopping at every single time.",
-    "tags": ["alpine", "mountain", "high-altitude", "national-park"],
-    "lat": 37.90,
+    "tip": "Usually opens late May\u2013June. Check NPS. Tenaya Lake section is worth stopping at every single time.",
+    "tags": [
+      "alpine",
+      "mountain",
+      "high-altitude",
+      "national-park"
+    ],
+    "lat": 37.9,
     "lng": -119.25,
     "geometry": [
-      [37.79, -119.87],
-      [37.84, -119.60],
-      [37.88, -119.43],
-      [37.91, -119.25],
-      [37.95, -119.05],
-      [37.97, -118.85]
+      [
+        37.79,
+        -119.87
+      ],
+      [
+        37.84,
+        -119.6
+      ],
+      [
+        37.88,
+        -119.43
+      ],
+      [
+        37.91,
+        -119.25
+      ],
+      [
+        37.95,
+        -119.05
+      ],
+      [
+        37.97,
+        -118.85
+      ]
     ]
   },
   {
@@ -113,22 +220,52 @@
     "length_mi": 68,
     "difficulty": 4,
     "surface": "Good",
-    "best_season": "Jun–Sep",
+    "best_season": "Jun\u2013Sep",
     "status": "seasonal",
     "description": "Charles Kuralt's 'most beautiful road in America.' Switchbacks climb to 10,947 ft through tundra plateaus and glaciers with a view horizon that stretches into Wyoming.",
-    "tip": "Snow is possible any month at elevation. Fill up in Red Lodge — next fuel is 70 miles away.",
-    "tags": ["alpine", "switchbacks", "high-altitude", "tundra", "glacier-views"],
+    "tip": "Snow is possible any month at elevation. Fill up in Red Lodge \u2014 next fuel is 70 miles away.",
+    "tags": [
+      "alpine",
+      "switchbacks",
+      "high-altitude",
+      "tundra",
+      "glacier-views"
+    ],
     "lat": 45.03,
     "lng": -109.54,
     "geometry": [
-      [45.18, -109.25],
-      [45.14, -109.30],
-      [45.10, -109.38],
-      [45.05, -109.45],
-      [45.03, -109.54],
-      [44.97, -109.65],
-      [44.91, -109.75],
-      [44.85, -109.85]
+      [
+        45.18,
+        -109.25
+      ],
+      [
+        45.14,
+        -109.3
+      ],
+      [
+        45.1,
+        -109.38
+      ],
+      [
+        45.05,
+        -109.45
+      ],
+      [
+        45.03,
+        -109.54
+      ],
+      [
+        44.97,
+        -109.65
+      ],
+      [
+        44.91,
+        -109.75
+      ],
+      [
+        44.85,
+        -109.85
+      ]
     ]
   },
   {
@@ -140,21 +277,48 @@
     "length_mi": 50,
     "difficulty": 3,
     "surface": "Good",
-    "best_season": "Jul–Sep",
+    "best_season": "Jul\u2013Sep",
     "status": "seasonal",
-    "description": "Carved directly into the Continental Divide at Glacier NP — one of the great engineering achievements of the National Park Service. Exposed cliff edges, waterfalls, and mountain goats at every turn.",
-    "tip": "Vehicle length limits apply — check NPS. Get there before 9am to skip mandatory shuttle periods.",
-    "tags": ["alpine", "national-park", "high-altitude", "cliff-edges", "waterfalls"],
-    "lat": 48.70,
+    "description": "Carved directly into the Continental Divide at Glacier NP \u2014 one of the great engineering achievements of the National Park Service. Exposed cliff edges, waterfalls, and mountain goats at every turn.",
+    "tip": "Vehicle length limits apply \u2014 check NPS. Get there before 9am to skip mandatory shuttle periods.",
+    "tags": [
+      "alpine",
+      "national-park",
+      "high-altitude",
+      "cliff-edges",
+      "waterfalls"
+    ],
+    "lat": 48.7,
     "lng": -113.73,
     "geometry": [
-      [48.50, -114.00],
-      [48.55, -113.90],
-      [48.60, -113.80],
-      [48.65, -113.72],
-      [48.70, -113.65],
-      [48.73, -113.50],
-      [48.76, -113.35]
+      [
+        48.5,
+        -114.0
+      ],
+      [
+        48.55,
+        -113.9
+      ],
+      [
+        48.6,
+        -113.8
+      ],
+      [
+        48.65,
+        -113.72
+      ],
+      [
+        48.7,
+        -113.65
+      ],
+      [
+        48.73,
+        -113.5
+      ],
+      [
+        48.76,
+        -113.35
+      ]
     ]
   },
   {
@@ -166,21 +330,48 @@
     "length_mi": 25,
     "difficulty": 5,
     "surface": "Good",
-    "best_season": "Jun–Oct",
+    "best_season": "Jun\u2013Oct",
     "status": "seasonal",
     "description": "Ouray to Silverton through the San Juans: no guardrails on the inside lane, sheer drop-offs of hundreds of feet, and the kind of exposure that sorts out serious drivers from the rest.",
-    "tip": "This road does not forgive distraction. No-guardrail sections are real — drive the centre line with confidence.",
-    "tags": ["no-guardrails", "exposure", "switchbacks", "mountain", "expert"],
-    "lat": 37.90,
+    "tip": "This road does not forgive distraction. No-guardrail sections are real \u2014 drive the centre line with confidence.",
+    "tags": [
+      "no-guardrails",
+      "exposure",
+      "switchbacks",
+      "mountain",
+      "expert"
+    ],
+    "lat": 37.9,
     "lng": -107.73,
     "geometry": [
-      [38.02, -107.67],
-      [37.98, -107.68],
-      [37.95, -107.70],
-      [37.90, -107.73],
-      [37.86, -107.71],
-      [37.83, -107.73],
-      [37.81, -107.66]
+      [
+        38.02,
+        -107.67
+      ],
+      [
+        37.98,
+        -107.68
+      ],
+      [
+        37.95,
+        -107.7
+      ],
+      [
+        37.9,
+        -107.73
+      ],
+      [
+        37.86,
+        -107.71
+      ],
+      [
+        37.83,
+        -107.73
+      ],
+      [
+        37.81,
+        -107.66
+      ]
     ]
   },
   {
@@ -192,19 +383,40 @@
     "length_mi": 19,
     "difficulty": 5,
     "surface": "Good",
-    "best_season": "May–Oct",
+    "best_season": "May\u2013Oct",
     "status": "seasonal",
-    "description": "The race-proven ascent to 14,115 ft — site of the Pikes Peak International Hill Climb since 1916. 156 corners, fully paved since 2011, and a summit that is genuinely above the clouds.",
-    "tip": "Brake fade is a real risk on the descent. Downshift early and use engine braking — your pads will thank you.",
-    "tags": ["hill-climb", "race-proven", "high-altitude", "technical", "sports-car"],
+    "description": "The race-proven ascent to 14,115 ft \u2014 site of the Pikes Peak International Hill Climb since 1916. 156 corners, fully paved since 2011, and a summit that is genuinely above the clouds.",
+    "tip": "Brake fade is a real risk on the descent. Downshift early and use engine braking \u2014 your pads will thank you.",
+    "tags": [
+      "hill-climb",
+      "race-proven",
+      "high-altitude",
+      "technical",
+      "sports-car"
+    ],
     "lat": 38.84,
     "lng": -105.04,
     "geometry": [
-      [38.80, -105.07],
-      [38.82, -105.06],
-      [38.84, -105.04],
-      [38.86, -105.02],
-      [38.84, -104.96]
+      [
+        38.8,
+        -105.07
+      ],
+      [
+        38.82,
+        -105.06
+      ],
+      [
+        38.84,
+        -105.04
+      ],
+      [
+        38.86,
+        -105.02
+      ],
+      [
+        38.84,
+        -104.96
+      ]
     ]
   },
   {
@@ -216,20 +428,43 @@
     "length_mi": 20,
     "difficulty": 4,
     "surface": "Good",
-    "best_season": "Jun–Oct",
+    "best_season": "Jun\u2013Oct",
     "status": "seasonal",
-    "description": "Colorado's highest paved pass at 12,095 ft between Aspen and Twin Lakes. Exposed switchbacks, thin air, and a summit with 360° alpine views.",
-    "tip": "Vehicle limit of 35 ft. Altitude affects fuel delivery at the top — give the engine time to adjust.",
-    "tags": ["alpine", "switchbacks", "high-altitude", "mountain"],
+    "description": "Colorado's highest paved pass at 12,095 ft between Aspen and Twin Lakes. Exposed switchbacks, thin air, and a summit with 360\u00b0 alpine views.",
+    "tip": "Vehicle limit of 35 ft. Altitude affects fuel delivery at the top \u2014 give the engine time to adjust.",
+    "tags": [
+      "alpine",
+      "switchbacks",
+      "high-altitude",
+      "mountain"
+    ],
     "lat": 39.09,
     "lng": -106.62,
     "geometry": [
-      [39.19, -106.82],
-      [39.15, -106.74],
-      [39.11, -106.67],
-      [39.09, -106.62],
-      [39.06, -106.55],
-      [39.00, -106.42]
+      [
+        39.19,
+        -106.82
+      ],
+      [
+        39.15,
+        -106.74
+      ],
+      [
+        39.11,
+        -106.67
+      ],
+      [
+        39.09,
+        -106.62
+      ],
+      [
+        39.06,
+        -106.55
+      ],
+      [
+        39.0,
+        -106.42
+      ]
     ]
   },
   {
@@ -241,19 +476,39 @@
     "length_mi": 14,
     "difficulty": 4,
     "surface": "Fair",
-    "best_season": "Jun–Sep",
+    "best_season": "Jun\u2013Sep",
     "status": "seasonal",
     "description": "The highest paved auto road in North America at 14,265 ft. 28 miles of switchbacks above the treeline with mountain goats literally on the tarmac.",
-    "tip": "No guardrails above treeline. Afternoon thunderstorms are daily in July–August — summit by noon, no exceptions.",
-    "tags": ["highest-paved-road", "no-guardrails", "mountain-goats", "high-altitude"],
+    "tip": "No guardrails above treeline. Afternoon thunderstorms are daily in July\u2013August \u2014 summit by noon, no exceptions.",
+    "tags": [
+      "highest-paved-road",
+      "no-guardrails",
+      "mountain-goats",
+      "high-altitude"
+    ],
     "lat": 39.59,
     "lng": -105.64,
     "geometry": [
-      [39.65, -105.55],
-      [39.63, -105.58],
-      [39.61, -105.61],
-      [39.59, -105.64],
-      [39.58, -105.64]
+      [
+        39.65,
+        -105.55
+      ],
+      [
+        39.63,
+        -105.58
+      ],
+      [
+        39.61,
+        -105.61
+      ],
+      [
+        39.59,
+        -105.64
+      ],
+      [
+        39.58,
+        -105.64
+      ]
     ]
   },
   {
@@ -265,21 +520,48 @@
     "length_mi": 124,
     "difficulty": 2,
     "surface": "Excellent",
-    "best_season": "Apr–Oct",
+    "best_season": "Apr\u2013Oct",
     "status": "open",
-    "description": "Utah's Highway 12 threads through Bryce Canyon, Grand Staircase–Escalante, and Capitol Reef — arguably the most scenically dense road in North America.",
+    "description": "Utah's Highway 12 threads through Bryce Canyon, Grand Staircase\u2013Escalante, and Capitol Reef \u2014 arguably the most scenically dense road in North America.",
     "tip": "The Hogsback section is genuinely exposed with drop-offs on both sides. Drive it at dawn for golden light on the sandstone.",
-    "tags": ["scenic", "canyon", "sandstone", "national-parks", "hogsback"],
+    "tags": [
+      "scenic",
+      "canyon",
+      "sandstone",
+      "national-parks",
+      "hogsback"
+    ],
     "lat": 37.77,
     "lng": -111.56,
     "geometry": [
-      [37.64, -112.17],
-      [37.67, -111.95],
-      [37.73, -111.80],
-      [37.77, -111.56],
-      [37.82, -111.35],
-      [37.93, -111.05],
-      [38.10, -111.17]
+      [
+        37.64,
+        -112.17
+      ],
+      [
+        37.67,
+        -111.95
+      ],
+      [
+        37.73,
+        -111.8
+      ],
+      [
+        37.77,
+        -111.56
+      ],
+      [
+        37.82,
+        -111.35
+      ],
+      [
+        37.93,
+        -111.05
+      ],
+      [
+        38.1,
+        -111.17
+      ]
     ]
   },
   {
@@ -291,19 +573,40 @@
     "length_mi": 3,
     "difficulty": 4,
     "surface": "Gravel",
-    "best_season": "Mar–Nov",
+    "best_season": "Mar\u2013Nov",
     "status": "open",
     "description": "Three miles of unpaved switchbacks hand-blasted into the face of Cedar Mesa in 1958. No guardrails. 1,100 ft of exposure. One of the most dramatic short stretches of road in the world.",
-    "tip": "RVs and trailers not recommended. Descend with low gear engaged — loose gravel on the steep corners is serious.",
-    "tags": ["gravel", "switchbacks", "no-guardrails", "exposure", "mesa"],
+    "tip": "RVs and trailers not recommended. Descend with low gear engaged \u2014 loose gravel on the steep corners is serious.",
+    "tags": [
+      "gravel",
+      "switchbacks",
+      "no-guardrails",
+      "exposure",
+      "mesa"
+    ],
     "lat": 37.29,
     "lng": -109.96,
     "geometry": [
-      [37.26, -109.94],
-      [37.27, -109.95],
-      [37.29, -109.96],
-      [37.31, -109.97],
-      [37.32, -109.96]
+      [
+        37.26,
+        -109.94
+      ],
+      [
+        37.27,
+        -109.95
+      ],
+      [
+        37.29,
+        -109.96
+      ],
+      [
+        37.31,
+        -109.97
+      ],
+      [
+        37.32,
+        -109.96
+      ]
     ]
   },
   {
@@ -315,22 +618,52 @@
     "length_mi": 100,
     "difficulty": 4,
     "surface": "Good",
-    "best_season": "Oct–May",
+    "best_season": "Oct\u2013May",
     "status": "open",
     "description": "Three farm-to-market roads in the Texas Hill Country that loop through river gorges and ridgelines with tight, rhythmic corners that reward smooth, committed driving.",
-    "tip": "Leakey is the unofficial hub — fuel, food, and locals who know every mile. Spring and fall are perfect conditions.",
-    "tags": ["technical", "hill-country", "loop", "sports-car", "motorcycle"],
+    "tip": "Leakey is the unofficial hub \u2014 fuel, food, and locals who know every mile. Spring and fall are perfect conditions.",
+    "tags": [
+      "technical",
+      "hill-country",
+      "loop",
+      "sports-car",
+      "motorcycle"
+    ],
     "lat": 29.83,
     "lng": -99.55,
     "geometry": [
-      [29.72, -99.80],
-      [29.78, -99.65],
-      [29.83, -99.55],
-      [29.90, -99.40],
-      [29.97, -99.25],
-      [29.93, -99.10],
-      [29.83, -99.20],
-      [29.78, -99.40]
+      [
+        29.72,
+        -99.8
+      ],
+      [
+        29.78,
+        -99.65
+      ],
+      [
+        29.83,
+        -99.55
+      ],
+      [
+        29.9,
+        -99.4
+      ],
+      [
+        29.97,
+        -99.25
+      ],
+      [
+        29.93,
+        -99.1
+      ],
+      [
+        29.83,
+        -99.2
+      ],
+      [
+        29.78,
+        -99.4
+      ]
     ]
   },
   {
@@ -342,22 +675,53 @@
     "length_mi": 11,
     "difficulty": 5,
     "surface": "Excellent",
-    "best_season": "Apr–Nov",
+    "best_season": "Apr\u2013Nov",
     "status": "open",
     "description": "318 curves packed into 11 miles with zero intersections, zero driveways, and zero distractions. The most famous driving road in America, and it earns every bit of that reputation.",
-    "tip": "Go on a weekday morning to avoid bikes and cruisers. It's over fast — most drivers go back for a second pass.",
-    "tags": ["switchbacks", "318-curves", "no-intersections", "sports-car", "motorcycle", "iconic"],
+    "tip": "Go on a weekday morning to avoid bikes and cruisers. It's over fast \u2014 most drivers go back for a second pass.",
+    "tags": [
+      "switchbacks",
+      "318-curves",
+      "no-intersections",
+      "sports-car",
+      "motorcycle",
+      "iconic"
+    ],
     "lat": 35.47,
     "lng": -83.98,
     "geometry": [
-      [35.47, -83.99],
-      [35.48, -83.97],
-      [35.49, -83.96],
-      [35.50, -83.94],
-      [35.51, -83.93],
-      [35.50, -83.91],
-      [35.49, -83.89],
-      [35.47, -83.88]
+      [
+        35.47,
+        -83.99
+      ],
+      [
+        35.48,
+        -83.97
+      ],
+      [
+        35.49,
+        -83.96
+      ],
+      [
+        35.5,
+        -83.94
+      ],
+      [
+        35.51,
+        -83.93
+      ],
+      [
+        35.5,
+        -83.91
+      ],
+      [
+        35.49,
+        -83.89
+      ],
+      [
+        35.47,
+        -83.88
+      ]
     ]
   },
   {
@@ -369,20 +733,43 @@
     "length_mi": 28,
     "difficulty": 4,
     "surface": "Good",
-    "best_season": "Apr–Nov",
+    "best_season": "Apr\u2013Nov",
     "status": "open",
     "description": "One of the best roads in the Southeast that almost nobody talks about. 28 miles of technical switchbacks and sweeping bends through the Nantahala Forest.",
-    "tip": "Less traffic than the Dragon — locals' choice. The stretch from Fontana Dam is the most technical section.",
-    "tags": ["technical", "switchbacks", "locals-choice", "nantahala"],
+    "tip": "Less traffic than the Dragon \u2014 locals' choice. The stretch from Fontana Dam is the most technical section.",
+    "tags": [
+      "technical",
+      "switchbacks",
+      "locals-choice",
+      "nantahala"
+    ],
     "lat": 35.27,
     "lng": -83.42,
     "geometry": [
-      [35.22, -83.80],
-      [35.24, -83.65],
-      [35.27, -83.55],
-      [35.27, -83.42],
-      [35.30, -83.30],
-      [35.29, -83.18]
+      [
+        35.22,
+        -83.8
+      ],
+      [
+        35.24,
+        -83.65
+      ],
+      [
+        35.27,
+        -83.55
+      ],
+      [
+        35.27,
+        -83.42
+      ],
+      [
+        35.3,
+        -83.3
+      ],
+      [
+        35.29,
+        -83.18
+      ]
     ]
   },
   {
@@ -394,20 +781,44 @@
     "length_mi": 43,
     "difficulty": 2,
     "surface": "Excellent",
-    "best_season": "May–Nov",
+    "best_season": "May\u2013Nov",
     "status": "open",
     "description": "The less-crowded sibling to the Tail of the Dragon. 43 miles of ridge-top cruising through the Cherokee and Nantahala National Forests with almost no traffic.",
-    "tip": "Combine with the Dragon for a full day loop. Cherohala rewards smooth, flowing driving — not trail braking.",
-    "tags": ["ridge-top", "scenic", "smooth", "national-forest", "cruising"],
+    "tip": "Combine with the Dragon for a full day loop. Cherohala rewards smooth, flowing driving \u2014 not trail braking.",
+    "tags": [
+      "ridge-top",
+      "scenic",
+      "smooth",
+      "national-forest",
+      "cruising"
+    ],
     "lat": 35.38,
-    "lng": -84.20,
+    "lng": -84.2,
     "geometry": [
-      [35.26, -84.57],
-      [35.30, -84.45],
-      [35.34, -84.35],
-      [35.38, -84.20],
-      [35.37, -84.05],
-      [35.38, -83.90]
+      [
+        35.26,
+        -84.57
+      ],
+      [
+        35.3,
+        -84.45
+      ],
+      [
+        35.34,
+        -84.35
+      ],
+      [
+        35.38,
+        -84.2
+      ],
+      [
+        35.37,
+        -84.05
+      ],
+      [
+        35.38,
+        -83.9
+      ]
     ]
   },
   {
@@ -419,20 +830,44 @@
     "length_mi": 35,
     "difficulty": 2,
     "surface": "Excellent",
-    "best_season": "Sep–Oct",
+    "best_season": "Sep\u2013Oct",
     "status": "open",
     "description": "New Hampshire's 'Kanc' climbs over Kancamagus Pass through White Mountain National Forest. A genuinely flowing road with October foliage spectacle that's hard to match anywhere in the US.",
     "tip": "Peak foliage is usually the second week of October. Early morning fog in the valleys creates surreal driving conditions.",
-    "tags": ["foliage", "scenic", "flowing", "national-forest", "fall-colors"],
+    "tags": [
+      "foliage",
+      "scenic",
+      "flowing",
+      "national-forest",
+      "fall-colors"
+    ],
     "lat": 44.05,
-    "lng": -71.40,
+    "lng": -71.4,
     "geometry": [
-      [43.97, -71.68],
-      [44.00, -71.58],
-      [44.03, -71.50],
-      [44.05, -71.40],
-      [44.07, -71.28],
-      [44.06, -71.15]
+      [
+        43.97,
+        -71.68
+      ],
+      [
+        44.0,
+        -71.58
+      ],
+      [
+        44.03,
+        -71.5
+      ],
+      [
+        44.05,
+        -71.4
+      ],
+      [
+        44.07,
+        -71.28
+      ],
+      [
+        44.06,
+        -71.15
+      ]
     ]
   },
   {
@@ -444,19 +879,40 @@
     "length_mi": 5,
     "difficulty": 5,
     "surface": "Good",
-    "best_season": "May–Oct",
+    "best_season": "May\u2013Oct",
     "status": "seasonal",
     "description": "A mountain notch so narrow that boulders literally touch both sides of the road. Closed all winter. 5 miles of switchbacks and blind corners through a gap in the Green Mountains.",
-    "tip": "Cars over 21 ft are banned. This is NOT the road for wide-bodied sports cars — the clearances are measured in inches.",
-    "tags": ["narrow", "switchbacks", "boulders", "blind-corners", "seasonal-closure"],
+    "tip": "Cars over 21 ft are banned. This is NOT the road for wide-bodied sports cars \u2014 the clearances are measured in inches.",
+    "tags": [
+      "narrow",
+      "switchbacks",
+      "boulders",
+      "blind-corners",
+      "seasonal-closure"
+    ],
     "lat": 44.56,
     "lng": -72.79,
     "geometry": [
-      [44.49, -72.82],
-      [44.52, -72.80],
-      [44.56, -72.79],
-      [44.59, -72.78],
-      [44.63, -72.77]
+      [
+        44.49,
+        -72.82
+      ],
+      [
+        44.52,
+        -72.8
+      ],
+      [
+        44.56,
+        -72.79
+      ],
+      [
+        44.59,
+        -72.78
+      ],
+      [
+        44.63,
+        -72.77
+      ]
     ]
   },
   {
@@ -468,21 +924,48 @@
     "length_mi": 105,
     "difficulty": 1,
     "surface": "Excellent",
-    "best_season": "Apr–Nov",
+    "best_season": "Apr\u2013Nov",
     "status": "open",
-    "description": "The ridge road through Shenandoah National Park. 35mph limit, 75 overlooks, and near-zero traffic midweek — one of the most relaxing drives on the East Coast.",
+    "description": "The ridge road through Shenandoah National Park. 35mph limit, 75 overlooks, and near-zero traffic midweek \u2014 one of the most relaxing drives on the East Coast.",
     "tip": "Enter at Rockfish Gap (South Entrance) and drive north for better mid-afternoon light on the valley views.",
-    "tags": ["scenic", "national-park", "ridge-top", "overlooks", "relaxed"],
-    "lat": 38.50,
-    "lng": -78.50,
+    "tags": [
+      "scenic",
+      "national-park",
+      "ridge-top",
+      "overlooks",
+      "relaxed"
+    ],
+    "lat": 38.5,
+    "lng": -78.5,
     "geometry": [
-      [38.88, -78.19],
-      [38.75, -78.25],
-      [38.60, -78.35],
-      [38.50, -78.50],
-      [38.38, -78.60],
-      [38.22, -78.72],
-      [38.05, -78.87]
+      [
+        38.88,
+        -78.19
+      ],
+      [
+        38.75,
+        -78.25
+      ],
+      [
+        38.6,
+        -78.35
+      ],
+      [
+        38.5,
+        -78.5
+      ],
+      [
+        38.38,
+        -78.6
+      ],
+      [
+        38.22,
+        -78.72
+      ],
+      [
+        38.05,
+        -78.87
+      ]
     ]
   },
   {
@@ -497,16 +980,1000 @@
     "best_season": "Year-round",
     "status": "open",
     "description": "The Bay Area's legendary sports car road: 10 miles of tight, technical bends between Woodside and La Honda through second-growth redwoods. A short road with a massive following.",
-    "tip": "Cyclists own this road — they're there every weekend. Find your gap patiently; there is no safe passing on the descent.",
-    "tags": ["technical", "redwoods", "short", "sports-car", "cult-classic"],
+    "tip": "Cyclists own this road \u2014 they're there every weekend. Find your gap patiently; there is no safe passing on the descent.",
+    "tags": [
+      "technical",
+      "redwoods",
+      "short",
+      "sports-car",
+      "cult-classic"
+    ],
     "lat": 37.38,
     "lng": -122.22,
     "geometry": [
-      [37.38, -122.25],
-      [37.37, -122.22],
-      [37.37, -122.18],
-      [37.38, -122.14],
-      [37.38, -122.10]
+      [
+        37.38,
+        -122.25
+      ],
+      [
+        37.37,
+        -122.22
+      ],
+      [
+        37.37,
+        -122.18
+      ],
+      [
+        37.38,
+        -122.14
+      ],
+      [
+        37.38,
+        -122.1
+      ]
+    ]
+  },
+  {
+    "id": "tamiami-trail",
+    "name": "Tamiami Trail (US-41)",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "Everglades",
+    "length_mi": 275,
+    "difficulty": 1,
+    "surface": "Good",
+    "best_season": "Nov\u2013Apr",
+    "status": "open",
+    "description": "Dead-straight slash through the Everglades from Miami to Naples. Zero traffic at dawn, alligators baking on the shoulder, and a road so flat it becomes meditative. Pull over at Shark Valley for a sunrise that will reset your brain.",
+    "tip": "Leave Miami before sunrise. The golden hour over the river of grass is otherworldly and traffic is nonexistent.",
+    "tags": [
+      "flat",
+      "scenic",
+      "everglades",
+      "wildlife",
+      "sunrise"
+    ],
+    "lat": 25.75,
+    "lng": -80.9,
+    "geometry": [
+      [
+        25.76,
+        -80.38
+      ],
+      [
+        25.75,
+        -80.7
+      ],
+      [
+        25.74,
+        -81.1
+      ],
+      [
+        25.76,
+        -81.4
+      ],
+      [
+        25.93,
+        -81.7
+      ],
+      [
+        26.14,
+        -81.79
+      ]
+    ]
+  },
+  {
+    "id": "card-sound-road",
+    "name": "Card Sound Road (CR-905)",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "Causeway / Coastal",
+    "length_mi": 22,
+    "difficulty": 1,
+    "surface": "Excellent",
+    "best_season": "Year-round",
+    "status": "open",
+    "description": "The locals-only alternative to US-1 into the Keys. A sweeping toll bridge over turquoise Card Sound Bay, flanked by mangroves and zero tourist traffic. The best way to enter Key Largo by a mile.",
+    "tip": "Only  toll. Go early morning \u2014 the water turns brilliant teal in morning light and you will have the bridge to yourself.",
+    "tags": [
+      "coastal",
+      "bridge",
+      "keys",
+      "low-traffic",
+      "scenic"
+    ],
+    "lat": 25.33,
+    "lng": -80.38,
+    "geometry": [
+      [
+        25.46,
+        -80.33
+      ],
+      [
+        25.38,
+        -80.35
+      ],
+      [
+        25.33,
+        -80.38
+      ],
+      [
+        25.25,
+        -80.4
+      ],
+      [
+        25.19,
+        -80.42
+      ]
+    ]
+  },
+  {
+    "id": "overseas-highway",
+    "name": "Overseas Highway (US-1) \u2014 The Keys",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "Causeway / Island Hop",
+    "length_mi": 113,
+    "difficulty": 1,
+    "surface": "Good",
+    "best_season": "Nov\u2013May",
+    "status": "open",
+    "description": "42 bridges stitching together the Florida Keys \u2014 ocean on both sides, sky above, and nowhere else like it on earth. Seven Mile Bridge is the highlight. Traffic can stack up but sunrise runs are magic.",
+    "tip": "Drive south to Key West at dawn, return at dusk \u2014 you get the sun behind you both ways and the light on the water is perfect.",
+    "tags": [
+      "iconic",
+      "coastal",
+      "bridge",
+      "keys",
+      "convertible-friendly"
+    ],
+    "lat": 24.92,
+    "lng": -81.1,
+    "geometry": [
+      [
+        25.19,
+        -80.42
+      ],
+      [
+        25.08,
+        -80.55
+      ],
+      [
+        24.96,
+        -80.76
+      ],
+      [
+        24.74,
+        -81.0
+      ],
+      [
+        24.62,
+        -81.32
+      ],
+      [
+        24.55,
+        -81.6
+      ],
+      [
+        24.46,
+        -81.8
+      ],
+      [
+        24.56,
+        -81.81
+      ]
+    ]
+  },
+  {
+    "id": "alligator-alley",
+    "name": "Alligator Alley (I-75)",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "Everglades Crossing",
+    "length_mi": 78,
+    "difficulty": 1,
+    "surface": "Excellent",
+    "best_season": "Nov\u2013Apr",
+    "status": "open",
+    "description": "Perfectly flat, perfectly straight 78-mile toll road slicing through Big Cypress. The road itself is nothing \u2014 the experience is everything. Panthers, alligators, and absolute wilderness on both sides at 75 mph.",
+    "tip": "Pull into the rest area at mile marker 63 just after sunrise. Nothing around you but sawgrass and sky.",
+    "tags": [
+      "flat",
+      "straight",
+      "everglades",
+      "wildlife",
+      "sunrise"
+    ],
+    "lat": 26.14,
+    "lng": -81.0,
+    "geometry": [
+      [
+        26.07,
+        -80.31
+      ],
+      [
+        26.1,
+        -80.7
+      ],
+      [
+        26.14,
+        -81.2
+      ],
+      [
+        26.14,
+        -81.5
+      ],
+      [
+        26.14,
+        -81.7
+      ],
+      [
+        26.14,
+        -81.79
+      ]
+    ]
+  },
+  {
+    "id": "south-dixie-highway-florida-city",
+    "name": "South Dixie Highway \u2014 Homestead Stretch (US-1)",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "Urban Fringe",
+    "length_mi": 30,
+    "difficulty": 1,
+    "surface": "Good",
+    "best_season": "Year-round",
+    "status": "open",
+    "description": "US-1 south of Miami through Homestead to Florida City. Opens up into long straights lined with farm stands and nurseries. Not glamorous \u2014 but at 5 AM on a Sunday it is wide, empty, and addictive.",
+    "tip": "Best between 5\u20137 AM on weekends. Traffic thins completely and the road opens up past Cutler Bay.",
+    "tags": [
+      "straight",
+      "early-morning",
+      "low-traffic",
+      "urban-fringe"
+    ],
+    "lat": 25.48,
+    "lng": -80.47,
+    "geometry": [
+      [
+        25.65,
+        -80.34
+      ],
+      [
+        25.57,
+        -80.37
+      ],
+      [
+        25.48,
+        -80.42
+      ],
+      [
+        25.39,
+        -80.47
+      ],
+      [
+        25.26,
+        -80.5
+      ]
+    ]
+  },
+  {
+    "id": "krome-avenue",
+    "name": "Krome Avenue (SR-997)",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "Rural Straight",
+    "length_mi": 40,
+    "difficulty": 1,
+    "surface": "Good",
+    "best_season": "Year-round",
+    "status": "open",
+    "description": "Dead straight 40-mile corridor through the agricultural west Miami-Dade flats. No traffic lights for miles. At 5 AM it might be the emptiest road in South Florida. Locals use it to blast between Homestead and Hialeah.",
+    "tip": "Enter from the south end in Florida City. Pre-dawn is peak \u2014 you will barely see another car for 30 miles.",
+    "tags": [
+      "straight",
+      "flat",
+      "empty",
+      "early-morning",
+      "rural"
+    ],
+    "lat": 25.58,
+    "lng": -80.54,
+    "geometry": [
+      [
+        25.27,
+        -80.52
+      ],
+      [
+        25.38,
+        -80.53
+      ],
+      [
+        25.48,
+        -80.54
+      ],
+      [
+        25.58,
+        -80.54
+      ],
+      [
+        25.68,
+        -80.54
+      ],
+      [
+        25.78,
+        -80.54
+      ],
+      [
+        25.88,
+        -80.54
+      ]
+    ]
+  },
+  {
+    "id": "snake-road-florida",
+    "name": "Snake Road (CR-833 / SW 8th Ave)",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "Back Road",
+    "length_mi": 15,
+    "difficulty": 2,
+    "surface": "Fair",
+    "best_season": "Nov\u2013Mar",
+    "status": "open",
+    "description": "A winding two-lane through the Big Cypress semi-wild area west of Homestead. Actual curves \u2014 rare in South Florida \u2014 with cypress hammocks pressing in from both sides. Light is stunning in the dry season.",
+    "tip": "Dry season only (Nov\u2013Mar). Wet season flooding can close sections. Zero cell service \u2014 enjoy it.",
+    "tags": [
+      "winding",
+      "rural",
+      "back-road",
+      "wildlife",
+      "scenic"
+    ],
+    "lat": 25.5,
+    "lng": -80.67,
+    "geometry": [
+      [
+        25.56,
+        -80.61
+      ],
+      [
+        25.53,
+        -80.64
+      ],
+      [
+        25.5,
+        -80.67
+      ],
+      [
+        25.47,
+        -80.7
+      ],
+      [
+        25.44,
+        -80.73
+      ]
+    ]
+  },
+  {
+    "id": "a1a-fort-lauderdale",
+    "name": "A1A Coastal Highway \u2014 Fort Lauderdale to Boca Raton",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "Coastal",
+    "length_mi": 30,
+    "difficulty": 1,
+    "surface": "Good",
+    "best_season": "Year-round",
+    "status": "open",
+    "description": "Ocean on the left, mansions and yachts on the right. A1A from Fort Lauderdale south through Deerfield Beach to Boca is the quintessential South Florida cruise \u2014 especially at dusk on a Friday.",
+    "tip": "Avoid midday on weekends. Dawn or dusk gives you golden light off the Atlantic and no traffic.",
+    "tags": [
+      "coastal",
+      "scenic",
+      "cruise",
+      "convertible-friendly",
+      "oceanfront"
+    ],
+    "lat": 26.12,
+    "lng": -80.08,
+    "geometry": [
+      [
+        26.37,
+        -80.09
+      ],
+      [
+        26.27,
+        -80.08
+      ],
+      [
+        26.19,
+        -80.08
+      ],
+      [
+        26.12,
+        -80.09
+      ],
+      [
+        26.02,
+        -80.1
+      ],
+      [
+        25.92,
+        -80.13
+      ],
+      [
+        25.85,
+        -80.12
+      ]
+    ]
+  },
+  {
+    "id": "a1a-miami-beach",
+    "name": "A1A \u2014 Miami Beach (Collins Ave)",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "Coastal / Urban",
+    "length_mi": 12,
+    "difficulty": 2,
+    "surface": "Good",
+    "best_season": "Year-round",
+    "status": "open",
+    "description": "Collins Avenue from South Beach north through Mid-Beach and Bal Harbour. Art Deco hotels, palm trees, and Atlantic ocean. More experience than driving performance \u2014 but in the right car, at the right hour, it delivers.",
+    "tip": "Sunday 6 AM \u2014 the road is empty, beach crews are out, and the light is golden. You will have Collins almost to yourself.",
+    "tags": [
+      "coastal",
+      "urban",
+      "cruise",
+      "iconic",
+      "convertible-friendly"
+    ],
+    "lat": 25.82,
+    "lng": -80.12,
+    "geometry": [
+      [
+        25.77,
+        -80.13
+      ],
+      [
+        25.79,
+        -80.12
+      ],
+      [
+        25.82,
+        -80.12
+      ],
+      [
+        25.85,
+        -80.12
+      ],
+      [
+        25.88,
+        -80.12
+      ],
+      [
+        25.9,
+        -80.12
+      ]
+    ]
+  },
+  {
+    "id": "highway-27-florida",
+    "name": "US-27 \u2014 Clewiston to Sebring",
+    "region": "South Florida",
+    "state": "FL",
+    "type": "Rural / Lake",
+    "length_mi": 65,
+    "difficulty": 1,
+    "surface": "Good",
+    "best_season": "Nov\u2013Apr",
+    "status": "open",
+    "description": "US-27 hugging the western shore of Lake Okeechobee north to Sebring. Long, wide, and smooth through sugarcane fields and small towns. Minimal traffic and surprisingly good surface for its length.",
+    "tip": "Pair it with a stop at Sebring International Raceway \u2014 the oldest road course in the US is a required pilgrimage.",
+    "tags": [
+      "flat",
+      "rural",
+      "lake",
+      "low-traffic",
+      "scenic"
+    ],
+    "lat": 26.75,
+    "lng": -80.93,
+    "geometry": [
+      [
+        26.45,
+        -80.94
+      ],
+      [
+        26.65,
+        -80.93
+      ],
+      [
+        26.75,
+        -80.93
+      ],
+      [
+        26.95,
+        -80.92
+      ],
+      [
+        27.15,
+        -81.2
+      ],
+      [
+        27.4,
+        -81.32
+      ],
+      [
+        27.5,
+        -81.44
+      ]
+    ]
+  },
+  {
+    "id": "lake-okeechobee-scenic-highway",
+    "name": "Lake Okeechobee Scenic Highway",
+    "region": "South Florida",
+    "state": "FL",
+    "type": "Lakeside Loop",
+    "length_mi": 110,
+    "difficulty": 1,
+    "surface": "Good",
+    "best_season": "Nov\u2013Apr",
+    "status": "open",
+    "description": "Full loop around Lake Okeechobee \u2014 second-largest freshwater lake entirely within the US. Atop the Herbert Hoover Dike, the road gives an almost aerial view of the lake and surrounding marshes.",
+    "tip": "Ride the top of the dike section between Clewiston and Moore Haven at sunset \u2014 nothing around but water, grass, and sky.",
+    "tags": [
+      "scenic",
+      "lake",
+      "flat",
+      "loop",
+      "wildlife"
+    ],
+    "lat": 26.93,
+    "lng": -80.8,
+    "geometry": [
+      [
+        26.65,
+        -80.94
+      ],
+      [
+        26.75,
+        -80.93
+      ],
+      [
+        26.93,
+        -80.8
+      ],
+      [
+        27.15,
+        -80.7
+      ],
+      [
+        27.15,
+        -80.83
+      ],
+      [
+        27.0,
+        -80.94
+      ],
+      [
+        26.75,
+        -80.93
+      ]
+    ]
+  },
+  {
+    "id": "old-cutler-road",
+    "name": "Old Cutler Road",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "Canopy Road",
+    "length_mi": 12,
+    "difficulty": 2,
+    "surface": "Good",
+    "best_season": "Year-round",
+    "status": "open",
+    "description": "The most beautiful urban road in Miami. A sweeping, winding two-lane under a full canopy of old-growth banyan and live oak trees. Flanks Biscayne Bay through Coral Gables and Pinecrest. Actual curves \u2014 in Miami.",
+    "tip": "Hit it right after sunrise on a weekday. The dappled light through the tree canopy is unlike anything else in South Florida. Low traffic before 8 AM.",
+    "tags": [
+      "canopy",
+      "winding",
+      "scenic",
+      "urban",
+      "low-traffic"
+    ],
+    "lat": 25.65,
+    "lng": -80.31,
+    "geometry": [
+      [
+        25.72,
+        -80.28
+      ],
+      [
+        25.69,
+        -80.29
+      ],
+      [
+        25.66,
+        -80.3
+      ],
+      [
+        25.63,
+        -80.31
+      ],
+      [
+        25.6,
+        -80.33
+      ],
+      [
+        25.57,
+        -80.35
+      ]
+    ]
+  },
+  {
+    "id": "bird-road-miami",
+    "name": "Bird Road (SW 40th St) to Coral Gables",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "Urban Cruise",
+    "length_mi": 8,
+    "difficulty": 2,
+    "surface": "Good",
+    "best_season": "Year-round",
+    "status": "open",
+    "description": "Through Coral Gables into the Gables Waterway area. Mediterranean architecture, tree-lined roundabouts, and low speed bumps \u2014 but at 6 AM on a Sunday the roundabouts and sweeping exits are almost car-centric.",
+    "tip": "Early Sunday mornings only. Explore the maze of Coral Gables streets around Miracle Mile for bonus atmosphere.",
+    "tags": [
+      "urban",
+      "cruise",
+      "early-morning",
+      "architecture",
+      "coral-gables"
+    ],
+    "lat": 25.72,
+    "lng": -80.3,
+    "geometry": [
+      [
+        25.73,
+        -80.22
+      ],
+      [
+        25.72,
+        -80.27
+      ],
+      [
+        25.71,
+        -80.3
+      ],
+      [
+        25.71,
+        -80.35
+      ]
+    ]
+  },
+  {
+    "id": "corkscrew-road",
+    "name": "Corkscrew Road (CR-850)",
+    "region": "Southwest Florida",
+    "state": "FL",
+    "type": "Rural / Swamp",
+    "length_mi": 25,
+    "difficulty": 2,
+    "surface": "Fair",
+    "best_season": "Nov\u2013Apr",
+    "status": "open",
+    "description": "Winding two-lane through cypress swamp and ranch land between Bonita Springs and Immokalee. Genuine bends, dense canopy overhead, wildlife crossings. The most interesting road between Naples and Fort Lauderdale.",
+    "tip": "Watch for sandhill cranes, deer, and the occasional Florida panther crossing. Drive slowly enough to actually see them.",
+    "tags": [
+      "winding",
+      "swamp",
+      "wildlife",
+      "canopy",
+      "rural"
+    ],
+    "lat": 26.35,
+    "lng": -81.55,
+    "geometry": [
+      [
+        26.34,
+        -81.79
+      ],
+      [
+        26.35,
+        -81.6
+      ],
+      [
+        26.38,
+        -81.45
+      ],
+      [
+        26.4,
+        -81.3
+      ],
+      [
+        26.42,
+        -81.15
+      ]
+    ]
+  },
+  {
+    "id": "immokalee-road",
+    "name": "Immokalee Road (CR-846) \u2014 East of Naples",
+    "region": "Southwest Florida",
+    "state": "FL",
+    "type": "Rural Back Road",
+    "length_mi": 30,
+    "difficulty": 1,
+    "surface": "Excellent",
+    "best_season": "Nov\u2013Apr",
+    "status": "open",
+    "description": "Wide, freshly paved two-lane from Naples northeast into Immokalee through open ranchland. Completely empty at dawn \u2014 stretches of 10+ miles with no traffic signals, no cross streets, nothing but road.",
+    "tip": "Head east from the I-75 overpass at dawn. You will have a fresh-paved straight virtually to yourself.",
+    "tags": [
+      "straight",
+      "rural",
+      "empty",
+      "early-morning",
+      "ranch"
+    ],
+    "lat": 26.35,
+    "lng": -81.3,
+    "geometry": [
+      [
+        26.28,
+        -81.73
+      ],
+      [
+        26.31,
+        -81.5
+      ],
+      [
+        26.35,
+        -81.3
+      ],
+      [
+        26.4,
+        -81.0
+      ],
+      [
+        26.43,
+        -80.75
+      ]
+    ]
+  },
+  {
+    "id": "a1a-palm-beach",
+    "name": "A1A \u2014 Palm Beach Island",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "Coastal / Exclusive",
+    "length_mi": 14,
+    "difficulty": 1,
+    "surface": "Excellent",
+    "best_season": "Year-round",
+    "status": "open",
+    "description": "The narrow barrier island strip of Palm Beach \u2014 ocean on one side, the Intracoastal and the most expensive real estate in Florida on the other. A1A here is immaculate, low-speed, and cinematic.",
+    "tip": "Drive it at sunset heading south. The light off the Atlantic and the mansions behind you is peak Florida luxury.",
+    "tags": [
+      "coastal",
+      "scenic",
+      "exclusive",
+      "cruise",
+      "convertible-friendly"
+    ],
+    "lat": 26.68,
+    "lng": -80.04,
+    "geometry": [
+      [
+        26.73,
+        -80.04
+      ],
+      [
+        26.7,
+        -80.04
+      ],
+      [
+        26.68,
+        -80.04
+      ],
+      [
+        26.65,
+        -80.05
+      ],
+      [
+        26.62,
+        -80.06
+      ],
+      [
+        26.6,
+        -80.07
+      ]
+    ]
+  },
+  {
+    "id": "florida-city-to-flamingo",
+    "name": "Main Park Road \u2014 Everglades NP (to Flamingo)",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "National Park",
+    "length_mi": 38,
+    "difficulty": 1,
+    "surface": "Good",
+    "best_season": "Nov\u2013Apr",
+    "status": "open",
+    "description": "The only road through Everglades National Park, dead-ending at Flamingo on Florida Bay. Sawgrass prairie, mangrove tunnels, and prehistoric-quiet. Sunrise light on the marsh is incomparable.",
+    "tip": "Gate opens at sunrise. Get there at first light \u2014 the low-angle sun on the sawgrass and the guaranteed alligator sightings make it worth the early start.",
+    "tags": [
+      "national-park",
+      "flat",
+      "scenic",
+      "wildlife",
+      "sunrise"
+    ],
+    "lat": 25.37,
+    "lng": -80.74,
+    "geometry": [
+      [
+        25.39,
+        -80.54
+      ],
+      [
+        25.37,
+        -80.7
+      ],
+      [
+        25.33,
+        -80.85
+      ],
+      [
+        25.2,
+        -81.0
+      ],
+      [
+        25.14,
+        -81.09
+      ],
+      [
+        25.14,
+        -81.08
+      ]
+    ]
+  },
+  {
+    "id": "florida-turnpike-homestead",
+    "name": "Florida Turnpike \u2014 Homestead Extension (SR-821)",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "Toll Highway",
+    "length_mi": 47,
+    "difficulty": 1,
+    "surface": "Excellent",
+    "best_season": "Year-round",
+    "status": "open",
+    "description": "The cleanest, fastest road in South Florida. SR-821 south from Miramar into Homestead \u2014 wide, well-paved, and nearly empty from 11 PM to 5 AM. The de facto midnight cruise route for Miami car culture.",
+    "tip": "Late night or 4\u20136 AM is the move. The toll lanes keep casual traffic off and the surface is excellent throughout.",
+    "tags": [
+      "highway",
+      "fast",
+      "smooth",
+      "late-night",
+      "cruise"
+    ],
+    "lat": 25.7,
+    "lng": -80.42,
+    "geometry": [
+      [
+        25.98,
+        -80.37
+      ],
+      [
+        25.87,
+        -80.39
+      ],
+      [
+        25.77,
+        -80.41
+      ],
+      [
+        25.68,
+        -80.42
+      ],
+      [
+        25.57,
+        -80.45
+      ],
+      [
+        25.46,
+        -80.49
+      ]
+    ]
+  },
+  {
+    "id": "tigertail-lake-road",
+    "name": "Tigertail Lake Road Area \u2014 Dade City",
+    "region": "Central Florida",
+    "state": "FL",
+    "type": "Hill Country (FL)",
+    "length_mi": 20,
+    "difficulty": 2,
+    "surface": "Good",
+    "best_season": "Year-round",
+    "status": "open",
+    "description": "Dade City sits in the highest elevation of peninsular Florida \u2014 the \"hills\" here are gentle rolls but they translate into actual undulation, something almost nonexistent in the state. The back roads east of town dip and weave through orange groves and old Florida.",
+    "tip": "Explore the grid of county roads east of US-98 around Lake Jovita. The elevation changes are subtle but real, and traffic is essentially zero.",
+    "tags": [
+      "rolling",
+      "rural",
+      "citrus",
+      "low-traffic",
+      "back-road"
+    ],
+    "lat": 28.36,
+    "lng": -82.19,
+    "geometry": [
+      [
+        28.34,
+        -82.23
+      ],
+      [
+        28.36,
+        -82.19
+      ],
+      [
+        28.39,
+        -82.15
+      ],
+      [
+        28.42,
+        -82.12
+      ]
+    ]
+  },
+  {
+    "id": "sugarloaf-key-loop",
+    "name": "Sugarloaf Key Back Roads",
+    "region": "Southeast",
+    "state": "FL",
+    "type": "Keys Back Road",
+    "length_mi": 10,
+    "difficulty": 1,
+    "surface": "Good",
+    "best_season": "Year-round",
+    "status": "open",
+    "description": "The side roads threading through Sugarloaf Key and Cudjoe Key off US-1. Narrow lanes flanked by mangroves, random chickee huts, and total silence. No destination \u2014 the wandering is the point.",
+    "tip": "Leave US-1 and just explore. Turn down any road with trees over it. You will end up somewhere beautiful with your car and zero other people.",
+    "tags": [
+      "keys",
+      "back-road",
+      "mangroves",
+      "peaceful",
+      "winding"
+    ],
+    "lat": 24.66,
+    "lng": -81.56,
+    "geometry": [
+      [
+        24.69,
+        -81.53
+      ],
+      [
+        24.67,
+        -81.55
+      ],
+      [
+        24.66,
+        -81.56
+      ],
+      [
+        24.64,
+        -81.58
+      ],
+      [
+        24.63,
+        -81.6
+      ]
     ]
   }
 ]

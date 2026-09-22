@@ -1,5 +1,5 @@
 /* ============================================================
-   Atlas — API Server (Express + in-memory store)
+   Culture — API Server (Express + in-memory store)
    ============================================================ */
 
 const express  = require('express');
@@ -12,7 +12,7 @@ const fs       = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const JWT_SECRET = process.env.JWT_SECRET || 'atlas-jwt-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'culture-jwt-secret-change-in-production';
 const IS_VERCEL  = !!process.env.VERCEL;
 
 // ── Uploads directory ─────────────────────────────────────────
@@ -443,8 +443,8 @@ async function seed() {
 
   const hash = await bcrypt.hash('atlas123', 10);
   const teamUser = {
-    id: nextUserId++, name: 'Atlas Team', email: 'team@atlas.app',
-    password: hash, avatar: null, bio: 'The official Atlas account.',
+    id: nextUserId++, name: 'Culture Team', email: 'team@culture.app',
+    password: hash, avatar: null, bio: 'The official Culture account.',
     plan: 'Explorer', created_at: now(),
   };
   users.push(teamUser);
@@ -484,7 +484,7 @@ async function seed() {
     { title: 'Brembo GT Brake Kit — M4 Front', price: '$3,800', category: 'Mods', description: 'Six-piston Brembo GT kit for F8x M3/M4. Includes 380mm slotted discs and pads. Barely used.' },
   ];
   for (const l of demoListings) {
-    listings.push({ id: nextListingId++, user_id: teamUser.id, image_url: null, contact: 'team@atlas.app', ...l, created_at: now() });
+    listings.push({ id: nextListingId++, user_id: teamUser.id, image_url: null, contact: 'team@culture.app', ...l, created_at: now() });
   }
 
   // Seed demo community roads
@@ -503,7 +503,7 @@ async function seed() {
 
 if (require.main === module) {
   seed().then(() => {
-    app.listen(PORT, () => console.log(`Atlas API running on http://localhost:${PORT}`));
+    app.listen(PORT, () => console.log(`Culture API running on http://localhost:${PORT}`));
   });
 } else {
   seed().catch(console.error);

@@ -1,5 +1,5 @@
 /* ============================================================
-   Atlas — App JS
+   Culture — App JS
    ============================================================ */
 
 const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -8,7 +8,7 @@ const API = (window.location.hostname === 'localhost' || window.location.hostnam
 
 // ── Nav auth (shared with community page) ─────────────────────
 (async () => {
-  const token = localStorage.getItem('atlas-token');
+  const token = localStorage.getItem('culture-token');
   const navAuth = document.getElementById('navAuth');
   if (!navAuth) return;
 
@@ -22,7 +22,7 @@ const API = (window.location.hostname === 'localhost' || window.location.hostnam
 
   try {
     const res = await fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) { localStorage.removeItem('atlas-token'); return; }
+    if (!res.ok) { localStorage.removeItem('culture-token'); return; }
     const { user } = await res.json();
     const initials = user.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
     navAuth.innerHTML = `
@@ -33,7 +33,7 @@ const API = (window.location.hostname === 'localhost' || window.location.hostnam
       <button class="nav-signout-btn" id="navSignOutBtn">Sign Out</button>
     `;
     document.getElementById('navSignOutBtn').addEventListener('click', () => {
-      localStorage.removeItem('atlas-token');
+      localStorage.removeItem('culture-token');
       window.location.reload();
     });
   } catch {}
@@ -41,14 +41,14 @@ const API = (window.location.hostname === 'localhost' || window.location.hostnam
 
 // ── Theme Toggle ──────────────────────────────────────────────
 const themeToggle = document.getElementById('themeToggle');
-const savedTheme = localStorage.getItem('atlas-theme') || 'light';
+const savedTheme = localStorage.getItem('culture-theme') || 'light';
 document.documentElement.setAttribute('data-theme', savedTheme);
 
 themeToggle.addEventListener('click', () => {
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('atlas-theme', next);
+  localStorage.setItem('culture-theme', next);
   updateMapTiles(next);
 });
 
@@ -533,8 +533,8 @@ function initMap() {
 
   // Add markers for all featured places
   const markerIcon = L.divIcon({
-    className: 'atlas-marker',
-    html: '<div class="atlas-marker-inner"></div>',
+    className: 'culture-marker',
+    html: '<div class="culture-marker-inner"></div>',
     iconSize: [18, 18],
     iconAnchor: [9, 9],
     popupAnchor: [0, -12],
@@ -680,10 +680,10 @@ contactForm.addEventListener('submit', e => {
   const subjectLabel = subjectEl.options[subjectEl.selectedIndex].text || 'General Inquiry';
   const messageVal = document.getElementById('message').value.trim();
 
-  const mailSubject = encodeURIComponent(`[Atlas] ${subjectLabel}`);
+  const mailSubject = encodeURIComponent(`[Culture] ${subjectLabel}`);
   const mailBody    = encodeURIComponent(`From: ${nameVal} <${emailVal}>\n\n${messageVal}`);
 
-  window.location.href = `mailto:hello@atlas.app?subject=${mailSubject}&body=${mailBody}`;
+  window.location.href = `mailto:hello@culture.app?subject=${mailSubject}&body=${mailBody}`;
 
   setTimeout(() => {
     contactForm.reset();
@@ -967,11 +967,11 @@ backToTop.addEventListener('click', () => {
 // ── Modals ────────────────────────────────────────────────────
 const MODAL_CONTENT = {
   about: {
-    title: 'About Atlas',
+    title: 'About Culture',
     body: `
-      <p>Atlas is the definitive guide to America's best driving roads — built by enthusiasts, for enthusiasts. We map, rate, and document the roads that make driving worth doing.</p>
+      <p>Culture is the definitive guide to America's best driving roads — built by enthusiasts, for enthusiasts. We map, rate, and document the roads that make driving worth doing.</p>
       <h4>Our Mission</h4>
-      <p>There are thousands of incredible roads in America that most drivers will never discover. Atlas exists to change that. We believe the best drive of your life is still out there, and we're here to help you find it.</p>
+      <p>There are thousands of incredible roads in America that most drivers will never discover. Culture exists to change that. We believe the best drive of your life is still out there, and we're here to help you find it.</p>
       <h4>What We Build</h4>
       <ul>
         <li>1,200+ mapped and rated driving roads across all 50 states</li>
@@ -981,7 +981,7 @@ const MODAL_CONTENT = {
         <li>Offline-first maps that work in the deepest canyons</li>
       </ul>
       <h4>Our Community</h4>
-      <p>Atlas is powered by a community of sports car owners, motorcycle riders, classic car enthusiasts, and anyone who believes a great road is worth going out of your way for. Every review, rating, and road report comes from real drivers who've been there.</p>
+      <p>Culture is powered by a community of sports car owners, motorcycle riders, classic car enthusiasts, and anyone who believes a great road is worth going out of your way for. Every review, rating, and road report comes from real drivers who've been there.</p>
       <p style="margin-top:1.5rem;color:var(--color-text-muted);font-size:0.9rem;">Founded in 2022 &middot; Headquartered in Asheville, NC &middot; Near the Tail of the Dragon</p>
     `,
   },
@@ -1017,10 +1017,10 @@ const MODAL_CONTENT = {
     body: `
       <p><em>Effective date: January 1, 2026</em></p>
       <h4>Information We Collect</h4>
-      <p>Atlas collects only the information necessary to provide our services. This includes account information you provide, location data when you use navigation features (with your permission), and anonymised usage analytics to improve the product.</p>
+      <p>Culture collects only the information necessary to provide our services. This includes account information you provide, location data when you use navigation features (with your permission), and anonymised usage analytics to improve the product.</p>
       <h4>How We Use Your Data</h4>
       <ul>
-        <li>To provide and improve Atlas services</li>
+        <li>To provide and improve Culture services</li>
         <li>To personalise your exploration experience</li>
         <li>To send product updates you've opted in to</li>
         <li>To ensure the security of your account</li>
@@ -1028,11 +1028,11 @@ const MODAL_CONTENT = {
       <h4>Data Storage &amp; Security</h4>
       <p>All personal data is encrypted at rest and in transit using AES-256 and TLS 1.3. Location history is stored locally on your device by default and only synced to our servers with explicit consent.</p>
       <h4>We Never Sell Your Data</h4>
-      <p>Atlas does not sell, rent, or share your personal information with third parties for marketing purposes. Full stop.</p>
+      <p>Culture does not sell, rent, or share your personal information with third parties for marketing purposes. Full stop.</p>
       <h4>Your Rights</h4>
-      <p>You may request access to, correction of, or deletion of your personal data at any time by contacting <a href="mailto:privacy@atlas.app">privacy@atlas.app</a>.</p>
+      <p>You may request access to, correction of, or deletion of your personal data at any time by contacting <a href="mailto:privacy@culture.app">privacy@culture.app</a>.</p>
       <h4>Contact</h4>
-      <p>Questions? Email us at <a href="mailto:privacy@atlas.app">privacy@atlas.app</a>.</p>
+      <p>Questions? Email us at <a href="mailto:privacy@culture.app">privacy@culture.app</a>.</p>
     `,
   },
   terms: {
@@ -1040,9 +1040,9 @@ const MODAL_CONTENT = {
     body: `
       <p><em>Effective date: January 1, 2026</em></p>
       <h4>Acceptance of Terms</h4>
-      <p>By accessing or using Atlas, you agree to be bound by these Terms of Service. If you do not agree, please do not use our services.</p>
+      <p>By accessing or using Culture, you agree to be bound by these Terms of Service. If you do not agree, please do not use our services.</p>
       <h4>Use of Service</h4>
-      <p>Atlas grants you a limited, non-exclusive, non-transferable licence to use our platform for personal, non-commercial exploration and navigation purposes.</p>
+      <p>Culture grants you a limited, non-exclusive, non-transferable licence to use our platform for personal, non-commercial exploration and navigation purposes.</p>
       <h4>Prohibited Activities</h4>
       <ul>
         <li>Scraping or bulk downloading of map data</li>
@@ -1051,13 +1051,13 @@ const MODAL_CONTENT = {
         <li>Submitting false or misleading location data</li>
       </ul>
       <h4>Intellectual Property</h4>
-      <p>All Atlas content, including maps, designs, and software, is owned by Atlas or its licensors. Map data is provided under OpenStreetMap's ODbL licence where applicable.</p>
+      <p>All Culture content, including maps, designs, and software, is owned by Culture or its licensors. Map data is provided under OpenStreetMap's ODbL licence where applicable.</p>
       <h4>Limitation of Liability</h4>
-      <p>Atlas is provided "as is". We are not liable for navigation errors, inaccurate map data, or any consequences of relying solely on Atlas for navigation in safety-critical situations.</p>
+      <p>Culture is provided "as is". We are not liable for navigation errors, inaccurate map data, or any consequences of relying solely on Culture for navigation in safety-critical situations.</p>
       <h4>Changes to Terms</h4>
-      <p>We may update these terms with reasonable notice. Continued use of Atlas after updates constitutes acceptance.</p>
+      <p>We may update these terms with reasonable notice. Continued use of Culture after updates constitutes acceptance.</p>
       <h4>Contact</h4>
-      <p>Questions? Email <a href="mailto:legal@atlas.app">legal@atlas.app</a>.</p>
+      <p>Questions? Email <a href="mailto:legal@culture.app">legal@culture.app</a>.</p>
     `,
   },
   cookies: {
@@ -1070,17 +1070,17 @@ const MODAL_CONTENT = {
       <table class="modal-table">
         <thead><tr><th>Cookie</th><th>Purpose</th><th>Duration</th></tr></thead>
         <tbody>
-          <tr><td>atlas-theme</td><td>Remembers your light/dark mode preference</td><td>1 year</td></tr>
-          <tr><td>atlas-session</td><td>Maintains your login session</td><td>Session</td></tr>
-          <tr><td>atlas-prefs</td><td>Stores map display preferences</td><td>6 months</td></tr>
+          <tr><td>culture-theme</td><td>Remembers your light/dark mode preference</td><td>1 year</td></tr>
+          <tr><td>culture-session</td><td>Maintains your login session</td><td>Session</td></tr>
+          <tr><td>culture-prefs</td><td>Stores map display preferences</td><td>6 months</td></tr>
         </tbody>
       </table>
       <h4>Third-Party Cookies</h4>
       <p>Our map tiles are served by CARTO. They may set their own cookies subject to <a href="https://carto.com/privacy" target="_blank" rel="noopener">CARTO's Privacy Policy</a>.</p>
       <h4>Managing Cookies</h4>
-      <p>You can control cookies through your browser settings. Note that disabling cookies may affect some Atlas features.</p>
+      <p>You can control cookies through your browser settings. Note that disabling cookies may affect some Culture features.</p>
       <h4>Contact</h4>
-      <p>Questions? Email <a href="mailto:privacy@atlas.app">privacy@atlas.app</a>.</p>
+      <p>Questions? Email <a href="mailto:privacy@culture.app">privacy@culture.app</a>.</p>
     `,
   },
 };

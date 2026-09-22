@@ -6,11 +6,11 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Atlas" />
+  <meta name="apple-mobile-web-app-title" content="Culture" />
   <meta name="theme-color" content="#0C0C0F" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-  <title>Atlas</title>
+  <title>Culture</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600&display=swap" rel="stylesheet" />
@@ -265,7 +265,7 @@
   </div>
 
   <script>
-    if (localStorage.getItem('atlas-token')) location.replace('community.html');
+    if (localStorage.getItem('culture-token')) location.replace('community.html');
 
     const tabLogin = document.getElementById('tabLogin');
     const tabReg   = document.getElementById('tabRegister');
@@ -298,7 +298,7 @@
         const r = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password: pass }) });
         const d = await r.json();
         if (!r.ok) { document.getElementById('loginErr').textContent = d.error || 'Sign in failed.'; return; }
-        localStorage.setItem('atlas-token', d.token);
+        localStorage.setItem('culture-token', d.token);
         location.replace('community.html');
       } catch { document.getElementById('loginErr').textContent = 'Network error. Try again.'; }
       finally { setLoading(btn, false); }
@@ -318,7 +318,7 @@
         const r = await fetch('/api/auth/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, email, password: pass }) });
         const d = await r.json();
         if (!r.ok) { document.getElementById('regErr').textContent = d.error || 'Registration failed.'; return; }
-        localStorage.setItem('atlas-token', d.token);
+        localStorage.setItem('culture-token', d.token);
         location.replace('community.html');
       } catch { document.getElementById('regErr').textContent = 'Network error. Try again.'; }
       finally { setLoading(btn, false); }
@@ -348,7 +348,7 @@
           document.getElementById('loginErr').textContent = d.error || 'Google sign-in failed.';
           return;
         }
-        localStorage.setItem('atlas-token', d.token);
+        localStorage.setItem('culture-token', d.token);
         location.replace('community.html');
       } catch {
         btn.disabled = false;

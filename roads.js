@@ -1,11 +1,11 @@
 /* ============================================================
-   Atlas — Community Roads Map JS
+   Culture — Community Roads Map JS
    ============================================================ */
 
 const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
   ? 'http://localhost:3001' : '';
 
-let token = localStorage.getItem('atlas-token');
+let token = localStorage.getItem('culture-token');
 let currentUser = null;
 let roadsMap = null;
 let allRoads = [];
@@ -18,12 +18,12 @@ let pendingPolyline = null;
 const DIFF_COLORS = { Easy: '#22c55e', Moderate: '#f59e0b', Hard: '#f97316', Expert: '#dc2222' };
 
 // ── Theme ──────────────────────────────────────────────────
-const savedTheme = localStorage.getItem('atlas-theme');
+const savedTheme = localStorage.getItem('culture-theme');
 if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
 document.getElementById('themeToggle').addEventListener('click', () => {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('atlas-theme', next);
+  localStorage.setItem('culture-theme', next);
 });
 
 // ── Auth ───────────────────────────────────────────────────
@@ -31,7 +31,7 @@ async function loadMe() {
   if (!token) return renderNav(null);
   try {
     const res = await fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) { token = null; localStorage.removeItem('atlas-token'); return renderNav(null); }
+    if (!res.ok) { token = null; localStorage.removeItem('culture-token'); return renderNav(null); }
     const { user } = await res.json();
     currentUser = user; renderNav(user);
   } catch { renderNav(null); }
@@ -49,7 +49,7 @@ function renderNav(user) {
       <span class="nav-user-btn"><div class="avatar avatar-sm">${init}</div>${user.name.split(' ')[0]}</span>
       <button class="nav-signout-btn" id="navSignOut">Sign Out</button>`;
     document.getElementById('navSignOut').addEventListener('click', () => {
-      localStorage.removeItem('atlas-token'); token = null; currentUser = null; location.reload();
+      localStorage.removeItem('culture-token'); token = null; currentUser = null; location.reload();
     });
   }
 }
@@ -85,7 +85,7 @@ let curatedRoads = [];
 
 // Snap waypoints to real roads via OSRM (browser-side, cached in localStorage)
 async function snapToRoad(id, waypoints) {
-  const cacheKey = `atlas-road-snap-v2-${id}`;
+  const cacheKey = `culture-road-snap-v1-${id}`;
   try {
     const cached = localStorage.getItem(cacheKey);
     if (cached) return JSON.parse(cached);
@@ -137,7 +137,7 @@ function renderRoadList(communityRoads, curatedList) {
   if (curatedList && curatedList.length > 0) {
     const header = document.createElement('div');
     header.style.cssText = 'padding:8px 12px 4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c-text-2)';
-    header.textContent = 'Atlas Roads';
+    header.textContent = 'Culture Roads';
     list.appendChild(header);
 
     curatedList.forEach(r => {
@@ -389,7 +389,7 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
     const data = await res.json();
     if (!res.ok) { document.getElementById('loginError').textContent = data.error; return; }
     token = data.token; currentUser = data.user;
-    localStorage.setItem('atlas-token', token);
+    localStorage.setItem('culture-token', token);
     authOverlay.classList.remove('open'); document.body.style.overflow = '';
     renderNav(currentUser);
   } catch { document.getElementById('loginError').textContent = 'Network error.'; }
@@ -406,7 +406,7 @@ document.getElementById('registerForm').addEventListener('submit', async e => {
     const data = await res.json();
     if (!res.ok) { document.getElementById('regError').textContent = data.error; return; }
     token = data.token; currentUser = data.user;
-    localStorage.setItem('atlas-token', token);
+    localStorage.setItem('culture-token', token);
     authOverlay.classList.remove('open'); document.body.style.overflow = '';
     renderNav(currentUser);
   } catch { document.getElementById('regError').textContent = 'Network error.'; }

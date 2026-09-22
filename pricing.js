@@ -1,5 +1,5 @@
 /* ============================================================
-   Atlas — Pricing Page JS
+   Culture — Pricing Page JS
    ============================================================ */
 
 const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -8,7 +8,7 @@ const API = (window.location.hostname === 'localhost' || window.location.hostnam
 
 // ── Nav auth ─────────────────────────────────────────────────
 (async () => {
-  const token   = localStorage.getItem('atlas-token');
+  const token   = localStorage.getItem('culture-token');
   const navAuth = document.getElementById('navAuth');
   if (!navAuth) return;
 
@@ -22,7 +22,7 @@ const API = (window.location.hostname === 'localhost' || window.location.hostnam
 
   try {
     const res = await fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) { localStorage.removeItem('atlas-token'); return; }
+    if (!res.ok) { localStorage.removeItem('culture-token'); return; }
     const { user } = await res.json();
     const initials = user.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
     navAuth.innerHTML = `
@@ -33,7 +33,7 @@ const API = (window.location.hostname === 'localhost' || window.location.hostnam
       <button class="nav-signout-btn" id="navSignOutBtn">Sign Out</button>
     `;
     document.getElementById('navSignOutBtn').addEventListener('click', () => {
-      localStorage.removeItem('atlas-token');
+      localStorage.removeItem('culture-token');
       window.location.reload();
     });
   } catch {}
@@ -41,12 +41,12 @@ const API = (window.location.hostname === 'localhost' || window.location.hostnam
 
 // ── Theme Toggle ──────────────────────────────────────────────
 const themeToggle = document.getElementById('themeToggle');
-const savedTheme = localStorage.getItem('atlas-theme') || 'light';
+const savedTheme = localStorage.getItem('culture-theme') || 'light';
 document.documentElement.setAttribute('data-theme', savedTheme);
 themeToggle.addEventListener('click', () => {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('atlas-theme', next);
+  localStorage.setItem('culture-theme', next);
 });
 
 // ── Navbar ────────────────────────────────────────────────────
@@ -174,11 +174,11 @@ backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 's
 // ── Modals (shared content) ───────────────────────────────────
 const MODAL_CONTENT = {
   about: {
-    title: 'About Atlas',
+    title: 'About Culture',
     body: `
-      <p>Atlas is the definitive guide to America's best driving roads — built by enthusiasts, for enthusiasts.</p>
+      <p>Culture is the definitive guide to America's best driving roads — built by enthusiasts, for enthusiasts.</p>
       <h4>Our Mission</h4>
-      <p>There are thousands of incredible roads in America that most drivers will never discover. Atlas exists to change that.</p>
+      <p>There are thousands of incredible roads in America that most drivers will never discover. Culture exists to change that.</p>
       <h4>What We Build</h4>
       <ul>
         <li>1,200+ mapped and rated driving roads across all 50 states</li>
@@ -213,15 +213,15 @@ const MODAL_CONTENT = {
   },
   privacy: {
     title: 'Privacy Policy',
-    body: `<p><em>Effective date: January 1, 2026</em></p><h4>Information We Collect</h4><p>Atlas collects only the information necessary to provide our services, including account data and anonymised usage analytics.</p><h4>We Never Sell Your Data</h4><p>Atlas does not sell, rent, or share your personal information with third parties for marketing purposes.</p><h4>Contact</h4><p>Questions? Email <a href="mailto:privacy@atlas.app">privacy@atlas.app</a>.</p>`,
+    body: `<p><em>Effective date: January 1, 2026</em></p><h4>Information We Collect</h4><p>Culture collects only the information necessary to provide our services, including account data and anonymised usage analytics.</p><h4>We Never Sell Your Data</h4><p>Culture does not sell, rent, or share your personal information with third parties for marketing purposes.</p><h4>Contact</h4><p>Questions? Email <a href="mailto:privacy@culture.app">privacy@culture.app</a>.</p>`,
   },
   terms: {
     title: 'Terms of Service',
-    body: `<p><em>Effective date: January 1, 2026</em></p><h4>Acceptance</h4><p>By using Atlas, you agree to these terms. Subscriptions auto-renew until cancelled. You may cancel at any time.</p><h4>Contact</h4><p>Questions? Email <a href="mailto:legal@atlas.app">legal@atlas.app</a>.</p>`,
+    body: `<p><em>Effective date: January 1, 2026</em></p><h4>Acceptance</h4><p>By using Culture, you agree to these terms. Subscriptions auto-renew until cancelled. You may cancel at any time.</p><h4>Contact</h4><p>Questions? Email <a href="mailto:legal@culture.app">legal@culture.app</a>.</p>`,
   },
   cookies: {
     title: 'Cookie Policy',
-    body: `<p><em>Effective date: January 1, 2026</em></p><h4>What We Use</h4><table class="modal-table"><thead><tr><th>Cookie</th><th>Purpose</th><th>Duration</th></tr></thead><tbody><tr><td>atlas-theme</td><td>Light/dark mode preference</td><td>1 year</td></tr></tbody></table><p>Questions? Email <a href="mailto:privacy@atlas.app">privacy@atlas.app</a>.</p>`,
+    body: `<p><em>Effective date: January 1, 2026</em></p><h4>What We Use</h4><table class="modal-table"><thead><tr><th>Cookie</th><th>Purpose</th><th>Duration</th></tr></thead><tbody><tr><td>culture-theme</td><td>Light/dark mode preference</td><td>1 year</td></tr></tbody></table><p>Questions? Email <a href="mailto:privacy@culture.app">privacy@culture.app</a>.</p>`,
   },
 };
 

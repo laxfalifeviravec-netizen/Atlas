@@ -1,5 +1,5 @@
 /* ============================================================
-   Atlas — Styles (Motorsport Edition)
+   Culture — Styles (Motorsport Edition)
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap');
@@ -920,8 +920,8 @@ input.error, textarea.error, select.error { border-color: var(--color-error); }
   }
 }
 
-.atlas-marker { background: none; border: none; }
-.atlas-marker-inner {
+.culture-marker { background: none; border: none; }
+.culture-marker-inner {
   width: 12px; height: 12px;
   background: var(--color-primary);
   border: 2px solid #fff;
@@ -929,7 +929,7 @@ input.error, textarea.error, select.error { border-color: var(--color-error); }
   box-shadow: 0 2px 8px rgba(220,34,34,.6);
   transition: transform 0.15s ease;
 }
-.atlas-marker:hover .atlas-marker-inner { transform: scale(1.4); }
+.culture-marker:hover .culture-marker-inner { transform: scale(1.4); }
 
 .leaflet-popup-content-wrapper {
   border-radius: var(--radius-sm) !important;

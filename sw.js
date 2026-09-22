@@ -1,9 +1,9 @@
 /* ============================================================
-   Atlas — Service Worker
+   Culture — Service Worker
    Caches the app shell so it loads instantly and works offline.
    ============================================================ */
 
-const CACHE = 'atlas-v4';
+const CACHE = 'culture-v1';
 
 const APP_SHELL = [
   '/',

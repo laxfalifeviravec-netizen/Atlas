@@ -1,22 +1,22 @@
 /* ============================================================
-   Atlas — Profile Page JS
+   Culture — Profile Page JS
    ============================================================ */
 
 const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
   ? 'http://localhost:3001' : '';
 
-let token = localStorage.getItem('atlas-token');
+let token = localStorage.getItem('culture-token');
 let currentUser = null;
 let profileUser = null;
 let editAvatarFile = null;
 
 // ── Theme ──────────────────────────────────────────────────
-const savedTheme = localStorage.getItem('atlas-theme');
+const savedTheme = localStorage.getItem('culture-theme');
 if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
 document.getElementById('themeToggle').addEventListener('click', () => {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('atlas-theme', next);
+  localStorage.setItem('culture-theme', next);
 });
 
 // ── Back button ────────────────────────────────────────────
@@ -33,7 +33,7 @@ async function loadMe() {
   if (!token) return;
   try {
     const res = await fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) { token = null; localStorage.removeItem('atlas-token'); return; }
+    if (!res.ok) { token = null; localStorage.removeItem('culture-token'); return; }
     const { user } = await res.json();
     currentUser = user;
   } catch {}
@@ -69,7 +69,7 @@ function renderProfile(user) {
   document.getElementById('profileLoading').style.display = 'none';
   document.getElementById('profileContent').style.display = '';
   document.getElementById('headerName').textContent = user.name;
-  document.title = `${user.name} — Atlas`;
+  document.title = `${user.name} — Culture`;
 
   // Avatar
   const avatarEl = document.getElementById('profileAvatar');
@@ -255,7 +255,7 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
     const data = await res.json();
     if (!res.ok) { document.getElementById('loginError').textContent = data.error; return; }
     token = data.token; currentUser = data.user;
-    localStorage.setItem('atlas-token', token);
+    localStorage.setItem('culture-token', token);
     authOverlay.classList.remove('open'); document.body.style.overflow = '';
     renderActions(profileUser);
   } catch { document.getElementById('loginError').textContent = 'Network error.'; }
@@ -271,7 +271,7 @@ document.getElementById('registerForm').addEventListener('submit', async e => {
     const data = await res.json();
     if (!res.ok) { document.getElementById('regError').textContent = data.error; return; }
     token = data.token; currentUser = data.user;
-    localStorage.setItem('atlas-token', token);
+    localStorage.setItem('culture-token', token);
     authOverlay.classList.remove('open'); document.body.style.overflow = '';
     renderActions(profileUser);
   } catch { document.getElementById('regError').textContent = 'Network error.'; }

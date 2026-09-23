@@ -80,7 +80,8 @@ function renderStories(stories) {
       <div class="story-avatar-wrap">
         <div class="story-avatar-inner">${initials}</div>
       </div>
-      <span>${(s.user_name||'').split(' ')[0] || 'Driver'}</span>`;
+      <span>${(s.user_name||'').split(' ')[0] || 'Driver'}</span>
+      <span class="story-time-left">${storyTimeLeft(s.created_at)}</span>`;
     btn.addEventListener('click', () => openStoryViewer(i));
     scroll.appendChild(btn);
   });
@@ -111,14 +112,13 @@ function showStory(idx) {
 
   // User header
   const initials = (s.user_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-  const timeAgo = formatTime(s.created_at);
   const userHdr = document.getElementById('storyUserHeader');
   if (userHdr) {
     userHdr.innerHTML = `
       <div class="story-user-avatar">${initials}</div>
       <div>
         <div class="story-user-name">${esc(s.user_name||'Driver')}</div>
-        <div class="story-user-time">${timeAgo}</div>
+        <div class="story-user-time">${storyTimeLeft(s.created_at)}</div>
       </div>`;
   }
 
@@ -580,6 +580,19 @@ function formatTime(ts) {
   if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
   return `${Math.floor(diff/86400)}d ago`;
+}
+
+function storyTimeLeft(ts) {
+  if (!ts) return '';
+  const d = new Date(ts.includes('T') ? ts : ts + 'Z');
+  const expiresAt = d.getTime() + 24 * 60 * 60 * 1000;
+  const msLeft = expiresAt - Date.now();
+  if (msLeft <= 0) return 'Expired';
+  const hLeft = Math.floor(msLeft / 3600000);
+  const mLeft = Math.floor((msLeft % 3600000) / 60000);
+  if (hLeft === 0) return `${mLeft}m left`;
+  if (mLeft === 0) return `${hLeft}h left`;
+  return `${hLeft}h ${mLeft}m left`;
 }
 
 // ── Notifications ──────────────────────────────────────────

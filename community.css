@@ -654,6 +654,13 @@ body {
 }
 .story-user-name { color: #fff; font-size: 13px; font-weight: 600; }
 .story-user-time { color: rgba(255,255,255,0.7); font-size: 11px; }
+.story-time-left {
+  font-size: 10px;
+  color: var(--c-accent);
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  margin-top: -2px;
+}
 
 /* ── Map tile dark-mode inversion (free OSM, no API key) ───── */
 [data-theme="dark"] .leaflet-tile-pane,

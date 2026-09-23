@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0C0C0F" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <title>One Culture — Messages</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="community.css" />
+  <link rel="stylesheet" href="messages.css" />
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <span class="app-logo" style="cursor:default">Messages</span>
+    <div class="app-header-actions">
+      <button class="app-icon-btn" id="newDmBtn" aria-label="New message">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+      <button class="app-icon-btn" id="themeToggle" aria-label="Toggle theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Conversation list view -->
+  <main id="convListView">
+    <div id="convLoading" class="dm-center-state"><div class="spinner"></div></div>
+
+    <div id="convEmpty" class="dm-center-state" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" width="52" height="52"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <p>No conversations yet</p>
+      <button class="btn btn-primary" id="startFirstDmBtn">Start a conversation</button>
+    </div>
+
+    <div id="convList"></div>
+  </main>
+
+  <!-- Chat view (hidden by default) -->
+  <div id="chatView" class="chat-view" style="display:none">
+    <header class="chat-header">
+      <button class="app-icon-btn" id="chatBackBtn" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="chat-header-info">
+        <div class="chat-header-avatar" id="chatHeaderAvatar"></div>
+        <div class="chat-header-name" id="chatHeaderName"></div>
+      </div>
+    </header>
+
+    <div class="chat-messages" id="chatMessages"></div>
+
+    <form class="chat-input-bar" id="chatForm">
+      <input type="text" id="chatInput" class="chat-input" placeholder="Message…" autocomplete="off" />
+      <button type="submit" class="chat-send-btn" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </form>
+  </div>
+
+  <!-- New DM modal: search users -->
+  <div class="modal-overlay" id="newDmOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>New Message</h3>
+        <button class="modal-close" id="newDmClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="search-input-row">
+          <svg class="srch-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="search" id="dmSearchInput" class="srch-input" placeholder="Search people…" autocomplete="off" />
+        </div>
+        <div id="dmSearchResults" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth wall -->
+  <div class="modal-overlay" id="authWall">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Sign in to message</h3>
+        <button class="modal-close" id="authWallClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--c-text-2);font-size:14px">You need an account to send messages.</p>
+        <a href="community.html" class="btn btn-primary btn-full" style="text-align:center;text-decoration:none">Go to Feed &amp; Sign In</a>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="community.html" class="bnav-item" aria-label="Feed">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Feed</span>
+    </a>
+    <a href="groups.html" class="bnav-item" aria-label="Groups">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Groups</span>
+    </a>
+    <a href="community.html" class="bnav-item bnav-post" aria-label="New post">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </a>
+    <a href="messages.html" class="bnav-item active" aria-label="Messages">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Messages</span>
+    </a>
+    <a href="roads.html" class="bnav-item" aria-label="Map">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+      <span>Map</span>
+    </a>
+  </nav>
+
+  <script src="messages.js"></script>
+  <script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js")); }</script>
+</body>
+</html>

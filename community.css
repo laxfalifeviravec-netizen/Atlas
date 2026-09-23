@@ -254,6 +254,8 @@ body {
 .post-action-btn:active { transform: scale(0.88); }
 .post-action-btn.liked { color: var(--c-accent); }
 .post-action-btn.liked svg { fill: var(--c-accent); stroke: var(--c-accent); }
+.post-action-btn.saved { color: var(--c-accent); }
+.post-action-btn.saved svg { fill: var(--c-accent); stroke: var(--c-accent); }
 .post-action-btn svg { width: 22px; height: 22px; }
 .post-action-btn .action-count { font-weight: 600; font-size: 13px; }
 

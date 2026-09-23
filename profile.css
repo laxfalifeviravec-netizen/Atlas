@@ -187,3 +187,94 @@
   border: 2px solid var(--c-accent);
 }
 .edit-avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── Profile tabs ────────────────────────────────────────── */
+.profile-tabs {
+  display: flex;
+  border-top: 1px solid var(--c-border);
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+  position: sticky;
+  top: var(--header-h);
+  z-index: 90;
+}
+
+.profile-tab {
+  flex: 1;
+  background: none; border: none; cursor: pointer;
+  color: var(--c-text-2);
+  padding: 12px 0;
+  display: flex; align-items: center; justify-content: center;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s;
+}
+.profile-tab.active {
+  color: var(--c-text);
+  border-bottom-color: var(--c-text);
+}
+.profile-tab svg { display: block; }
+
+/* ── Garage grid ─────────────────────────────────────────── */
+.garage-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.garage-car-card {
+  border-bottom: 1px solid var(--c-border);
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.garage-car-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--c-text-2);
+  flex-shrink: 0;
+}
+.garage-car-icon svg { width: 22px; height: 22px; }
+
+.garage-car-info { flex: 1; min-width: 0; }
+.garage-car-name {
+  font-family: var(--font-head);
+  font-size: 17px; font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--c-text);
+}
+.garage-car-year-color {
+  font-size: 12px; color: var(--c-text-2);
+  margin-top: 2px;
+}
+.garage-car-mods {
+  font-size: 13px; color: var(--c-text-2);
+  margin-top: 4px;
+  white-space: pre-wrap;
+}
+
+.garage-car-delete {
+  background: none; border: none; cursor: pointer;
+  color: var(--c-text-2); padding: 4px;
+  opacity: 0.5; transition: opacity 0.15s;
+}
+.garage-car-delete:hover { opacity: 1; }
+.garage-car-delete svg { width: 16px; height: 16px; }
+
+/* ── Profile field labels (for add car form) ─────────────── */
+.profile-field-label {
+  display: block;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--c-text-2); margin-bottom: 4px;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}

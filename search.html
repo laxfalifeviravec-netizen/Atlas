@@ -6,44 +6,63 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="One Culture" />
   <meta name="theme-color" content="#0C0C0F" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-  <title>One Culture — Shop</title>
+  <title>One Culture — Search</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="community.css" />
-  <link rel="stylesheet" href="shop.css" />
+  <link rel="stylesheet" href="search.css" />
 </head>
 <body>
 
-  <header class="app-header" id="appHeader">
-    <span class="app-logo" style="cursor:default">Shop</span>
+  <header class="app-header">
+    <a href="community.html" class="app-logo">One Culture</a>
     <div class="app-header-actions">
       <button class="app-icon-btn" id="themeToggle" aria-label="Toggle theme">
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
         <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </button>
-      <div id="navAuth" class="nav-auth"></div>
     </div>
   </header>
 
-  <main class="shop-main">
-    <p class="shop-subtitle">Parts, mods &amp; builds from the community</p>
-    <div class="shop-loading" id="shopLoading"><div class="spinner"></div></div>
-    <div class="shop-grid" id="shopGrid"></div>
-    <div class="shop-empty" id="shopEmpty" style="display:none">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" width="44" height="44"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-      <p>No mods listed yet. Share a post with a part attached to appear here.</p>
+  <main class="search-main">
+
+    <div class="search-bar-wrap">
+      <div class="search-input-row">
+        <svg class="srch-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" id="searchInput" class="srch-input" placeholder="Search people, roads, regions…" autocomplete="off" />
+        <button class="srch-clear" id="searchClear" aria-label="Clear" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
     </div>
-    <div class="shop-load-more" id="shopLoadMore" style="display:none">
-      <button class="btn btn-outline" id="loadMoreBtn">Load more</button>
+
+    <div id="searchPlaceholder" class="srch-placeholder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" width="52" height="52"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <p>Search for people, roads or regions</p>
     </div>
+
+    <div id="searchLoading" class="srch-loading" style="display:none">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="searchResults" style="display:none">
+      <section id="usersSection" style="display:none">
+        <div class="srch-section-title">People</div>
+        <div id="usersList"></div>
+      </section>
+      <section id="postsSection" style="display:none">
+        <div class="srch-section-title">Roads &amp; Posts</div>
+        <div class="srch-posts-grid" id="postsList"></div>
+      </section>
+      <div id="noResults" class="srch-no-results" style="display:none">No results found.</div>
+    </div>
+
   </main>
 
-  <!-- Bottom Nav -->
   <nav class="bottom-nav">
     <a href="community.html" class="bnav-item" aria-label="Feed">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -66,7 +85,7 @@
     </a>
   </nav>
 
-  <script src="shop.js"></script>
+  <script src="search.js"></script>
   <script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js")); }</script>
 </body>
 </html>

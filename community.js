@@ -270,6 +270,9 @@ function buildPostCard(p) {
       <button class="post-action-btn share-btn" data-id="${p.id}" aria-label="Share">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
+      <button class="post-action-btn save-btn${p.saved?' saved':''}" data-id="${p.id}" aria-label="Save" style="margin-left:auto">
+        <svg viewBox="0 0 24 24" fill="${p.saved?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      </button>
     </div>
     <div class="post-card-likes">${p.likes} like${p.likes===1?'':'s'}</div>
     ${p.caption ? `<div class="post-card-caption"><strong>${esc(p.user_name||'')}</strong> ${esc(p.caption)}</div>` : ''}
@@ -286,6 +289,7 @@ function buildPostCard(p) {
   card.querySelector('.like-btn').addEventListener('click', e => toggleLike(p, e.currentTarget, card));
   card.querySelector('.comment-btn').addEventListener('click', () => openPostModal(p));
   card.querySelector('.share-btn').addEventListener('click', () => sharePost(p.id));
+  card.querySelector('.save-btn').addEventListener('click', e => toggleSave(p, e.currentTarget));
   card.querySelector('.post-card-img-wrap img').addEventListener('dblclick', () => {
     const btn = card.querySelector('.like-btn');
     if (!p.liked) toggleLike(p, btn, card);
@@ -300,6 +304,20 @@ function buildPostCard(p) {
     card.querySelector('.post-card-actions').appendChild(delBtn);
   }
   return card;
+}
+
+async function toggleSave(post, btn) {
+  if (!currentUser) return openAuth();
+  try {
+    const res = await fetch(`${API}/api/posts/${post.id}/save`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    post.saved = data.saved;
+    btn.classList.toggle('saved', data.saved);
+    btn.querySelector('svg').setAttribute('fill', data.saved ? 'currentColor' : 'none');
+  } catch {}
 }
 
 async function toggleLike(post, btn, card) {

@@ -200,6 +200,23 @@ function renderGroupActions(group) {
     box.appendChild(gpsWrap);
     box.appendChild(gpsBtn);
     box.appendChild(leaveBtn);
+
+    if (group.is_creator) {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn btn-outline';
+      deleteBtn.textContent = '🗑 Delete Group';
+      deleteBtn.style.cssText = 'color:#e74c3c;margin-top:4px;width:100%';
+      deleteBtn.addEventListener('click', async () => {
+        if (!confirm('Permanently delete this group and remove all members?')) return;
+        stopGPS();
+        const r = await fetch(`${API}/api/groups/${group.id}`, {
+          method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
+        });
+        if (r.ok) { closeGroupModal(); await loadGroups(); }
+        else { const d = await r.json(); alert(d.error || 'Failed to delete.'); }
+      });
+      box.appendChild(deleteBtn);
+    }
     startLocationPoll(group.id);
   }
 }

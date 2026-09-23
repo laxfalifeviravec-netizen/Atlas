@@ -338,13 +338,15 @@ const db = {
       return (groups || []).map(g => ({
         ...g, creator_name: g.users?.name || '', users: undefined,
         member_count: countMap[g.id] || 0, is_member: memberOf.has(g.id),
+        is_creator: userId ? g.creator_id === userId : false,
       }));
     }
     return _groups.map(g => {
       const u = _users.find(u => u.id === g.creator_id) || {};
       return { ...g, creator_name: u.name || '',
         member_count: _groupMembers.filter(m => m.group_id === g.id).length,
-        is_member: userId ? _groupMembers.some(m => m.group_id === g.id && m.user_id === userId) : false };
+        is_member: userId ? _groupMembers.some(m => m.group_id === g.id && m.user_id === userId) : false,
+        is_creator: userId ? g.creator_id === userId : false };
     });
   },
   async createGroup(fields) {
@@ -371,7 +373,8 @@ const db = {
       }));
       return { ...g, creator_name: g.users?.name || '', users: undefined,
         members: memberList, member_count: memberList.length,
-        is_member: userId ? memberList.some(m => m.user_id === userId) : false };
+        is_member: userId ? memberList.some(m => m.user_id === userId) : false,
+        is_creator: userId ? g.creator_id === userId : false };
     }
     const g = _groups.find(g => g.id === id);
     if (!g) return null;
@@ -381,7 +384,8 @@ const db = {
       return { user_id: m.user_id, name: u.name || '', avatar: u.avatar || null, joined_at: m.joined_at };
     });
     return { ...g, creator_name: creator.name || '', members, member_count: members.length,
-      is_member: userId ? members.some(m => m.user_id === userId) : false };
+      is_member: userId ? members.some(m => m.user_id === userId) : false,
+      is_creator: userId ? g.creator_id === userId : false };
   },
   async joinGroup(groupId, userId) {
     if (USE_SUPABASE) {
@@ -885,6 +889,27 @@ app.post('/api/groups/:id/routes', requireAuth, async (req, res) => {
     if (!await db.isMember(groupId, req.user.id)) return res.status(403).json({ error: 'Not a member.' });
     const route = await db.createGroupRoute({ group_id: groupId, user_id: req.user.id, name: name.trim(), points });
     res.status(201).json({ route });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.delete('/api/groups/:id', requireAuth, async (req, res) => {
+  try {
+    const groupId = parseInt(req.params.id);
+    if (USE_SUPABASE) {
+      const { data: g } = await sb.from('groups').select('creator_id').eq('id', groupId).single();
+      if (!g) return res.status(404).json({ error: 'Group not found.' });
+      if (g.creator_id !== req.user.id) return res.status(403).json({ error: 'Only the group founder can delete it.' });
+      await sb.from('groups').delete().eq('id', groupId);
+    } else {
+      const idx = _groups.findIndex(g => g.id === groupId);
+      if (idx === -1) return res.status(404).json({ error: 'Group not found.' });
+      if (_groups[idx].creator_id !== req.user.id) return res.status(403).json({ error: 'Only the group founder can delete it.' });
+      _groups.splice(idx, 1);
+      _groupMembers   = _groupMembers.filter(m => m.group_id !== groupId);
+      _groupLocations = _groupLocations.filter(l => l.group_id !== groupId);
+      _groupRoutes    = _groupRoutes.filter(r => r.group_id !== groupId);
+    }
+    res.json({ ok: true });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 

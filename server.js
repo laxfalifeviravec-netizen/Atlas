@@ -751,7 +751,13 @@ app.post('/api/posts', requireAuth, upload.single('image'), async (req, res) => 
     });
     const user = await db.findUserById(req.user.id);
     res.status(201).json({ post: { ...post, user_name: user?.name || '', user_avatar: user?.avatar || null, liked: false } });
-  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+  } catch (e) {
+    console.error(e);
+    const msg = e.message?.includes('Bucket not found') ? 'Storage bucket missing — run schema.sql in Supabase to create the uploads bucket.'
+      : e.message?.includes('fetch failed') ? 'Database connection failed. Check Supabase env vars.'
+      : 'Server error.';
+    res.status(500).json({ error: msg });
+  }
 });
 
 app.delete('/api/posts/:id', requireAuth, async (req, res) => {
@@ -810,7 +816,13 @@ app.post('/api/stories', requireAuth, upload.single('image'), async (req, res) =
     const story = await db.createStory({ user_id: req.user.id, image_url, road_name: (req.body.road_name || '').trim() });
     const user = await db.findUserById(req.user.id);
     res.status(201).json({ story: { ...story, user_name: user?.name || '', user_avatar: user?.avatar || null } });
-  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+  } catch (e) {
+    console.error(e);
+    const msg = e.message?.includes('Bucket not found') ? 'Storage bucket missing — run schema.sql in Supabase to create the uploads bucket.'
+      : e.message?.includes('fetch failed') ? 'Database connection failed. Check Supabase env vars.'
+      : 'Server error.';
+    res.status(500).json({ error: msg });
+  }
 });
 
 // ── Groups routes ─────────────────────────────────────────────

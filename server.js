@@ -1561,7 +1561,12 @@ app.post('/api/cars', requireAuth, async (req, res) => {
     if (!make || !model) return res.status(400).json({ error: 'Make and model are required.' });
     const car = await db.addCar({ user_id: req.user.id, year: year ? parseInt(year) : null, make: make.trim(), model: model.trim(), color: (color||'').trim(), mods: (mods||'').trim() });
     res.status(201).json({ car });
-  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+  } catch (e) {
+    console.error('addCar error:', e);
+    const msg = e?.message || 'Server error.';
+    const isSchema = msg.includes('does not exist') || msg.includes('relation');
+    res.status(500).json({ error: isSchema ? 'The cars table is missing — run the schema migration in Supabase.' : msg });
+  }
 });
 
 app.delete('/api/cars/:id', requireAuth, async (req, res) => {

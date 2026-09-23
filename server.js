@@ -105,6 +105,14 @@ let _follows = []; // { follower_id, following_id }
 let _notifications = []; // { id, user_id, actor_id, actor_name, type, post_id, read, created_at }
 let _uid = 1, _pid = 1, _cid = 1, _gid = 1, _rid = 1, _lid = 1, _roadId = 1, _sid = 1, _nid = 1;
 let _seeded = false;
+let _saved = [];        // { user_id, post_id }
+let _conversations = []; // { id, created_at }
+let _convMembers = [];  // { conv_id, user_id }
+let _messages = [];     // { id, conv_id, sender_id, body, read, created_at }
+let _events = [];       // { id, creator_id, title, description, date, location, lat, lng, created_at }
+let _eventRsvps = [];   // { event_id, user_id }
+let _cars = [];         // { id, user_id, year, make, model, color, mods, created_at }
+let _convId = 1, _msgId = 1, _evId = 1, _carId = 1;
 function now() { return new Date().toISOString(); }
 
 // ── Middleware ────────────────────────────────────────────────
@@ -687,6 +695,245 @@ const db = {
     _notifications.push({ id: _nid++, ...fields, read: false, created_at: now() });
   },
 
+  // ── Search ──
+  async search(q, viewerId) {
+    const lower = q.toLowerCase();
+    if (USE_SUPABASE) {
+      const { data: users } = await sb.from('users')
+        .select('id, name, avatar, bio, plan')
+        .ilike('name', `%${q}%`).limit(20);
+      const { data: posts } = await sb.from('posts')
+        .select('id, user_id, image_url, road_name, region, caption, likes, created_at, users!posts_user_id_fkey(name)')
+        .or(`road_name.ilike.%${q}%,region.ilike.%${q}%,caption.ilike.%${q}%`)
+        .order('created_at', { ascending: false }).limit(30);
+      return {
+        users: users || [],
+        posts: (posts || []).map(p => ({ ...p, user_name: p.users?.name || '', users: undefined })),
+      };
+    }
+    return {
+      users: _users.filter(u => u.name.toLowerCase().includes(lower)).slice(0, 20)
+        .map(u => ({ id: u.id, name: u.name, avatar: u.avatar, bio: u.bio, plan: u.plan })),
+      posts: _posts.filter(p =>
+        (p.road_name||'').toLowerCase().includes(lower) ||
+        (p.region||'').toLowerCase().includes(lower) ||
+        (p.caption||'').toLowerCase().includes(lower)
+      ).sort((a,b) => b.created_at.localeCompare(a.created_at)).slice(0, 30)
+        .map(p => { const u = _users.find(u=>u.id===p.user_id)||{}; return { ...p, user_name: u.name||'' }; }),
+    };
+  },
+
+  // ── Saved posts ──
+  async getSaved(userId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('saved_posts')
+        .select('post_id, posts!saved_posts_post_id_fkey(id, user_id, image_url, road_name, region, likes, created_at, users!posts_user_id_fkey(name))')
+        .eq('user_id', userId).order('created_at', { ascending: false });
+      return (data || []).filter(r => r.posts).map(r => ({
+        ...r.posts, user_name: r.posts.users?.name || '', users: undefined,
+      }));
+    }
+    return _saved.filter(s => s.user_id === userId)
+      .map(s => { const p = _posts.find(p => p.id === s.post_id); if (!p) return null;
+        const u = _users.find(u => u.id === p.user_id)||{};
+        return { ...p, user_name: u.name||'' }; }).filter(Boolean);
+  },
+  async toggleSave(postId, userId) {
+    if (USE_SUPABASE) {
+      const { data: existing } = await sb.from('saved_posts').select().eq('user_id', userId).eq('post_id', postId).single();
+      if (existing) {
+        await sb.from('saved_posts').delete().eq('user_id', userId).eq('post_id', postId);
+        return { saved: false };
+      }
+      await sb.from('saved_posts').insert({ user_id: userId, post_id: postId });
+      return { saved: true };
+    }
+    const idx = _saved.findIndex(s => s.user_id === userId && s.post_id === postId);
+    if (idx !== -1) { _saved.splice(idx, 1); return { saved: false }; }
+    _saved.push({ user_id: userId, post_id: postId, created_at: now() });
+    return { saved: true };
+  },
+  async isSaved(postId, userId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('saved_posts').select('post_id').eq('user_id', userId).eq('post_id', postId).single();
+      return !!data;
+    }
+    return _saved.some(s => s.user_id === userId && s.post_id === postId);
+  },
+
+  // ── Conversations / DMs ──
+  async getOrCreateConversation(userA, userB) {
+    if (USE_SUPABASE) {
+      const { data: convs } = await sb.from('conversation_members').select('conv_id').eq('user_id', userA);
+      const myConvIds = (convs||[]).map(c => c.conv_id);
+      if (myConvIds.length) {
+        const { data: shared } = await sb.from('conversation_members').select('conv_id')
+          .eq('user_id', userB).in('conv_id', myConvIds);
+        if (shared?.length) return shared[0].conv_id;
+      }
+      const { data: conv } = await sb.from('conversations').insert({}).select().single();
+      await sb.from('conversation_members').insert([{ conv_id: conv.id, user_id: userA }, { conv_id: conv.id, user_id: userB }]);
+      return conv.id;
+    }
+    const mine = _convMembers.filter(m => m.user_id === userA).map(m => m.conv_id);
+    const shared = _convMembers.find(m => m.user_id === userB && mine.includes(m.conv_id));
+    if (shared) return shared.conv_id;
+    const id = _convId++;
+    _conversations.push({ id, created_at: now() });
+    _convMembers.push({ conv_id: id, user_id: userA }, { conv_id: id, user_id: userB });
+    return id;
+  },
+  async getConversations(userId) {
+    if (USE_SUPABASE) {
+      const { data: myConvs } = await sb.from('conversation_members').select('conv_id').eq('user_id', userId);
+      if (!myConvs?.length) return [];
+      const convIds = myConvs.map(c => c.conv_id);
+      const result = [];
+      for (const convId of convIds) {
+        const { data: members } = await sb.from('conversation_members')
+          .select('user_id, users!conversation_members_user_id_fkey(name, avatar)').eq('conv_id', convId);
+        const other = members?.find(m => m.user_id !== userId);
+        const { data: msgs } = await sb.from('messages').select('*').eq('conv_id', convId).order('created_at', { ascending: false }).limit(1);
+        const unread = (await sb.from('messages').select('id', { count: 'exact', head: true }).eq('conv_id', convId).eq('read', false).neq('sender_id', userId)).count || 0;
+        result.push({ id: convId, other_user_id: other?.user_id, other_name: other?.users?.name || '?', other_avatar: other?.users?.avatar || null, last_message: msgs?.[0] || null, unread });
+      }
+      return result;
+    }
+    const myConvIds = _convMembers.filter(m => m.user_id === userId).map(m => m.conv_id);
+    return myConvIds.map(convId => {
+      const other = _convMembers.find(m => m.conv_id === convId && m.user_id !== userId);
+      const otherUser = _users.find(u => u.id === other?.user_id) || {};
+      const msgs = _messages.filter(m => m.conv_id === convId).sort((a,b) => b.created_at.localeCompare(a.created_at));
+      const unread = msgs.filter(m => m.sender_id !== userId && !m.read).length;
+      return { id: convId, other_user_id: other?.user_id, other_name: otherUser.name || '?', other_avatar: otherUser.avatar || null, last_message: msgs[0] || null, unread };
+    }).filter(c => c.other_user_id);
+  },
+  async getMessages(convId, userId) {
+    if (USE_SUPABASE) {
+      const { data: member } = await sb.from('conversation_members').select('user_id').eq('conv_id', convId).eq('user_id', userId).single();
+      if (!member) return null;
+      const { data } = await sb.from('messages').select('*, users!messages_sender_id_fkey(name, avatar)')
+        .eq('conv_id', convId).order('created_at', { ascending: true });
+      await sb.from('messages').update({ read: true }).eq('conv_id', convId).neq('sender_id', userId);
+      return (data||[]).map(m => ({ ...m, sender_name: m.users?.name||'', users: undefined }));
+    }
+    const isMember = _convMembers.some(m => m.conv_id === convId && m.user_id === userId);
+    if (!isMember) return null;
+    _messages.filter(m => m.conv_id === convId && m.sender_id !== userId).forEach(m => { m.read = true; });
+    return _messages.filter(m => m.conv_id === convId)
+      .sort((a,b) => a.created_at.localeCompare(b.created_at))
+      .map(m => { const u = _users.find(u=>u.id===m.sender_id)||{}; return { ...m, sender_name: u.name||'' }; });
+  },
+  async sendMessage(convId, senderId, body) {
+    if (USE_SUPABASE) {
+      const { data, error } = await sb.from('messages').insert({ conv_id: convId, sender_id: senderId, body, read: false }).select().single();
+      if (error) throw error;
+      const { data: u } = await sb.from('users').select('name').eq('id', senderId).single();
+      return { ...data, sender_name: u?.name||'' };
+    }
+    const msg = { id: _msgId++, conv_id: convId, sender_id: senderId, body, read: false, created_at: now() };
+    _messages.push(msg);
+    const u = _users.find(u=>u.id===senderId)||{};
+    return { ...msg, sender_name: u.name||'' };
+  },
+  async getUnreadMessageCount(userId) {
+    if (USE_SUPABASE) {
+      const { data: myConvs } = await sb.from('conversation_members').select('conv_id').eq('user_id', userId);
+      if (!myConvs?.length) return 0;
+      const { count } = await sb.from('messages').select('id', { count: 'exact', head: true })
+        .in('conv_id', myConvs.map(c=>c.conv_id)).eq('read', false).neq('sender_id', userId);
+      return count || 0;
+    }
+    const myConvIds = _convMembers.filter(m => m.user_id === userId).map(m => m.conv_id);
+    return _messages.filter(m => myConvIds.includes(m.conv_id) && m.sender_id !== userId && !m.read).length;
+  },
+
+  // ── Events ──
+  async getEvents() {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('events')
+        .select('*, users!events_creator_id_fkey(name), event_rsvps(user_id)')
+        .order('date', { ascending: true });
+      return (data||[]).map(e => ({ ...e, creator_name: e.users?.name||'', attendee_count: e.event_rsvps?.length||0, event_rsvps: undefined, users: undefined }));
+    }
+    return _events.map(e => {
+      const u = _users.find(u=>u.id===e.creator_id)||{};
+      return { ...e, creator_name: u.name||'', attendee_count: _eventRsvps.filter(r=>r.event_id===e.id).length };
+    }).sort((a,b) => a.date.localeCompare(b.date));
+  },
+  async createEvent(fields) {
+    if (USE_SUPABASE) {
+      const { data, error } = await sb.from('events').insert(fields).select().single();
+      if (error) throw error;
+      return data;
+    }
+    const e = { id: _evId++, ...fields, created_at: now() };
+    _events.push(e); return e;
+  },
+  async toggleEventRsvp(eventId, userId) {
+    if (USE_SUPABASE) {
+      const { data: existing } = await sb.from('event_rsvps').select().eq('event_id', eventId).eq('user_id', userId).single();
+      if (existing) {
+        await sb.from('event_rsvps').delete().eq('event_id', eventId).eq('user_id', userId);
+        return { going: false };
+      }
+      await sb.from('event_rsvps').insert({ event_id: eventId, user_id: userId });
+      return { going: true };
+    }
+    const idx = _eventRsvps.findIndex(r => r.event_id === eventId && r.user_id === userId);
+    if (idx !== -1) { _eventRsvps.splice(idx, 1); return { going: false }; }
+    _eventRsvps.push({ event_id: eventId, user_id: userId });
+    return { going: true };
+  },
+  async getEventAttendees(eventId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('event_rsvps').select('user_id, users!event_rsvps_user_id_fkey(name, avatar)').eq('event_id', eventId);
+      return (data||[]).map(r => ({ user_id: r.user_id, name: r.users?.name||'', avatar: r.users?.avatar||null }));
+    }
+    return _eventRsvps.filter(r => r.event_id === eventId).map(r => {
+      const u = _users.find(u=>u.id===r.user_id)||{};
+      return { user_id: r.user_id, name: u.name||'', avatar: u.avatar||null };
+    });
+  },
+  async isGoing(eventId, userId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('event_rsvps').select('user_id').eq('event_id', eventId).eq('user_id', userId).single();
+      return !!data;
+    }
+    return _eventRsvps.some(r => r.event_id === eventId && r.user_id === userId);
+  },
+
+  // ── Car Garage ──
+  async getCars(userId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('cars').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+      return data || [];
+    }
+    return _cars.filter(c => c.user_id === userId).sort((a,b) => b.created_at.localeCompare(a.created_at));
+  },
+  async addCar(fields) {
+    if (USE_SUPABASE) {
+      const { data, error } = await sb.from('cars').insert(fields).select().single();
+      if (error) throw error;
+      return data;
+    }
+    const c = { id: _carId++, ...fields, created_at: now() };
+    _cars.push(c); return c;
+  },
+  async deleteCar(id, userId) {
+    if (USE_SUPABASE) {
+      const { data: c } = await sb.from('cars').select('user_id').eq('id', id).single();
+      if (!c) return { error: 'not_found' };
+      if (c.user_id !== userId) return { error: 'forbidden' };
+      await sb.from('cars').delete().eq('id', id);
+      return { ok: true };
+    }
+    const idx = _cars.findIndex(c => c.id === id);
+    if (idx === -1) return { error: 'not_found' };
+    if (_cars[idx].user_id !== userId) return { error: 'forbidden' };
+    _cars.splice(idx, 1); return { ok: true };
+  },
+
   // ── Password resets ──
   _resetTokens: new Map(), // in-memory fallback: token → { email, expires_at }
   async createResetToken(email) {
@@ -1209,6 +1456,123 @@ app.post('/api/notifications/read', requireAuth, async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
+// ── Search ────────────────────────────────────────────────────
+app.get('/api/search', optionalAuth, async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q) return res.json({ users: [], posts: [] });
+    res.json(await db.search(q, req.user?.id));
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// ── Saved posts ───────────────────────────────────────────────
+app.get('/api/saved', requireAuth, async (req, res) => {
+  try { res.json({ posts: await db.getSaved(req.user.id) }); }
+  catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/posts/:id/save', requireAuth, async (req, res) => {
+  try { res.json(await db.toggleSave(parseInt(req.params.id), req.user.id)); }
+  catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// ── Messages / DMs ────────────────────────────────────────────
+app.get('/api/conversations', requireAuth, async (req, res) => {
+  try { res.json({ conversations: await db.getConversations(req.user.id) }); }
+  catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/conversations', requireAuth, async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    if (!user_id) return res.status(400).json({ error: 'user_id required.' });
+    const convId = await db.getOrCreateConversation(req.user.id, parseInt(user_id));
+    res.json({ conversation_id: convId });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.get('/api/conversations/:id/messages', requireAuth, async (req, res) => {
+  try {
+    const msgs = await db.getMessages(parseInt(req.params.id), req.user.id);
+    if (!msgs) return res.status(403).json({ error: 'Access denied.' });
+    res.json({ messages: msgs });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/conversations/:id/messages', requireAuth, async (req, res) => {
+  try {
+    const convId = parseInt(req.params.id);
+    const { body } = req.body;
+    if (!body?.trim()) return res.status(400).json({ error: 'Message cannot be empty.' });
+    const msgs = await db.getMessages(convId, req.user.id);
+    if (!msgs) return res.status(403).json({ error: 'Access denied.' });
+    const msg = await db.sendMessage(convId, req.user.id, body.trim());
+    res.status(201).json({ message: msg });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.get('/api/messages/unread', requireAuth, async (req, res) => {
+  try { res.json({ count: await db.getUnreadMessageCount(req.user.id) }); }
+  catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// ── Events ────────────────────────────────────────────────────
+app.get('/api/events', optionalAuth, async (req, res) => {
+  try {
+    const events = await db.getEvents();
+    const result = [];
+    for (const e of events) {
+      const going = req.user ? await db.isGoing(e.id, req.user.id) : false;
+      result.push({ ...e, going });
+    }
+    res.json({ events: result });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/events', requireAuth, async (req, res) => {
+  try {
+    const { title, description = '', date, location = '', lat, lng } = req.body;
+    if (!title || !date) return res.status(400).json({ error: 'Title and date are required.' });
+    const event = await db.createEvent({ creator_id: req.user.id, title: title.trim(), description: description.trim(), date, location: location.trim(), lat: lat ? parseFloat(lat) : null, lng: lng ? parseFloat(lng) : null });
+    const user = await db.findUserById(req.user.id);
+    res.status(201).json({ event: { ...event, creator_name: user?.name || '', attendee_count: 0, going: false } });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/events/:id/rsvp', requireAuth, async (req, res) => {
+  try { res.json(await db.toggleEventRsvp(parseInt(req.params.id), req.user.id)); }
+  catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.get('/api/events/:id/attendees', async (req, res) => {
+  try { res.json({ attendees: await db.getEventAttendees(parseInt(req.params.id)) }); }
+  catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// ── Car Garage ────────────────────────────────────────────────
+app.get('/api/users/:id/cars', async (req, res) => {
+  try { res.json({ cars: await db.getCars(parseInt(req.params.id)) }); }
+  catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/cars', requireAuth, async (req, res) => {
+  try {
+    const { year, make, model, color = '', mods = '' } = req.body;
+    if (!year || !make || !model) return res.status(400).json({ error: 'Year, make and model are required.' });
+    const car = await db.addCar({ user_id: req.user.id, year: parseInt(year), make: make.trim(), model: model.trim(), color: color.trim(), mods: mods.trim() });
+    res.status(201).json({ car });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.delete('/api/cars/:id', requireAuth, async (req, res) => {
+  try {
+    const result = await db.deleteCar(parseInt(req.params.id), req.user.id);
+    if (result.error === 'not_found') return res.status(404).json({ error: 'Car not found.' });
+    if (result.error === 'forbidden') return res.status(403).json({ error: 'Not your car.' });
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
 // ── Seed (only runs once, only if DB is empty) ────────────────
 async function seed() {
   if (_seeded) return;
@@ -1258,6 +1622,13 @@ async function seed() {
   for (const l of demoListings) {
     await db.createListing({ user_id: teamUser.id, ...l });
   }
+
+  const demoEvents = [
+    { creator_id: teamUser.id, title: 'Pacific Coast Sunday Run', description: 'Weekly cruise from Santa Monica to Malibu. All cars welcome.', date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0,10), location: 'Santa Monica, CA', lat: 34.0195, lng: -118.4912 },
+    { creator_id: teamUser.id, title: 'Dragon Slayers Mountain Drive', description: 'Tail of the Dragon convoy. Meet at Deals Gap at 9am.', date: new Date(Date.now() + 14 * 86400000).toISOString().slice(0,10), location: 'Deals Gap, NC', lat: 35.4678, lng: -83.9035 },
+    { creator_id: teamUser.id, title: 'Cars & Coffee — Denver', description: 'Monthly meet at Union Station. Bring whatever you drive.', date: new Date(Date.now() + 3 * 86400000).toISOString().slice(0,10), location: 'Denver, CO', lat: 39.7527, lng: -104.9982 },
+  ];
+  for (const e of demoEvents) { await db.createEvent(e); }
 }
 
 if (require.main === module) {

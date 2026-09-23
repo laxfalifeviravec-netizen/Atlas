@@ -149,6 +149,68 @@ create table if not exists notifications (
 
 create index if not exists notifications_user_id_idx on notifications(user_id, read);
 
+-- Saved posts
+create table if not exists saved_posts (
+  user_id    bigint references users(id) on delete cascade,
+  post_id    bigint references posts(id) on delete cascade,
+  created_at timestamptz default now(),
+  primary key (user_id, post_id)
+);
+
+-- Conversations (DMs)
+create table if not exists conversations (
+  id         bigserial primary key,
+  created_at timestamptz default now()
+);
+
+create table if not exists conversation_members (
+  conv_id  bigint references conversations(id) on delete cascade,
+  user_id  bigint references users(id) on delete cascade,
+  primary key (conv_id, user_id)
+);
+
+create table if not exists messages (
+  id         bigserial primary key,
+  conv_id    bigint references conversations(id) on delete cascade,
+  sender_id  bigint references users(id) on delete cascade,
+  body       text not null,
+  read       boolean default false,
+  created_at timestamptz default now()
+);
+
+create index if not exists messages_conv_id_idx on messages(conv_id, created_at);
+
+-- Events
+create table if not exists events (
+  id          bigserial primary key,
+  creator_id  bigint references users(id) on delete cascade,
+  title       text not null,
+  description text default '',
+  date        date not null,
+  location    text default '',
+  lat         float,
+  lng         float,
+  created_at  timestamptz default now()
+);
+
+create table if not exists event_rsvps (
+  event_id bigint references events(id) on delete cascade,
+  user_id  bigint references users(id) on delete cascade,
+  primary key (event_id, user_id)
+);
+
+-- Cars (garage)
+create table if not exists cars (
+  id         bigserial primary key,
+  user_id    bigint references users(id) on delete cascade,
+  year       int not null,
+  make       text not null,
+  model      text not null,
+  color      text default '',
+  mods       text default '',
+  created_at timestamptz default now()
+);
+
 -- Password reset tokens
 create table if not exists password_resets (
   token      text primary key,

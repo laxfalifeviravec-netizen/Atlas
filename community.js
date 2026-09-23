@@ -241,9 +241,14 @@ function renderFeed(newPosts, reset) {
   newPosts.forEach(p => list.appendChild(buildPostCard(p)));
 }
 
+function isVideoUrl(url) {
+  return /\.(mp4|webm|mov|m4v|avi)(\?|$)/i.test(url);
+}
+
 function buildPostCard(p) {
   const initials = (p.user_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-  const imgSrc   = p.image_url.startsWith('http') ? p.image_url : `${API}${p.image_url}`;
+  const mediaSrc = p.image_url.startsWith('http') ? p.image_url : `${API}${p.image_url}`;
+  const isVideo  = isVideoUrl(mediaSrc);
   const timeStr  = formatTime(p.created_at);
 
   const card = document.createElement('article');
@@ -257,7 +262,9 @@ function buildPostCard(p) {
       </div>
     </div>
     <div class="post-card-img-wrap">
-      <img src="${imgSrc}" alt="${esc(p.road_name||'Road photo')}" loading="lazy" />
+      ${isVideo
+        ? `<video src="${mediaSrc}" muted loop playsinline preload="metadata" class="post-card-video"></video>`
+        : `<img src="${mediaSrc}" alt="${esc(p.road_name||'Road photo')}" loading="lazy" />`}
     </div>
     <div class="post-card-actions">
       <button class="post-action-btn like-btn${p.liked?' liked':''}" data-id="${p.id}" data-liked="${p.liked}" aria-label="Like">
@@ -290,10 +297,18 @@ function buildPostCard(p) {
   card.querySelector('.comment-btn').addEventListener('click', () => openPostModal(p));
   card.querySelector('.share-btn').addEventListener('click', () => sharePost(p.id));
   card.querySelector('.save-btn').addEventListener('click', e => toggleSave(p, e.currentTarget));
-  card.querySelector('.post-card-img-wrap img').addEventListener('dblclick', () => {
-    const btn = card.querySelector('.like-btn');
-    if (!p.liked) toggleLike(p, btn, card);
-  });
+
+  const mediaEl = card.querySelector('.post-card-img-wrap img, .post-card-img-wrap video');
+  if (mediaEl) {
+    mediaEl.addEventListener('dblclick', () => {
+      const btn = card.querySelector('.like-btn');
+      if (!p.liked) toggleLike(p, btn, card);
+    });
+    if (mediaEl.tagName === 'VIDEO') {
+      mediaEl.addEventListener('mouseenter', () => mediaEl.play().catch(() => {}));
+      mediaEl.addEventListener('mouseleave', () => { mediaEl.pause(); mediaEl.currentTime = 0; });
+    }
+  }
 
   if (currentUser && p.user_id === currentUser.id) {
     const delBtn = document.createElement('button');
@@ -343,8 +358,16 @@ const postOverlay = document.getElementById('postOverlay');
 
 async function openPostModal(post) {
   activePost = post;
-  const imgSrc = post.image_url.startsWith('http') ? post.image_url : `${API}${post.image_url}`;
-  document.getElementById('postModalImg').src = imgSrc;
+  const mediaSrc = post.image_url.startsWith('http') ? post.image_url : `${API}${post.image_url}`;
+  const modalImg   = document.getElementById('postModalImg');
+  const modalVideo = document.getElementById('postModalVideo');
+  if (isVideoUrl(mediaSrc)) {
+    modalImg.style.display = 'none'; modalImg.src = '';
+    modalVideo.src = mediaSrc; modalVideo.style.display = 'block';
+  } else {
+    modalVideo.style.display = 'none'; modalVideo.src = '';
+    modalImg.src = mediaSrc; modalImg.style.display = 'block';
+  }
   const initials = (post.user_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
   document.getElementById('postModalAuthor').innerHTML = `<div class="post-avatar" style="display:inline-flex;margin-right:8px;">${initials}</div><strong>${esc(post.user_name||'Driver')}</strong>`;
   document.getElementById('postModalRoad').textContent = post.road_name || post.region || '';
@@ -385,12 +408,14 @@ async function loadComments(postId) {
   } catch { box.innerHTML = ''; }
 }
 
-document.getElementById('postModalClose').addEventListener('click', () => {
-  postOverlay.classList.remove('open'); document.body.style.overflow = '';
-});
-postOverlay.addEventListener('click', e => {
-  if (e.target === postOverlay) { postOverlay.classList.remove('open'); document.body.style.overflow = ''; }
-});
+function closePostModal() {
+  postOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+  const v = document.getElementById('postModalVideo');
+  if (v) { v.pause(); v.src = ''; }
+}
+document.getElementById('postModalClose').addEventListener('click', closePostModal);
+postOverlay.addEventListener('click', e => { if (e.target === postOverlay) closePostModal(); });
 
 document.getElementById('postCommentForm').addEventListener('submit', async e => {
   e.preventDefault();
@@ -441,14 +466,24 @@ postImageInput.addEventListener('change', e => { if (e.target.files[0]) setPostF
 
 function setPostFile(file) {
   postFile = file;
-  uploadPreview.src = URL.createObjectURL(file);
-  uploadPreview.style.display = 'block';
+  const isVideo = file.type.startsWith('video/');
+  const videoPreview = document.getElementById('uploadVideoPreview');
+  const url = URL.createObjectURL(file);
+  if (isVideo) {
+    videoPreview.src = url;
+    videoPreview.style.display = 'block';
+    uploadPreview.style.display = 'none';
+  } else {
+    uploadPreview.src = url;
+    uploadPreview.style.display = 'block';
+    videoPreview.style.display = 'none';
+  }
   uploadZone.style.display = 'none';
 }
 
 document.getElementById('submitPostBtn').addEventListener('click', async () => {
   const err = document.getElementById('newPostError');
-  if (!postFile) { err.textContent = 'Please select an image.'; return; }
+  if (!postFile) { err.textContent = 'Please select a photo or video.'; return; }
   err.textContent = '';
   const fd = new FormData();
   fd.append('image', postFile);

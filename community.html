@@ -99,7 +99,8 @@
   <div class="modal-overlay" id="postOverlay" role="dialog" aria-modal="true">
     <div class="post-modal">
       <div class="post-modal-image-wrap">
-        <img id="postModalImg" src="" alt="" />
+        <img id="postModalImg" src="" alt="" style="display:none" />
+        <video id="postModalVideo" src="" style="display:none" controls autoplay muted loop playsinline></video>
         <button class="post-modal-close-btn" id="postModalClose">&times;</button>
       </div>
       <div class="post-modal-sidebar">
@@ -129,12 +130,13 @@
       </div>
       <div class="modal-body">
         <div class="upload-zone" id="uploadZone">
-          <input type="file" id="postImageInput" accept="image/*" style="display:none" />
+          <input type="file" id="postImageInput" accept="image/*,video/*" style="display:none" />
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          <p>Click or drag to upload a photo</p>
-          <span>JPEG, PNG, WebP up to 8 MB</span>
+          <p>Click or drag to upload a photo or video</p>
+          <span>JPEG, PNG, WebP, MP4, MOV up to 100 MB</span>
         </div>
         <img id="uploadPreview" src="" alt="" style="display:none" class="upload-preview" />
+        <video id="uploadVideoPreview" style="display:none" class="upload-preview" controls muted playsinline></video>
         <div class="form-group">
           <input type="text" id="postRoadName" placeholder="Road name (e.g. Tail of the Dragon)" maxlength="100" />
         </div>

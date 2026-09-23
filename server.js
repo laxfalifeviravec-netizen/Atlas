@@ -76,16 +76,17 @@ const upload = multer({
           cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
         },
       }),
-  limits: { fileSize: 8 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (/^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) cb(null, true);
-    else cb(new Error('Only JPEG, PNG, WebP and GIF images are allowed.'));
+    else if (/^video\/(mp4|webm|quicktime|x-m4v|avi|mov)$/.test(file.mimetype)) cb(null, true);
+    else cb(new Error('Only images (JPEG, PNG, WebP, GIF) and videos (MP4, WebM, MOV) are allowed.'));
   },
 });
 
 async function storeImage(file) {
   if (USE_SUPABASE) {
-    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    const ext = path.extname(file.originalname).toLowerCase() || (file.mimetype.startsWith('video/') ? '.mp4' : '.jpg');
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
     const { error } = await sb.storage.from('uploads').upload(filename, file.buffer, {
       contentType: file.mimetype, upsert: false,

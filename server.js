@@ -101,7 +101,9 @@ async function storeImage(file) {
 let _users = [], _posts = [], _comments = [], _postLikes = new Set();
 let _groups = [], _groupMembers = [], _groupLocations = [], _groupRoutes = [];
 let _listings = [], _roads = [], _stories = [];
-let _uid = 1, _pid = 1, _cid = 1, _gid = 1, _rid = 1, _lid = 1, _roadId = 1, _sid = 1;
+let _follows = []; // { follower_id, following_id }
+let _notifications = []; // { id, user_id, actor_id, actor_name, type, post_id, read, created_at }
+let _uid = 1, _pid = 1, _cid = 1, _gid = 1, _rid = 1, _lid = 1, _roadId = 1, _sid = 1, _nid = 1;
 let _seeded = false;
 function now() { return new Date().toISOString(); }
 
@@ -574,6 +576,117 @@ const db = {
     _roads.splice(idx, 1); return { ok: true };
   },
 
+  // ── Users (public profile + stats) ──
+  async getUserWithStats(id, viewerId) {
+    if (USE_SUPABASE) {
+      const { data: u } = await sb.from('users').select('*').eq('id', id).single();
+      if (!u) return null;
+      const { count: post_count }      = await sb.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', id);
+      const { count: follower_count }  = await sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', id);
+      const { count: following_count } = await sb.from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', id);
+      let is_following = false;
+      if (viewerId && viewerId !== id) {
+        const { data: f } = await sb.from('follows').select('follower_id').eq('follower_id', viewerId).eq('following_id', id).single();
+        is_following = !!f;
+      }
+      return { ...safeUser(u), post_count: post_count || 0, follower_count: follower_count || 0, following_count: following_count || 0, is_following };
+    }
+    const u = _users.find(u => u.id === id);
+    if (!u) return null;
+    return {
+      ...safeUser(u),
+      post_count:      _posts.filter(p => p.user_id === id).length,
+      follower_count:  _follows.filter(f => f.following_id === id).length,
+      following_count: _follows.filter(f => f.follower_id === id).length,
+      is_following: viewerId ? _follows.some(f => f.follower_id === viewerId && f.following_id === id) : false,
+    };
+  },
+  async getUserPosts(userId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('posts')
+        .select('id, user_id, image_url, caption, road_name, region, likes, created_at')
+        .eq('user_id', userId).order('created_at', { ascending: false });
+      return data || [];
+    }
+    return _posts.filter(p => p.user_id === userId).sort((a, b) => b.created_at.localeCompare(a.created_at));
+  },
+  async getPostById(id, userId) {
+    if (USE_SUPABASE) {
+      const { data: p } = await sb.from('posts')
+        .select('*, users!posts_user_id_fkey(name, avatar)').eq('id', id).single();
+      if (!p) return null;
+      let liked = false;
+      if (userId) {
+        const { data: lk } = await sb.from('post_likes').select('post_id').eq('user_id', userId).eq('post_id', id).single();
+        liked = !!lk;
+      }
+      return { ...p, user_name: p.users?.name || '', user_avatar: p.users?.avatar || null, liked, users: undefined };
+    }
+    const p = _posts.find(p => p.id === id);
+    if (!p) return null;
+    const u = _users.find(u => u.id === p.user_id) || {};
+    return { ...p, user_name: u.name || '', user_avatar: u.avatar || null,
+      liked: userId ? _postLikes.has(`${userId}-${p.id}`) : false };
+  },
+
+  // ── Follows ──
+  async followUser(followerId, followingId) {
+    if (followerId === followingId) return { error: 'self' };
+    if (USE_SUPABASE) {
+      const { error } = await sb.from('follows').insert({ follower_id: followerId, following_id: followingId });
+      if (error?.code === '23505') return { following: true };
+      if (error) throw error;
+      return { following: true };
+    }
+    if (_follows.some(f => f.follower_id === followerId && f.following_id === followingId)) return { following: true };
+    _follows.push({ follower_id: followerId, following_id: followingId });
+    return { following: true };
+  },
+  async unfollowUser(followerId, followingId) {
+    if (USE_SUPABASE) {
+      await sb.from('follows').delete().eq('follower_id', followerId).eq('following_id', followingId);
+      return { following: false };
+    }
+    const idx = _follows.findIndex(f => f.follower_id === followerId && f.following_id === followingId);
+    if (idx !== -1) _follows.splice(idx, 1);
+    return { following: false };
+  },
+
+  // ── Notifications ──
+  async getNotifications(userId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('notifications')
+        .select('*, actor:users!notifications_actor_id_fkey(name, avatar), post:posts!notifications_post_id_fkey(image_url)')
+        .eq('user_id', userId).order('created_at', { ascending: false }).limit(50);
+      return (data || []).map(n => ({
+        ...n, actor_name: n.actor?.name || '', post_image: n.post?.image_url || null,
+        actor: undefined, post: undefined,
+      }));
+    }
+    return _notifications.filter(n => n.user_id === userId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 50)
+      .map(n => {
+        const actor = _users.find(u => u.id === n.actor_id) || {};
+        const post  = _posts.find(p => p.id === n.post_id)  || {};
+        return { ...n, actor_name: actor.name || n.actor_name || '', post_image: post.image_url || null };
+      });
+  },
+  async markNotificationsRead(userId) {
+    if (USE_SUPABASE) {
+      await sb.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false);
+      return;
+    }
+    _notifications.filter(n => n.user_id === userId && !n.read).forEach(n => { n.read = true; });
+  },
+  async createNotification(fields) {
+    if (fields.user_id === fields.actor_id) return; // no self-notifications
+    if (USE_SUPABASE) {
+      await sb.from('notifications').insert(fields);
+      return;
+    }
+    _notifications.push({ id: _nid++, ...fields, read: false, created_at: now() });
+  },
+
   // ── Password resets ──
   _resetTokens: new Map(), // in-memory fallback: token → { email, expires_at }
   async createResetToken(email) {
@@ -771,9 +884,16 @@ app.delete('/api/posts/:id', requireAuth, async (req, res) => {
 
 app.post('/api/posts/:id/like', requireAuth, async (req, res) => {
   try {
-    const result = await db.toggleLike(parseInt(req.params.id), req.user.id);
+    const postId = parseInt(req.params.id);
+    const result = await db.toggleLike(postId, req.user.id);
     if (!result) return res.status(404).json({ error: 'Post not found.' });
     res.json(result);
+    if (result.liked) {
+      const post = USE_SUPABASE
+        ? (await sb.from('posts').select('user_id').eq('id', postId).single()).data
+        : _posts.find(p => p.id === postId);
+      if (post) db.createNotification({ user_id: post.user_id, actor_id: req.user.id, actor_name: req.user.name || '', type: 'like', post_id: postId }).catch(() => {});
+    }
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
@@ -786,11 +906,16 @@ app.get('/api/posts/:id/comments', async (req, res) => {
 
 app.post('/api/posts/:id/comments', requireAuth, async (req, res) => {
   try {
+    const postId = parseInt(req.params.id);
     const { body } = req.body;
     if (!body?.trim()) return res.status(400).json({ error: 'Comment cannot be empty.' });
-    const comment = await db.createComment({ post_id: parseInt(req.params.id), user_id: req.user.id, body: body.trim() });
+    const comment = await db.createComment({ post_id: postId, user_id: req.user.id, body: body.trim() });
     const user = await db.findUserById(req.user.id);
     res.status(201).json({ comment: { ...comment, user_name: user?.name || '', user_avatar: user?.avatar || null } });
+    const post = USE_SUPABASE
+      ? (await sb.from('posts').select('user_id').eq('id', postId).single()).data
+      : _posts.find(p => p.id === postId);
+    if (post) db.createNotification({ user_id: post.user_id, actor_id: req.user.id, actor_name: req.user.name || '', type: 'comment', post_id: postId }).catch(() => {});
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
@@ -1026,6 +1151,60 @@ app.delete('/api/roads/:id', requireAuth, async (req, res) => {
     const result = await db.deleteRoad(parseInt(req.params.id), req.user.id);
     if (result.error === 'not_found') return res.status(404).json({ error: 'Road not found.' });
     if (result.error === 'forbidden') return res.status(403).json({ error: 'Not your road.' });
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// ── User profile routes ───────────────────────────────────────
+app.get('/api/users/:id', optionalAuth, async (req, res) => {
+  try {
+    const user = await db.getUserWithStats(parseInt(req.params.id), req.user?.id);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    res.json({ user });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.get('/api/users/:id/posts', async (req, res) => {
+  try {
+    res.json({ posts: await db.getUserPosts(parseInt(req.params.id)) });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.get('/api/posts/:id', optionalAuth, async (req, res) => {
+  try {
+    const post = await db.getPostById(parseInt(req.params.id), req.user?.id);
+    if (!post) return res.status(404).json({ error: 'Post not found.' });
+    res.json({ post });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// ── Follow routes ─────────────────────────────────────────────
+app.post('/api/follow/:id', requireAuth, async (req, res) => {
+  try {
+    const result = await db.followUser(req.user.id, parseInt(req.params.id));
+    if (result.error === 'self') return res.status(400).json({ error: 'Cannot follow yourself.' });
+    res.json(result);
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.delete('/api/follow/:id', requireAuth, async (req, res) => {
+  try {
+    res.json(await db.unfollowUser(req.user.id, parseInt(req.params.id)));
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// ── Notification routes ───────────────────────────────────────
+app.get('/api/notifications', requireAuth, async (req, res) => {
+  try {
+    const notifications = await db.getNotifications(req.user.id);
+    const unread = notifications.filter(n => !n.read).length;
+    res.json({ notifications, unread });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/notifications/read', requireAuth, async (req, res) => {
+  try {
+    await db.markNotificationsRead(req.user.id);
     res.json({ ok: true });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });

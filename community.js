@@ -285,10 +285,20 @@ function buildPostCard(p) {
 
   card.querySelector('.like-btn').addEventListener('click', e => toggleLike(p, e.currentTarget, card));
   card.querySelector('.comment-btn').addEventListener('click', () => openPostModal(p));
-  card.querySelector('.post-card-img-wrap img').addEventListener('dblclick', e => {
+  card.querySelector('.share-btn').addEventListener('click', () => sharePost(p.id));
+  card.querySelector('.post-card-img-wrap img').addEventListener('dblclick', () => {
     const btn = card.querySelector('.like-btn');
     if (!p.liked) toggleLike(p, btn, card);
   });
+
+  if (currentUser && p.user_id === currentUser.id) {
+    const delBtn = document.createElement('button');
+    delBtn.className = 'post-action-btn post-delete-btn';
+    delBtn.title = 'Delete post';
+    delBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
+    delBtn.addEventListener('click', () => deletePost(p.id, card));
+    card.querySelector('.post-card-actions').appendChild(delBtn);
+  }
   return card;
 }
 
@@ -505,6 +515,9 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
     localStorage.setItem('culture-token', token);
     authOverlay.classList.remove('open'); document.body.style.overflow = '';
     renderNav(currentUser);
+    document.getElementById('notifBtn').style.display = '';
+    loadNotifications();
+    if (!notifPollTimer) notifPollTimer = setInterval(loadNotifications, 30000);
     loadFeed(true);
   } catch { document.getElementById('loginError').textContent = 'Network error. Try again.'; }
 });
@@ -528,7 +541,11 @@ document.getElementById('registerForm').addEventListener('submit', async e => {
     localStorage.setItem('culture-token', token);
     authOverlay.classList.remove('open'); document.body.style.overflow = '';
     renderNav(currentUser);
+    document.getElementById('notifBtn').style.display = '';
+    loadNotifications();
+    notifPollTimer = setInterval(loadNotifications, 30000);
     loadFeed(true);
+    if (!localStorage.getItem('culture-onboarded')) showOnboarding();
   } catch { document.getElementById('regError').textContent = 'Network error. Try again.'; }
 });
 
@@ -547,8 +564,138 @@ function formatTime(ts) {
   return `${Math.floor(diff/86400)}d ago`;
 }
 
+// ── Notifications ──────────────────────────────────────────
+const notifOverlay = document.getElementById('notifOverlay');
+let notifPollTimer = null;
+
+document.getElementById('notifBtn').addEventListener('click', () => {
+  notifOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderNotifList();
+  markNotifsRead();
+});
+document.getElementById('notifClose').addEventListener('click', () => {
+  notifOverlay.classList.remove('open'); document.body.style.overflow = '';
+});
+notifOverlay.addEventListener('click', e => {
+  if (e.target === notifOverlay) { notifOverlay.classList.remove('open'); document.body.style.overflow = ''; }
+});
+
+async function loadNotifications() {
+  if (!currentUser) return;
+  try {
+    const res = await fetch(`${API}/api/notifications`, { headers: { Authorization: `Bearer ${token}` } });
+    const { unread } = await res.json();
+    const badge = document.getElementById('notifBadge');
+    if (unread > 0) { badge.textContent = unread > 9 ? '9+' : unread; badge.style.display = ''; }
+    else badge.style.display = 'none';
+  } catch {}
+}
+
+async function renderNotifList() {
+  const list = document.getElementById('notifList');
+  list.innerHTML = '<div class="feed-loading"><div class="spinner"></div></div>';
+  try {
+    const res = await fetch(`${API}/api/notifications`, { headers: { Authorization: `Bearer ${token}` } });
+    const { notifications } = await res.json();
+    if (!notifications?.length) {
+      list.innerHTML = '<p class="notif-empty">No notifications yet.</p>'; return;
+    }
+    list.innerHTML = notifications.map(n => `
+      <div class="notif-item${n.read ? '' : ' notif-unread'}" data-post="${n.post_id || ''}">
+        <div class="notif-avatar">${(n.actor_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()}</div>
+        <div class="notif-body">
+          <strong>${esc(n.actor_name||'Someone')}</strong>
+          ${n.type === 'like' ? ' liked your post.' : ' commented on your post.'}
+          <div class="notif-time">${formatTime(n.created_at)}</div>
+        </div>
+        ${n.post_image ? `<img class="notif-thumb" src="${n.post_image.startsWith('http') ? n.post_image : API + n.post_image}" alt="" />` : ''}
+      </div>`).join('');
+    list.querySelectorAll('.notif-item[data-post]').forEach(el => {
+      const postId = parseInt(el.dataset.post);
+      if (!postId) return;
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', async () => {
+        notifOverlay.classList.remove('open'); document.body.style.overflow = '';
+        await openPostById(postId);
+      });
+    });
+  } catch { list.innerHTML = '<p class="notif-empty">Failed to load.</p>'; }
+}
+
+async function markNotifsRead() {
+  try {
+    await fetch(`${API}/api/notifications/read`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    const badge = document.getElementById('notifBadge');
+    badge.style.display = 'none';
+  } catch {}
+}
+
+async function openPostById(postId) {
+  try {
+    const res = await fetch(`${API}/api/posts/${postId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!res.ok) return;
+    const { post } = await res.json();
+    await openPostModal(post);
+  } catch {}
+}
+
+// ── Post deep-link (?post=:id in URL) ──────────────────────
+(async function handlePostDeepLink() {
+  const params = new URLSearchParams(location.search);
+  const postId = parseInt(params.get('post'));
+  if (!postId) return;
+  history.replaceState({}, '', location.pathname);
+  await openPostById(postId);
+})();
+
+// ── Delete own post ────────────────────────────────────────
+async function deletePost(postId, cardEl) {
+  if (!confirm('Delete this post? This cannot be undone.')) return;
+  try {
+    const res = await fetch(`${API}/api/posts/${postId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) { cardEl.remove(); posts = posts.filter(p => p.id !== postId); }
+  } catch {}
+}
+
+// ── Share post ─────────────────────────────────────────────
+function sharePost(postId) {
+  const url = `${location.origin}/community.html?post=${postId}`;
+  if (navigator.share) {
+    navigator.share({ title: 'One Culture', url }).catch(() => {});
+  } else {
+    navigator.clipboard?.writeText(url).then(() => {
+      showToast('Link copied!');
+    }).catch(() => showToast('Copy: ' + url));
+  }
+}
+
+function showToast(msg) {
+  let t = document.getElementById('appToast');
+  if (!t) { t = document.createElement('div'); t.id = 'appToast'; t.className = 'app-toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Onboarding ─────────────────────────────────────────────
+function showOnboarding() {
+  const el = document.getElementById('onboardingOverlay');
+  if (el) { el.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+}
+document.getElementById('onboardingDone')?.addEventListener('click', () => {
+  localStorage.setItem('culture-onboarded', '1');
+  const el = document.getElementById('onboardingOverlay');
+  if (el) { el.style.display = 'none'; document.body.style.overflow = ''; }
+});
+
 // ── Init ───────────────────────────────────────────────────
 (async () => {
   await loadMe();
   await Promise.all([loadFeed(true), loadStories()]);
+  if (currentUser) {
+    document.getElementById('notifBtn').style.display = '';
+    loadNotifications();
+    notifPollTimer = setInterval(loadNotifications, 30000);
+  }
 })();

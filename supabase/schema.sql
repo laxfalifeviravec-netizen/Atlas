@@ -125,6 +125,30 @@ create table if not exists roads (
   created_at  timestamptz default now()
 );
 
+-- Follows
+create table if not exists follows (
+  follower_id  bigint references users(id) on delete cascade,
+  following_id bigint references users(id) on delete cascade,
+  created_at   timestamptz default now(),
+  primary key (follower_id, following_id)
+);
+
+create index if not exists follows_following_id_idx on follows(following_id);
+
+-- Notifications
+create table if not exists notifications (
+  id         bigserial primary key,
+  user_id    bigint references users(id) on delete cascade,
+  actor_id   bigint references users(id) on delete cascade,
+  actor_name text default '',
+  type       text not null,
+  post_id    bigint references posts(id) on delete cascade,
+  read       boolean default false,
+  created_at timestamptz default now()
+);
+
+create index if not exists notifications_user_id_idx on notifications(user_id, read);
+
 -- Password reset tokens
 create table if not exists password_resets (
   token      text primary key,

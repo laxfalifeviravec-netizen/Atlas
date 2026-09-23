@@ -596,5 +596,108 @@ body {
   }
 }
 
+/* ── Notification bell badge ──────────────────────────────── */
+.notif-bell { position: relative; }
+.notif-badge {
+  position: absolute; top: 4px; right: 4px;
+  min-width: 16px; height: 16px; border-radius: 8px;
+  background: #ef4444; color: #fff;
+  font-size: 10px; font-weight: 700; line-height: 16px;
+  text-align: center; padding: 0 3px;
+  display: none;
+  pointer-events: none;
+}
+
+/* ── Notifications panel ──────────────────────────────────── */
+.notif-modal { max-height: 85vh; display: flex; flex-direction: column; }
+.notif-modal .modal-header { flex-shrink: 0; }
+.notif-list { overflow-y: auto; flex: 1; padding: 4px 0; }
+.notif-empty { padding: 32px 16px; text-align: center; color: var(--c-text-2); font-size: 14px; }
+.notif-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--c-border);
+  transition: background 0.1s;
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-item:active { background: var(--c-bg); }
+.notif-unread { background: rgba(228,165,48,0.05); }
+.notif-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-head); font-size: 15px; font-weight: 700;
+  flex-shrink: 0; color: var(--c-text);
+}
+.notif-body { flex: 1; min-width: 0; font-size: 13px; line-height: 1.45; }
+.notif-body strong { color: var(--c-text); font-weight: 600; }
+.notif-time { font-size: 11px; color: var(--c-text-2); margin-top: 2px; }
+.notif-thumb {
+  width: 44px; height: 44px; border-radius: 4px;
+  object-fit: cover; flex-shrink: 0;
+}
+
+/* ── Delete post button ───────────────────────────────────── */
+.post-delete-btn {
+  margin-left: auto;
+  color: var(--c-text-2);
+}
+.post-delete-btn:hover, .post-delete-btn:active { color: #ef4444; }
+
+/* ── Toast notification ───────────────────────────────────── */
+.app-toast {
+  position: fixed; bottom: calc(var(--bottom-nav-h) + 12px); left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--c-surface); color: var(--c-text);
+  border: 1px solid var(--c-border);
+  border-radius: 8px; padding: 10px 20px;
+  font-size: 13px; font-weight: 500;
+  opacity: 0; transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none; z-index: 9999; white-space: nowrap;
+}
+.app-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Onboarding overlay ───────────────────────────────────── */
+.onboarding-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(12,12,15,0.96);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 0;
+}
+.onboarding-card {
+  background: var(--c-surface);
+  border-radius: 20px 20px 0 0;
+  padding: 32px 24px calc(32px + env(safe-area-inset-bottom, 0px));
+  width: 100%; max-width: 480px;
+  display: flex; flex-direction: column; gap: 20px;
+  animation: slideUp 0.35s ease;
+}
+@keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.onboarding-logo {
+  font-family: var(--font-head); font-size: 28px; font-weight: 800;
+  letter-spacing: -0.5px; color: var(--c-accent);
+  text-align: center;
+}
+.onboarding-card h2 {
+  font-family: var(--font-head); font-size: 26px; font-weight: 800;
+  line-height: 1.15; letter-spacing: -0.4px;
+  text-align: center; margin-top: -8px;
+}
+.onboarding-card > p {
+  font-size: 14px; color: var(--c-text-2); text-align: center; margin-top: -8px;
+}
+.onboarding-features { display: flex; flex-direction: column; gap: 14px; }
+.onboarding-feature {
+  display: flex; align-items: center; gap: 14px;
+}
+.onboarding-icon {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: rgba(228,165,48,0.1); border: 1px solid rgba(228,165,48,0.2);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--c-accent); flex-shrink: 0;
+}
+.onboarding-feature strong { display: block; font-size: 14px; font-weight: 600; margin-bottom: 1px; }
+.onboarding-feature span { font-size: 12px; color: var(--c-text-2); }
+
 /* ── Utility ───────────────────────────────────────────────── */
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }

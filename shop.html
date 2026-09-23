@@ -30,13 +30,25 @@
     </div>
   </header>
 
+  <!-- Category tabs -->
+  <div class="shop-cats" id="shopCats">
+    <button class="shop-cat active" data-cat="All">All</button>
+    <button class="shop-cat" data-cat="Performance">Performance</button>
+    <button class="shop-cat" data-cat="Wheels">Wheels &amp; Tires</button>
+    <button class="shop-cat" data-cat="Electronics">Electronics</button>
+    <button class="shop-cat" data-cat="Exterior">Exterior</button>
+    <button class="shop-cat" data-cat="Interior">Interior</button>
+    <button class="shop-cat" data-cat="Apparel">Apparel</button>
+    <button class="shop-cat" data-cat="Other">Other</button>
+  </div>
+
   <main class="shop-main">
-    <p class="shop-subtitle">Parts, mods &amp; builds from the community</p>
     <div class="shop-loading" id="shopLoading"><div class="spinner"></div></div>
     <div class="shop-grid" id="shopGrid"></div>
     <div class="shop-empty" id="shopEmpty" style="display:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" width="44" height="44"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-      <p>No mods listed yet. Share a post with a part attached to appear here.</p>
+      <p>No mods yet. Post with a part attached to appear here.</p>
+      <a href="community.html?create=post" class="btn btn-primary" style="text-decoration:none;margin-top:4px">Share a Build</a>
     </div>
     <div class="shop-load-more" id="shopLoadMore" style="display:none">
       <button class="btn btn-outline" id="loadMoreBtn">Load more</button>
@@ -67,6 +79,7 @@
   </nav>
 
   <script src="shop.js"></script>
+  <script src="create-sheet.js"></script>
   <script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js")); }</script>
 </body>
 </html>

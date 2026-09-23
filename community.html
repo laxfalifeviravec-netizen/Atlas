@@ -131,7 +131,7 @@
   <div class="modal-overlay" id="newPostOverlay" role="dialog" aria-modal="true">
     <div class="modal">
       <div class="modal-header">
-        <h3>Share a Road</h3>
+        <h3>New Post</h3>
         <button class="modal-close" id="newPostClose">&times;</button>
       </div>
       <div class="modal-body">
@@ -144,23 +144,36 @@
         <img id="uploadPreview" src="" alt="" style="display:none" class="upload-preview" />
         <video id="uploadVideoPreview" style="display:none" class="upload-preview" controls muted playsinline></video>
         <div class="form-group">
-          <input type="text" id="postRoadName" placeholder="Road name (e.g. Tail of the Dragon)" maxlength="100" />
+          <textarea id="postCaption" placeholder="Caption, road story, or thoughts…" rows="3" maxlength="500"></textarea>
+        </div>
+        <div class="form-group">
+          <input type="text" id="postRoadName" placeholder="Road name (optional, e.g. Tail of the Dragon)" maxlength="100" />
         </div>
         <div class="form-group">
           <select id="postRegion">
-            <option value="">Select region…</option>
+            <option value="">Region (optional)…</option>
             <option>West Coast</option><option>Mountain West</option>
             <option>Southwest</option><option>Midwest</option>
             <option>Southeast</option><option>Northeast</option>
+            <option>International</option>
           </select>
-        </div>
-        <div class="form-group">
-          <textarea id="postCaption" placeholder="Tell the story of this road…" rows="3" maxlength="500"></textarea>
         </div>
         <!-- Mod attachment -->
         <details class="mod-details" id="modDetails">
           <summary class="mod-summary">+ Attach a mod / part</summary>
           <div class="mod-fields">
+            <div class="form-group">
+              <select id="postModCategory">
+                <option value="">Category…</option>
+                <option value="Performance">Performance</option>
+                <option value="Wheels">Wheels &amp; Tires</option>
+                <option value="Electronics">Electronics &amp; Audio</option>
+                <option value="Exterior">Exterior</option>
+                <option value="Interior">Interior</option>
+                <option value="Apparel">Apparel</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
             <div class="form-group">
               <input type="text" id="postModTitle" placeholder="Part or mod name" maxlength="100" />
             </div>
@@ -168,12 +181,12 @@
               <input type="text" id="postModPrice" placeholder="Price (e.g. $299)" maxlength="40" />
             </div>
             <div class="form-group">
-              <input type="url" id="postModUrl" placeholder="Link (optional)" maxlength="500" />
+              <input type="url" id="postModUrl" placeholder="Link to part (optional)" maxlength="500" />
             </div>
           </div>
         </details>
         <span class="field-error" id="newPostError"></span>
-        <button class="btn btn-primary btn-full" id="submitPostBtn">Share Road</button>
+        <button class="btn btn-primary btn-full" id="submitPostBtn">Post</button>
       </div>
     </div>
   </div>
@@ -312,6 +325,7 @@
   </div>
 
   <script src="community.js"></script>
+  <script src="create-sheet.js"></script>
   <script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js")); }</script>
 </body>
 </html>

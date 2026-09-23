@@ -8,6 +8,7 @@ if (!token) location.replace('index.html');
 let page = 1;
 let totalPages = 1;
 let allPosts = [];
+let activeShopCat = 'All';
 
 // ── Theme ──────────────────────────────────────────────────
 const savedTheme = localStorage.getItem('culture-theme');
@@ -41,17 +42,29 @@ function renderNav(user) {
   });
 }
 
+// ── Category tabs ──────────────────────────────────────────
+document.getElementById('shopCats')?.addEventListener('click', e => {
+  const btn = e.target.closest('.shop-cat');
+  if (!btn) return;
+  document.querySelectorAll('.shop-cat').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  activeShopCat = btn.dataset.cat || 'All';
+  loadShop(true);
+});
+
 // ── Shop Feed ──────────────────────────────────────────────
 async function loadShop(reset = false) {
   if (reset) { page = 1; allPosts = []; document.getElementById('shopGrid').innerHTML = ''; }
   document.getElementById('shopLoading').style.display = 'flex';
   try {
-    const res = await fetch(`${API}/api/shop`, {
+    const cat = activeShopCat && activeShopCat !== 'All' ? `?category=${encodeURIComponent(activeShopCat)}` : '';
+    const res = await fetch(`${API}/api/shop${cat}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     const data = await res.json();
-    allPosts = reset ? data.posts : [...allPosts, ...data.posts];
-    renderShop(data.posts, reset);
+    const posts = Array.isArray(data) ? data : (data.posts || []);
+    allPosts = reset ? posts : [...allPosts, ...posts];
+    renderShop(posts, reset);
     document.getElementById('shopEmpty').style.display = allPosts.length === 0 ? 'flex' : 'none';
     document.getElementById('shopLoadMore').style.display = 'none';
   } catch {}
@@ -65,21 +78,23 @@ function renderShop(posts, reset) {
 }
 
 function buildShopCard(p) {
-  const imgSrc   = p.image_url.startsWith('http') ? p.image_url : `${API}${p.image_url}`;
+  const imgSrc   = p.image_url ? (p.image_url.startsWith('http') ? p.image_url : `${API}${p.image_url}`) : null;
   const initials = (p.user_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
   const timeStr  = formatTime(p.created_at);
 
   const card = document.createElement('div');
   card.className = 'shop-card';
   card.innerHTML = `
-    <img class="shop-card-img" src="${imgSrc}" alt="${esc(p.mod_title||'Mod')}" loading="lazy" />
+    ${imgSrc
+      ? `<img class="shop-card-img" src="${imgSrc}" alt="${esc(p.mod_title||'Mod')}" loading="lazy" />`
+      : `<div class="shop-card-img shop-card-img-placeholder">🔧</div>`}
     <div class="shop-card-body">
-      <div class="shop-card-author">
-        <a href="profile.html?id=${p.user_id}">${initials}</a>
-        <span>·</span>
-        <a href="profile.html?id=${p.user_id}">${esc(p.user_name||'Driver')}</a>
+      <div class="shop-card-top">
+        <div class="shop-card-author">
+          <a href="profile.html?id=${p.user_id}">${esc(p.user_name||'Driver')}</a>
+        </div>
+        ${p.mod_category ? `<span class="shop-cat-badge">${esc(p.mod_category)}</span>` : ''}
       </div>
-      ${p.road_name ? `<div class="shop-card-meta"><span class="shop-card-road">${esc(p.road_name)}</span>${p.region ? `<span>· ${esc(p.region)}</span>` : ''}</div>` : ''}
       <div class="shop-mod-row">
         <div class="shop-mod-info">
           <span class="shop-mod-name">${esc(p.mod_title)}</span>
@@ -88,7 +103,7 @@ function buildShopCard(p) {
         ${p.mod_url ? `<a href="${esc(p.mod_url)}" target="_blank" rel="noopener noreferrer" class="shop-mod-btn">View</a>` : ''}
       </div>
       ${p.caption ? `<div class="shop-card-caption">${esc(p.caption)}</div>` : ''}
-      <div class="shop-card-meta" style="margin-top:2px">${timeStr}</div>
+      <div class="shop-card-time">${timeStr}</div>
     </div>
   `;
   return card;

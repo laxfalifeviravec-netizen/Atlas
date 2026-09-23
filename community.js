@@ -158,14 +158,14 @@ const storyImageInput = document.getElementById('storyImageInput');
 const storyPreview    = document.getElementById('storyPreview');
 let storyFile = null;
 
-document.getElementById('addStoryBtn').addEventListener('click', () => {
+function openNewStory() {
   if (!currentUser) return openAuth();
   newStoryOverlay.classList.add('open');
-});
-document.getElementById('newStoryBtn').addEventListener('click', () => {
-  if (!currentUser) return openAuth();
-  newStoryOverlay.classList.add('open');
-});
+}
+window.openNewStory = openNewStory;
+
+document.getElementById('addStoryBtn').addEventListener('click', openNewStory);
+document.getElementById('newStoryBtn').addEventListener('click', openNewStory);
 document.getElementById('newStoryClose').addEventListener('click', () => newStoryOverlay.classList.remove('open'));
 newStoryOverlay.addEventListener('click', e => { if (e.target === newStoryOverlay) newStoryOverlay.classList.remove('open'); });
 
@@ -464,6 +464,7 @@ function openNewPost() {
   newPostOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
+window.openNewPost = openNewPost;
 
 document.getElementById('newPostClose').addEventListener('click', () => {
   newPostOverlay.classList.remove('open'); document.body.style.overflow = '';
@@ -471,7 +472,11 @@ document.getElementById('newPostClose').addEventListener('click', () => {
 newPostOverlay.addEventListener('click', e => {
   if (e.target === newPostOverlay) { newPostOverlay.classList.remove('open'); document.body.style.overflow = ''; }
 });
-document.getElementById('newPostBtnNav').addEventListener('click', openNewPost);
+// create-sheet.js intercepts .bnav-post in capture phase; this is the fallback
+document.getElementById('newPostBtnNav').addEventListener('click', () => {
+  if (typeof window.openCreateSheet === 'function') window.openCreateSheet();
+  else openNewPost();
+});
 
 uploadZone.addEventListener('click', () => postImageInput.click());
 uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor = 'var(--c-accent)'; });
@@ -509,9 +514,10 @@ document.getElementById('submitPostBtn').addEventListener('click', async () => {
   fd.append('caption',   document.getElementById('postCaption').value.trim());
   fd.append('road_name', document.getElementById('postRoadName').value.trim());
   fd.append('region',    document.getElementById('postRegion').value);
-  fd.append('mod_title', (document.getElementById('postModTitle')?.value||'').trim());
-  fd.append('mod_price', (document.getElementById('postModPrice')?.value||'').trim());
-  fd.append('mod_url',   (document.getElementById('postModUrl')?.value||'').trim());
+  fd.append('mod_category', (document.getElementById('postModCategory')?.value||'').trim());
+  fd.append('mod_title',    (document.getElementById('postModTitle')?.value||'').trim());
+  fd.append('mod_price',    (document.getElementById('postModPrice')?.value||'').trim());
+  fd.append('mod_url',      (document.getElementById('postModUrl')?.value||'').trim());
   const btn = document.getElementById('submitPostBtn');
   btn.disabled = true; btn.textContent = 'Sharing…';
   try {
@@ -777,6 +783,9 @@ document.getElementById('onboardingDone')?.addEventListener('click', () => {
 // ── Init ───────────────────────────────────────────────────
 (async () => {
   await loadMe();
+  const _cp = new URLSearchParams(location.search).get('create');
+  if (_cp === 'post') openNewPost();
+  else if (_cp === 'story') openNewStory();
   await Promise.all([loadFeed(true), loadStories()]);
   if (currentUser) {
     document.getElementById('notifBtn').style.display = '';

@@ -1,15 +1,45 @@
 /* One Culture — Shop page styles */
 
+/* ── Category tabs ─── */
+.shop-cats {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid var(--c-border);
+  position: sticky;
+  top: var(--header-h, 56px);
+  background: var(--c-bg);
+  z-index: 40;
+}
+.shop-cats::-webkit-scrollbar { display: none; }
+
+.shop-cat {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text-2, #8B8B96);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+  white-space: nowrap;
+}
+.shop-cat.active {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+  color: #0C0C0F;
+}
+
 .shop-main {
   padding: 12px 16px calc(var(--bottom-nav-h) + 12px);
   max-width: 680px;
   margin: 0 auto;
-}
-
-.shop-subtitle {
-  font-size: 13px;
-  color: var(--c-text-2);
-  margin-bottom: 16px;
 }
 
 .shop-loading {
@@ -150,4 +180,39 @@
 .shop-card-road {
   font-weight: 600;
   color: var(--c-text);
+}
+
+.shop-card-img-placeholder {
+  width: 100%;
+  aspect-ratio: 16/9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-surface);
+  font-size: 48px;
+}
+
+.shop-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.shop-cat-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  color: var(--c-text-secondary, #8B8B96);
+  flex-shrink: 0;
+}
+
+.shop-card-time {
+  font-size: 11px;
+  color: var(--c-text-2);
 }

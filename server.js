@@ -1104,11 +1104,13 @@ app.get('/api/posts', optionalAuth, async (req, res) => {
 app.post('/api/posts', requireAuth, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'An image is required.' });
-    const { caption = '', road_name = '', region = '' } = req.body;
+    const { caption = '', road_name = '', region = '', mod_title = '', mod_price = '', mod_url = '', mod_category = '' } = req.body;
     const image_url = await storeImage(req.file);
     const post = await db.createPost({
       user_id: req.user.id, image_url,
       caption: caption.trim(), road_name: road_name.trim(), region: region.trim(),
+      mod_title: mod_title.trim(), mod_price: mod_price.trim(),
+      mod_url: mod_url.trim(), mod_category: mod_category.trim(),
     });
     const user = await db.findUserById(req.user.id);
     res.status(201).json({ post: { ...post, user_name: user?.name || '', user_avatar: user?.avatar || null, liked: false } });
@@ -1119,6 +1121,35 @@ app.post('/api/posts', requireAuth, upload.single('image'), async (req, res) => 
       : 'Server error.';
     res.status(500).json({ error: msg });
   }
+});
+
+// ── Shop feed (posts with a mod attached) ─────────────────────
+app.get('/api/shop', optionalAuth, async (req, res) => {
+  try {
+    const category = req.query.category || '';
+    if (USE_SUPABASE) {
+      let q = sb.from('posts')
+        .select('*, users!posts_user_id_fkey(name, avatar)')
+        .not('mod_title', 'is', null)
+        .neq('mod_title', '')
+        .order('created_at', { ascending: false })
+        .limit(60);
+      if (category && category !== 'All') q = q.eq('mod_category', category);
+      const { data, error } = await q;
+      if (error) throw error;
+      const posts = (data || []).map(p => ({
+        ...p, user_name: p.users?.name || '', user_avatar: p.users?.avatar || null, users: undefined,
+      }));
+      return res.json({ posts });
+    }
+    let posts = _posts.filter(p => p.mod_title && p.mod_title.trim());
+    if (category && category !== 'All') posts = posts.filter(p => (p.mod_category || '') === category);
+    posts = posts.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
+    res.json({ posts: posts.map(p => {
+      const u = _users.find(u => u.id === p.user_id) || {};
+      return { ...p, user_name: u.name || '', user_avatar: u.avatar || null };
+    }) });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
 app.delete('/api/posts/:id', requireAuth, async (req, res) => {

@@ -1558,8 +1558,8 @@ app.get('/api/users/:id/cars', async (req, res) => {
 app.post('/api/cars', requireAuth, async (req, res) => {
   try {
     const { year, make, model, color = '', mods = '' } = req.body;
-    if (!year || !make || !model) return res.status(400).json({ error: 'Year, make and model are required.' });
-    const car = await db.addCar({ user_id: req.user.id, year: parseInt(year), make: make.trim(), model: model.trim(), color: color.trim(), mods: mods.trim() });
+    if (!make || !model) return res.status(400).json({ error: 'Make and model are required.' });
+    const car = await db.addCar({ user_id: req.user.id, year: year ? parseInt(year) : null, make: make.trim(), model: model.trim(), color: (color||'').trim(), mods: (mods||'').trim() });
     res.status(201).json({ car });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });

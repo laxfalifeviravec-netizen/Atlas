@@ -203,7 +203,7 @@ create table if not exists event_rsvps (
 create table if not exists cars (
   id         bigserial primary key,
   user_id    bigint references users(id) on delete cascade,
-  year       int not null,
+  year       int,
   make       text not null,
   model      text not null,
   color      text default '',

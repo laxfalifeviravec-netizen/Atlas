@@ -92,20 +92,24 @@
   <!-- ═══ POST DETAIL MODAL ══════════════════════════════════════ -->
   <div class="modal-overlay" id="postOverlay" role="dialog" aria-modal="true">
     <div class="post-modal">
-      <button class="modal-close" id="postModalClose">&times;</button>
       <div class="post-modal-image-wrap">
         <img id="postModalImg" src="" alt="" />
+        <button class="post-modal-close-btn" id="postModalClose">&times;</button>
       </div>
       <div class="post-modal-sidebar">
-        <div class="post-modal-author" id="postModalAuthor"></div>
-        <div class="post-modal-road" id="postModalRoad"></div>
-        <p class="post-modal-caption" id="postModalCaption"></p>
-        <div class="post-modal-comments" id="postModalComments"></div>
-        <div class="post-modal-actions" id="postModalActions"></div>
-        <form class="post-modal-comment-form" id="postCommentForm">
-          <input type="text" id="postCommentInput" placeholder="Add a comment…" autocomplete="off" />
-          <button type="submit" class="btn btn-primary btn-sm">Post</button>
-        </form>
+        <div class="post-modal-scroll">
+          <div class="post-modal-author" id="postModalAuthor"></div>
+          <div class="post-modal-road" id="postModalRoad"></div>
+          <p class="post-modal-caption" id="postModalCaption"></p>
+          <div class="post-modal-comments" id="postModalComments"></div>
+        </div>
+        <div class="post-modal-bottom">
+          <div class="post-modal-actions" id="postModalActions"></div>
+          <form class="post-modal-comment-form" id="postCommentForm">
+            <input type="text" id="postCommentInput" placeholder="Add a comment…" autocomplete="off" />
+            <button type="submit" class="btn btn-primary btn-sm">Post</button>
+          </form>
+        </div>
       </div>
     </div>
   </div>

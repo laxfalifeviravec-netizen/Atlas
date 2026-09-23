@@ -146,11 +146,11 @@ values ('uploads', 'uploads', true)
 on conflict (id) do nothing;
 
 -- Allow public reads on the uploads bucket
-create policy if not exists "Public read uploads"
-  on storage.objects for select
-  using (bucket_id = 'uploads');
-
--- Allow authenticated uploads
-create policy if not exists "Authenticated upload"
-  on storage.objects for insert
-  with check (bucket_id = 'uploads');
+do $$ begin
+  if not exists (select 1 from pg_policies where policyname = 'Public read uploads' and tablename = 'objects') then
+    create policy "Public read uploads" on storage.objects for select using (bucket_id = 'uploads');
+  end if;
+  if not exists (select 1 from pg_policies where policyname = 'Authenticated upload' and tablename = 'objects') then
+    create policy "Authenticated upload" on storage.objects for insert with check (bucket_id = 'uploads');
+  end if;
+end $$;

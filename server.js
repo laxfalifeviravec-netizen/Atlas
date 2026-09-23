@@ -591,7 +591,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
       password_hash, avatar: null, bio: '', plan: 'Explorer',
     });
     res.status(201).json({ token: makeToken(user), user: safeUser(user) });
-  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: e.message || 'Server error.' }); }
 });
 
 app.post('/api/auth/login', authLimiter, async (req, res) => {
@@ -604,7 +604,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     const match = await bcrypt.compare(password, hash);
     if (!match) return res.status(401).json({ error: 'Invalid email or password.' });
     res.json({ token: makeToken(user), user: safeUser(user) });
-  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: e.message || 'Server error.' }); }
 });
 
 app.get('/api/auth/me', requireAuth, async (req, res) => {

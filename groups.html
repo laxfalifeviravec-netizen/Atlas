@@ -78,6 +78,24 @@
       <div class="modal-body" style="padding:0">
         <div class="group-modal-inner">
           <div class="group-modal-info" id="groupModalInfo"></div>
+
+          <!-- Destination search bar (members only) -->
+          <div class="dest-bar hidden" id="destBar">
+            <div class="dest-search-row">
+              <div class="dest-search-wrap">
+                <input type="text" id="destSearch" placeholder="Search destination…" autocomplete="off" />
+                <div class="dest-results hidden" id="destResults"></div>
+              </div>
+              <button class="dest-pin-btn" id="destPickBtn" title="Click on map to place pin">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </button>
+            </div>
+            <div class="dest-active hidden" id="destActive">
+              <span class="dest-active-label" id="destActiveLabel"></span>
+              <button class="dest-clear-btn" id="destClearBtn">✕ Clear</button>
+            </div>
+          </div>
+
           <div id="groupMap" class="group-map"></div>
           <div class="group-modal-members" id="groupModalMembers"></div>
           <div class="group-modal-actions" id="groupModalActions"></div>

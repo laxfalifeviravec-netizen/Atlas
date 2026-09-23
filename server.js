@@ -455,6 +455,37 @@ const db = {
     const r = { id: _rid++, ...fields, created_at: now() };
     _groupRoutes.push(r); return r;
   },
+  async getDestination(groupId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('group_routes').select('*')
+        .eq('group_id', groupId).eq('name', '__destination__').single();
+      return data ? data.points[0] : null;
+    }
+    const r = _groupRoutes.find(r => r.group_id === groupId && r.name === '__destination__');
+    return r ? r.points[0] : null;
+  },
+  async setDestination(groupId, userId, lat, lng, label) {
+    const points = [{ lat, lng, label }];
+    if (USE_SUPABASE) {
+      await sb.from('group_routes').delete().eq('group_id', groupId).eq('name', '__destination__');
+      const { data, error } = await sb.from('group_routes')
+        .insert({ group_id: groupId, user_id: userId, name: '__destination__', points }).select().single();
+      if (error) throw error;
+      return data.points[0];
+    }
+    const idx = _groupRoutes.findIndex(r => r.group_id === groupId && r.name === '__destination__');
+    if (idx !== -1) _groupRoutes.splice(idx, 1);
+    _groupRoutes.push({ id: _rid++, group_id: groupId, user_id: userId, name: '__destination__', points, created_at: now() });
+    return points[0];
+  },
+  async clearDestination(groupId) {
+    if (USE_SUPABASE) {
+      await sb.from('group_routes').delete().eq('group_id', groupId).eq('name', '__destination__');
+      return;
+    }
+    const idx = _groupRoutes.findIndex(r => r.group_id === groupId && r.name === '__destination__');
+    if (idx !== -1) _groupRoutes.splice(idx, 1);
+  },
 
   // ── Marketplace ──
   async getListings(category) {
@@ -854,6 +885,33 @@ app.post('/api/groups/:id/routes', requireAuth, async (req, res) => {
     if (!await db.isMember(groupId, req.user.id)) return res.status(403).json({ error: 'Not a member.' });
     const route = await db.createGroupRoute({ group_id: groupId, user_id: req.user.id, name: name.trim(), points });
     res.status(201).json({ route });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// ── Destination routes ────────────────────────────────────────
+app.get('/api/groups/:id/destination', async (req, res) => {
+  try {
+    res.json({ destination: await db.getDestination(parseInt(req.params.id)) });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/groups/:id/destination', requireAuth, async (req, res) => {
+  try {
+    const groupId = parseInt(req.params.id);
+    const { lat, lng, label } = req.body;
+    if (lat == null || lng == null) return res.status(400).json({ error: 'lat and lng are required.' });
+    if (!await db.isMember(groupId, req.user.id)) return res.status(403).json({ error: 'Not a member.' });
+    const dest = await db.setDestination(groupId, req.user.id, parseFloat(lat), parseFloat(lng), label || `${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}`);
+    res.json({ destination: dest });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.delete('/api/groups/:id/destination', requireAuth, async (req, res) => {
+  try {
+    const groupId = parseInt(req.params.id);
+    if (!await db.isMember(groupId, req.user.id)) return res.status(403).json({ error: 'Not a member.' });
+    await db.clearDestination(groupId);
+    res.json({ ok: true });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 

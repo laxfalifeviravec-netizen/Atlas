@@ -9,6 +9,9 @@ let token = localStorage.getItem('culture-token');
 let currentUser = null;
 let groupMap = null;
 let memberMarkers = {};
+let destMarker = null;
+let destLines = [];
+let pickingDest = false;
 let gpsInterval = null;
 let currentGroupId = null;
 let locationPoll = null;
@@ -98,14 +101,33 @@ async function openGroupModal(group) {
   groupOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 
+  // Reset destination UI state
+  destMarker = null; destLines = []; pickingDest = false;
+  document.getElementById('destBar').classList.add('hidden');
+  document.getElementById('destActive').classList.add('hidden');
+  document.getElementById('destSearch').value = '';
+  document.getElementById('destResults').classList.add('hidden');
+  document.getElementById('destResults').innerHTML = '';
+  document.getElementById('destPickBtn').classList.remove('active');
+
   // Init map
   if (groupMap) { groupMap.remove(); groupMap = null; }
   memberMarkers = {};
   setTimeout(() => {
-    groupMap = L.map('groupMap', { zoomControl: true }).setView([38, -97], 4);
+    groupMap = L.map('groupMap', { zoomControl: false }).setView([38, -97], 4);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors', maxZoom: 19
     }).addTo(groupMap);
+
+    // Map click → place destination when in pick mode
+    groupMap.on('click', async (e) => {
+      if (!pickingDest) return;
+      const { lat, lng } = e.latlng;
+      setPickingMode(false);
+      const label = await reverseGeocode(lat, lng);
+      await saveDestination(lat, lng, label);
+    });
+
     loadGroupDetail(group.id);
   }, 100);
 }
@@ -116,6 +138,8 @@ async function loadGroupDetail(groupId) {
     const { group } = await res.json();
     renderMembers(group.members || []);
     renderGroupActions(group);
+    // Load destination for everyone
+    await refreshDestination(groupId);
   } catch {}
 }
 
@@ -149,19 +173,18 @@ function renderGroupActions(group) {
     });
     box.appendChild(joinBtn);
   } else {
+    // Show destination bar for members
+    document.getElementById('destBar').classList.remove('hidden');
+    initDestControls(group.id);
+
     // GPS toggle
     const gpsWrap = document.createElement('div');
     gpsWrap.innerHTML = `<div class="gps-status"><div class="gps-dot" id="gpsDot"></div><span id="gpsLabel">GPS off</span></div>`;
     const gpsBtn = document.createElement('button');
     gpsBtn.className = 'btn btn-outline'; gpsBtn.textContent = '📡 Share My Location';
     gpsBtn.addEventListener('click', () => {
-      if (gpsInterval) {
-        stopGPS();
-        gpsBtn.textContent = '📡 Share My Location';
-      } else {
-        startGPS(group.id);
-        gpsBtn.textContent = '⏹ Stop Sharing';
-      }
+      if (gpsInterval) { stopGPS(); gpsBtn.textContent = '📡 Share My Location'; }
+      else { startGPS(group.id); gpsBtn.textContent = '⏹ Stop Sharing'; }
     });
     const leaveBtn = document.createElement('button');
     leaveBtn.className = 'btn btn-outline'; leaveBtn.textContent = 'Leave Group';
@@ -177,7 +200,6 @@ function renderGroupActions(group) {
     box.appendChild(gpsWrap);
     box.appendChild(gpsBtn);
     box.appendChild(leaveBtn);
-    // Start polling member locations
     startLocationPoll(group.id);
   }
 }
@@ -217,9 +239,12 @@ function startLocationPoll(groupId) {
   const poll = async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${API}/api/groups/${groupId}/locations`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) return;
-      const { locations } = await res.json();
+      const [locRes] = await Promise.all([
+        fetch(`${API}/api/groups/${groupId}/locations`, { headers: { Authorization: `Bearer ${token}` } }),
+        refreshDestination(groupId),
+      ]);
+      if (!locRes.ok) return;
+      const { locations } = await locRes.json();
       updateMapMarkers(locations);
     } catch {}
   };
@@ -259,10 +284,162 @@ function updateMapMarkers(locations) {
     chips.forEach(chip => { if (chip.textContent.includes(loc.user_name||'')) { chip.querySelector('.member-dot')?.classList.add('active'); } });
   });
 
-  if (locations.length > 0) {
+  // Redraw dashed lines to destination
+  destLines.forEach(l => l.remove()); destLines = [];
+  if (destMarker) {
+    const dLatLng = destMarker.getLatLng();
+    Object.values(memberMarkers).forEach(m => {
+      const ll = m.getLatLng();
+      const line = L.polyline([[ll.lat, ll.lng], [dLatLng.lat, dLatLng.lng]], {
+        color: '#E4A530', weight: 2, dashArray: '6 6', opacity: 0.7,
+      }).addTo(groupMap);
+      destLines.push(line);
+    });
+  }
+
+  if (!destMarker && locations.length > 0) {
     const bounds = L.latLngBounds(locations.map(l => [l.lat, l.lng]));
     groupMap.fitBounds(bounds, { padding: [40, 40] });
   }
+}
+
+// ── Destination ────────────────────────────────────────────
+function flagIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div class="dest-flag-marker"><svg viewBox="0 0 24 24" width="20" height="20" fill="#E4A530"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="3" stroke="#E4A530" stroke-width="2.5"/></svg></div>`,
+    iconSize: [32, 32], iconAnchor: [4, 30],
+  });
+}
+
+async function refreshDestination(groupId) {
+  try {
+    const res = await fetch(`${API}/api/groups/${groupId}/destination`);
+    if (!res.ok) return;
+    const { destination } = await res.json();
+    renderDestinationMarker(destination);
+  } catch {}
+}
+
+function renderDestinationMarker(dest) {
+  if (!groupMap) return;
+
+  // Remove old marker and lines
+  if (destMarker) { destMarker.remove(); destMarker = null; }
+  destLines.forEach(l => l.remove()); destLines = [];
+
+  const activeEl = document.getElementById('destActive');
+  const labelEl = document.getElementById('destActiveLabel');
+
+  if (!dest) {
+    activeEl.classList.add('hidden');
+    return;
+  }
+
+  destMarker = L.marker([dest.lat, dest.lng], { icon: flagIcon() })
+    .addTo(groupMap)
+    .bindPopup(`<strong>📍 Destination</strong><br>${esc(dest.label)}`, { closeButton: false });
+
+  // Dashed lines from each member location to destination
+  Object.values(memberMarkers).forEach(m => {
+    const ll = m.getLatLng();
+    const line = L.polyline([[ll.lat, ll.lng], [dest.lat, dest.lng]], {
+      color: '#E4A530', weight: 2, dashArray: '6 6', opacity: 0.7,
+    }).addTo(groupMap);
+    destLines.push(line);
+  });
+
+  activeEl.classList.remove('hidden');
+  labelEl.textContent = dest.label;
+
+  // Fit map to include destination and members
+  const pts = [[dest.lat, dest.lng], ...Object.values(memberMarkers).map(m => [m.getLatLng().lat, m.getLatLng().lng])];
+  if (pts.length > 1) groupMap.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });
+  else groupMap.setView([dest.lat, dest.lng], 12);
+}
+
+async function saveDestination(lat, lng, label) {
+  if (!token || !currentGroupId) return;
+  try {
+    const res = await fetch(`${API}/api/groups/${currentGroupId}/destination`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat, lng, label }),
+    });
+    if (res.ok) {
+      const { destination } = await res.json();
+      renderDestinationMarker(destination);
+    }
+  } catch {}
+}
+
+function setPickingMode(on) {
+  pickingDest = on;
+  const btn = document.getElementById('destPickBtn');
+  const mapEl = document.getElementById('groupMap');
+  btn.classList.toggle('active', on);
+  mapEl.classList.toggle('dest-pick-cursor', on);
+}
+
+function initDestControls(groupId) {
+  // Search
+  const searchInput = document.getElementById('destSearch');
+  const resultsEl = document.getElementById('destResults');
+
+  let searchTimeout;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    const q = searchInput.value.trim();
+    if (q.length < 2) { resultsEl.classList.add('hidden'); resultsEl.innerHTML = ''; return; }
+    searchTimeout = setTimeout(async () => {
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5`);
+        const results = await r.json();
+        resultsEl.innerHTML = '';
+        if (!results.length) { resultsEl.innerHTML = '<div class="dest-result-item" style="color:var(--c-text-2)">No results</div>'; }
+        results.forEach(item => {
+          const el = document.createElement('div');
+          el.className = 'dest-result-item';
+          el.textContent = item.display_name.split(',').slice(0, 3).join(',');
+          el.addEventListener('click', async () => {
+            resultsEl.classList.add('hidden');
+            searchInput.value = '';
+            const lat = parseFloat(item.lat), lng = parseFloat(item.lon);
+            const label = item.display_name.split(',').slice(0, 2).join(',').trim();
+            await saveDestination(lat, lng, label);
+          });
+          resultsEl.appendChild(el);
+        });
+        resultsEl.classList.remove('hidden');
+      } catch {}
+    }, 350);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#destBar')) { resultsEl.classList.add('hidden'); }
+  });
+
+  // Click-on-map pin button
+  document.getElementById('destPickBtn').addEventListener('click', () => {
+    setPickingMode(!pickingDest);
+  });
+
+  // Clear destination
+  document.getElementById('destClearBtn').addEventListener('click', async () => {
+    if (!token || !currentGroupId) return;
+    await fetch(`${API}/api/groups/${currentGroupId}/destination`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
+    });
+    renderDestinationMarker(null);
+  });
+}
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+    const d = await r.json();
+    return d.display_name?.split(',').slice(0, 2).join(',').trim() || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  } catch { return `${lat.toFixed(4)}, ${lng.toFixed(4)}`; }
 }
 
 function closeGroupModal() {
@@ -272,6 +449,7 @@ function closeGroupModal() {
   if (locationPoll) { clearInterval(locationPoll); locationPoll = null; }
   if (groupMap) { groupMap.remove(); groupMap = null; }
   memberMarkers = {};
+  destMarker = null; destLines = []; pickingDest = false;
 }
 
 document.getElementById('groupModalClose').addEventListener('click', closeGroupModal);

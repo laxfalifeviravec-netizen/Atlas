@@ -1517,6 +1517,31 @@ app.get('/api/messages/unread', requireAuth, async (req, res) => {
   catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
+// ── Groups (simple in-memory, Supabase if table exists) ───────
+app.get('/api/groups', requireAuth, async (req, res) => {
+  try {
+    if (USE_SUPABASE) {
+      const { data, error } = await sb.from('groups').select('*').order('created_at', { ascending: false });
+      if (error) return res.json([]);
+      return res.json(data || []);
+    }
+    res.json([]);
+  } catch { res.json([]); }
+});
+
+app.post('/api/groups', requireAuth, async (req, res) => {
+  try {
+    const { name, member_ids = [] } = req.body;
+    if (!name) return res.status(400).json({ error: 'Name is required.' });
+    if (USE_SUPABASE) {
+      const { data, error } = await sb.from('groups').insert({ name: name.trim(), creator_id: req.user.id }).select().single();
+      if (error) return res.status(500).json({ error: 'Could not create group.' });
+      return res.status(201).json(data);
+    }
+    res.status(201).json({ id: Date.now(), name: name.trim(), creator_id: req.user.id });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
 // ── Events ────────────────────────────────────────────────────
 app.get('/api/events', optionalAuth, async (req, res) => {
   try {

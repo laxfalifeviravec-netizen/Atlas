@@ -216,6 +216,25 @@ document.addEventListener('DOMContentLoaded', () => {
       loadFeed(true);
     });
   }
+
+  // Swipe left/right on the feed to switch tabs
+  const feedMain = document.getElementById('feedMain');
+  if (feedMain) {
+    let swipeStartX = 0;
+    feedMain.addEventListener('touchstart', e => { swipeStartX = e.touches[0].clientX; }, { passive: true });
+    feedMain.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - swipeStartX;
+      if (Math.abs(dx) < 60) return;
+      const modes = ['forYou', 'following'];
+      const idx = modes.indexOf(feedMode);
+      const next = dx < 0 ? modes[idx + 1] : modes[idx - 1];
+      if (!next) return;
+      if (next === 'following' && !currentUser) return openAuth();
+      feedMode = next;
+      renderFeedTabs();
+      loadFeed(true);
+    }, { passive: true });
+  }
 });
 
 // ── Feed ───────────────────────────────────────────────────

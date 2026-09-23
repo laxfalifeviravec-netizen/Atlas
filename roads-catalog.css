@@ -1,0 +1,238 @@
+/* ── Roads Catalog ─────────────────────────── */
+
+.rc-filters {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.rc-filters::-webkit-scrollbar { display: none; }
+
+.rc-chip {
+  flex-shrink: 0;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text-secondary, #8B8B96);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.rc-chip.active {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+  color: #0C0C0F;
+}
+
+.rc-main {
+  padding: 12px 16px 96px;
+}
+
+.rc-center-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 260px;
+  color: var(--c-text-secondary, #8B8B96);
+  text-align: center;
+}
+.rc-center-state p {
+  margin: 0;
+  font-size: 15px;
+}
+
+.rc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Road card */
+.rc-card {
+  background: var(--c-surface);
+  border: 1.5px solid var(--c-border);
+  border-radius: 16px;
+  padding: 14px 14px 12px;
+  cursor: pointer;
+  transition: border-color .15s, transform .1s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rc-card:active { transform: scale(.97); }
+.rc-card:hover { border-color: var(--c-accent); }
+
+.rc-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.rc-card-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: 1.15;
+  color: var(--c-text, #F2F2F5);
+  flex: 1;
+  min-width: 0;
+}
+
+.rc-diff-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.rc-diff-badge.easy     { background: #1a3a2a; color: #4ec97a; }
+.rc-diff-badge.moderate { background: #3a2e10; color: #E4A530; }
+.rc-diff-badge.hard     { background: #3a1c10; color: #e06030; }
+.rc-diff-badge.extreme  { background: #2e0e1c; color: #d0407a; }
+
+.rc-card-region {
+  font-size: 12px;
+  color: var(--c-text-secondary, #8B8B96);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rc-card-desc {
+  font-size: 12px;
+  color: var(--c-text-secondary, #8B8B96);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+.rc-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 6px;
+  border-top: 1px solid var(--c-border);
+}
+.rc-card-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--c-text-secondary, #8B8B96);
+}
+.rc-card-stat svg { flex-shrink: 0; }
+
+/* Road detail modal */
+.rd-modal {
+  max-width: 480px;
+  width: calc(100% - 32px);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.rd-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--c-text-secondary, #8B8B96);
+  margin: 16px 0 4px;
+}
+.rd-section-label:first-child { margin-top: 0; }
+
+.rd-value {
+  font-size: 15px;
+  color: var(--c-text, #F2F2F5);
+  line-height: 1.5;
+}
+
+.rd-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.rd-tag {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  font-size: 12px;
+  color: var(--c-text-secondary, #8B8B96);
+}
+
+.rd-like-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--c-border);
+}
+
+.rd-like-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text-secondary, #8B8B96);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.rd-like-btn.liked {
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+}
+.rd-like-btn.liked svg { stroke: var(--c-accent); }
+
+.rd-drive-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  background: var(--c-accent);
+  color: #0C0C0F;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.rd-drive-btn:hover { opacity: .88; }
+
+/* Spinner */
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--c-border);
+  border-top-color: var(--c-accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (min-width: 480px) {
+  .rc-grid { grid-template-columns: repeat(3, 1fr); }
+}

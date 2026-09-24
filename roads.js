@@ -8,6 +8,8 @@ const API = (location.hostname === 'localhost' || location.hostname === '127.0.0
 let token = localStorage.getItem('culture-token');
 let currentUser = null;
 let roadsMap = null;
+let roadsTileLayer = null;
+let myLocMarker = null;
 let allRoads = [];
 let roadPolylines = {};
 let addModeActive = false;
@@ -24,6 +26,10 @@ document.getElementById('themeToggle').addEventListener('click', () => {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('culture-theme', next);
+  if (roadsTileLayer && roadsMap) {
+    roadsMap.removeLayer(roadsTileLayer);
+    roadsTileLayer = cartoTile(roadsMap, next !== 'light');
+  }
 });
 
 // ── Auth ───────────────────────────────────────────────────
@@ -54,12 +60,45 @@ function renderNav(user) {
   }
 }
 
+// ── Map tile helper ────────────────────────────────────────
+function isDarkTheme() {
+  const t = document.documentElement.getAttribute('data-theme');
+  return t ? t !== 'light' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function cartoTile(map, dark) {
+  return L.tileLayer(
+    `https://{s}.basemaps.cartocdn.com/${dark ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`,
+    { attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>', subdomains: 'abcd', maxZoom: 19 }
+  ).addTo(map);
+}
+
 // ── Map Init ───────────────────────────────────────────────
 function initMap() {
   roadsMap = L.map('roadsMap', { zoomControl: true }).setView([39.5, -98.35], 4);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors', maxZoom: 19
-  }).addTo(roadsMap);
+  roadsTileLayer = cartoTile(roadsMap, isDarkTheme());
+
+  // Locate-me control
+  const LocateCtrl = L.Control.extend({
+    onAdd(map) {
+      const btn = L.DomUtil.create('button', 'map-locate-btn leaflet-bar');
+      btn.title = 'Go to my location';
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><circle cx="12" cy="12" r="3"/><line x1="12" y1="1" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="1" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="23" y2="12"/></svg>`;
+      L.DomEvent.on(btn, 'click', ev => {
+        L.DomEvent.stopPropagation(ev);
+        if (!navigator.geolocation) return;
+        btn.classList.add('locating');
+        navigator.geolocation.getCurrentPosition(pos => {
+          btn.classList.remove('locating');
+          const { latitude: lat, longitude: lng } = pos.coords;
+          map.setView([lat, lng], 13);
+          if (myLocMarker) myLocMarker.setLatLng([lat, lng]);
+          else myLocMarker = L.circleMarker([lat, lng], { radius: 9, color: '#fff', weight: 2.5, fillColor: '#2563eb', fillOpacity: 1 }).addTo(map).bindPopup('Your location');
+        }, () => { btn.classList.remove('locating'); });
+      });
+      return btn;
+    }
+  });
+  new LocateCtrl({ position: 'topright' }).addTo(roadsMap);
 
   roadsMap.on('click', onMapClick);
 }

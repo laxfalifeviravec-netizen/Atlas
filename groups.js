@@ -8,6 +8,7 @@ const API = (location.hostname === 'localhost' || location.hostname === '127.0.0
 let token = localStorage.getItem('culture-token');
 let currentUser = null;
 let groupMap = null;
+let groupTileLayer = null;
 let memberMarkers = {};
 let destMarker = null;
 let destLines = [];
@@ -16,6 +17,16 @@ let gpsInterval = null;
 let currentGroupId = null;
 let locationPoll = null;
 
+// Run-mode state
+let runMap = null;
+let runTileLayer = null;
+let runMemberMarkers = {};
+let runDestMarker = null;
+let runDestLines = [];
+let runGpsInterval = null;
+let runPollInterval = null;
+let runGroupId = null;
+
 // ── Theme ──────────────────────────────────────────────────
 const savedTheme = localStorage.getItem('culture-theme');
 if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
@@ -23,7 +34,32 @@ document.getElementById('themeToggle').addEventListener('click', () => {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('culture-theme', next);
+  if (groupTileLayer && groupMap) { groupMap.removeLayer(groupTileLayer); groupTileLayer = cartoTile(groupMap, next !== 'light'); }
+  if (runTileLayer && runMap) { runMap.removeLayer(runTileLayer); runTileLayer = cartoTile(runMap, next !== 'light'); }
 });
+
+// ── Map tile helper ────────────────────────────────────────
+function isDarkTheme() {
+  const t = document.documentElement.getAttribute('data-theme');
+  return t ? t !== 'light' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function cartoTile(map, dark) {
+  return L.tileLayer(
+    `https://{s}.basemaps.cartocdn.com/${dark ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`,
+    { attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>', subdomains: 'abcd', maxZoom: 19 }
+  ).addTo(map);
+}
+
+function memberDivIcon(initials, isMe, heading) {
+  const color = isMe ? '#dc2222' : '#1a73e8';
+  const h = (heading !== null && heading !== undefined && !isNaN(heading)) ? heading : null;
+  const arrow = h !== null ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(${h}deg);width:44px;height:44px;pointer-events:none"><svg viewBox="0 0 44 44" width="44" height="44"><polygon points="22,4 28,30 22,25 16,30" fill="${color}" opacity="0.85"/></svg></div>` : '';
+  return L.divIcon({
+    className: '',
+    html: `<div style="position:relative;width:44px;height:44px">${arrow}<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:${color};color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-weight:700;font-size:13px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4)">${initials}</div></div>`,
+    iconSize: [44, 44], iconAnchor: [22, 22],
+  });
+}
 
 // ── Auth ───────────────────────────────────────────────────
 async function loadMe() {
@@ -115,9 +151,7 @@ async function openGroupModal(group) {
   memberMarkers = {};
   setTimeout(() => {
     groupMap = L.map('groupMap', { zoomControl: false }).setView([38, -97], 4);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors', maxZoom: 19
-    }).addTo(groupMap);
+    groupTileLayer = cartoTile(groupMap, isDarkTheme());
 
     // Map click → place destination when in pick mode
     groupMap.on('click', async (e) => {
@@ -197,6 +231,12 @@ function renderGroupActions(group) {
       });
       closeGroupModal(); await loadGroups();
     });
+    // Full-screen run button
+    const runBtn = document.createElement('button');
+    runBtn.className = 'btn btn-primary';
+    runBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" style="margin-right:4px"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Start Run`;
+    runBtn.addEventListener('click', () => openRunView(group));
+    box.appendChild(runBtn);
     box.appendChild(gpsWrap);
     box.appendChild(gpsBtn);
     box.appendChild(leaveBtn);
@@ -227,14 +267,15 @@ function startGPS(groupId) {
   const label = document.getElementById('gpsLabel');
   const sendLocation = () => {
     navigator.geolocation.getCurrentPosition(pos => {
-      const { latitude: lat, longitude: lng, heading } = pos.coords;
+      const { latitude: lat, longitude: lng, heading, speed } = pos.coords;
       fetch(`${API}/api/groups/${groupId}/location`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ lat, lng, heading: heading || 0 }),
       });
       if (dot) dot.classList.add('active');
-      if (label) label.textContent = `Sharing (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      const mph = speed !== null ? ` · ${Math.round(speed * 2.237)} mph` : '';
+      if (label) label.textContent = `Sharing${mph}`;
     }, () => {
       if (label) label.textContent = 'GPS unavailable';
     });
@@ -282,15 +323,12 @@ function updateMapMarkers(locations) {
     const uid = loc.user_id;
     const initials = (loc.user_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
     const isMe = currentUser && uid === currentUser.id;
+    const icon = memberDivIcon(initials, isMe, loc.heading);
 
     if (memberMarkers[uid]) {
       memberMarkers[uid].setLatLng([loc.lat, loc.lng]);
+      memberMarkers[uid].setIcon(icon);
     } else {
-      const icon = L.divIcon({
-        className: '',
-        html: `<div style="background:${isMe?'#dc2222':'#1a73e8'};color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-weight:700;font-size:13px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3)">${initials}</div>`,
-        iconSize: [32,32], iconAnchor: [16,16],
-      });
       memberMarkers[uid] = L.marker([loc.lat, loc.lng], { icon })
         .addTo(groupMap)
         .bindPopup(`<strong>${esc(loc.user_name||'Driver')}</strong>${isMe?' (You)':''}`, { closeButton: false });
@@ -459,12 +497,161 @@ async function reverseGeocode(lat, lng) {
   } catch { return `${lat.toFixed(4)}, ${lng.toFixed(4)}`; }
 }
 
+// ── Full-screen Run Mode ───────────────────────────────────
+function openRunView(group) {
+  runGroupId = group.id;
+  const view = document.getElementById('groupRunView');
+  document.getElementById('runGroupName').textContent = group.name;
+  view.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  // Init run map
+  if (runMap) { runMap.remove(); runMap = null; }
+  runMemberMarkers = {}; runDestMarker = null; runDestLines = [];
+  setTimeout(() => {
+    runMap = L.map('runMap', { zoomControl: false }).setView([38, -97], 4);
+    runTileLayer = cartoTile(runMap, isDarkTheme());
+
+    // Locate me control
+    const LocCtrl = L.Control.extend({
+      onAdd(m) {
+        const btn = L.DomUtil.create('button', 'map-locate-btn leaflet-bar');
+        btn.title = 'Center on me';
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><circle cx="12" cy="12" r="3"/><line x1="12" y1="1" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="1" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="23" y2="12"/></svg>`;
+        L.DomEvent.on(btn, 'click', ev => {
+          L.DomEvent.stopPropagation(ev);
+          if (!navigator.geolocation) return;
+          navigator.geolocation.getCurrentPosition(p => m.setView([p.coords.latitude, p.coords.longitude], 14));
+        });
+        return btn;
+      }
+    });
+    new LocCtrl({ position: 'topright' }).addTo(runMap);
+
+    startRunGPS(group.id);
+    startRunPoll(group.id);
+  }, 80);
+}
+
+function closeRunView() {
+  document.getElementById('groupRunView').style.display = 'none';
+  document.body.style.overflow = '';
+  stopRunGPS();
+  if (runPollInterval) { clearInterval(runPollInterval); runPollInterval = null; }
+  if (runMap) { runMap.remove(); runMap = null; runTileLayer = null; }
+  runMemberMarkers = {}; runDestMarker = null; runDestLines = [];
+}
+
+function startRunGPS(groupId) {
+  if (!navigator.geolocation) return;
+  const dot = document.getElementById('runGpsDot');
+  const label = document.getElementById('runGpsLabel');
+  const speedEl = document.getElementById('runSpeed');
+  const send = () => {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude: lat, longitude: lng, heading, speed } = pos.coords;
+      fetch(`${API}/api/groups/${groupId}/location`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, lng, heading: heading || 0 }),
+      });
+      if (dot) dot.classList.add('active');
+      if (label) label.textContent = 'Live';
+      if (speedEl) {
+        const mph = speed !== null ? Math.round(speed * 2.237) : null;
+        speedEl.textContent = mph !== null ? `${mph} mph` : '-- mph';
+        speedEl.style.display = '';
+      }
+    }, () => { if (label) label.textContent = 'GPS unavailable'; });
+  };
+  send();
+  runGpsInterval = setInterval(send, 4000);
+}
+
+function stopRunGPS() {
+  if (runGpsInterval) { clearInterval(runGpsInterval); runGpsInterval = null; }
+}
+
+function startRunPoll(groupId) {
+  if (runPollInterval) clearInterval(runPollInterval);
+  const poll = async () => {
+    if (!token || !runMap) return;
+    try {
+      const [locRes, destRes] = await Promise.all([
+        fetch(`${API}/api/groups/${groupId}/locations`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API}/api/groups/${groupId}/destination`),
+      ]);
+      if (locRes.ok) { const { locations } = await locRes.json(); updateRunMarkers(locations); }
+      if (destRes.ok) {
+        const { destination } = await destRes.json();
+        updateRunDestination(destination);
+        const destLabel = document.getElementById('runDest');
+        if (destLabel) { destLabel.textContent = destination ? `📍 ${destination.label}` : ''; destLabel.style.display = destination ? '' : 'none'; }
+      }
+    } catch {}
+  };
+  poll();
+  runPollInterval = setInterval(poll, 4000);
+}
+
+function updateRunMarkers(locations) {
+  if (!runMap) return;
+  const activeIds = new Set(locations.map(l => l.user_id));
+  for (const uid of Object.keys(runMemberMarkers)) {
+    if (!activeIds.has(parseInt(uid))) { runMemberMarkers[uid].remove(); delete runMemberMarkers[uid]; }
+  }
+  const memberEl = document.getElementById('runMembers');
+  if (memberEl) memberEl.innerHTML = locations.map(loc => {
+    const isMe = currentUser && loc.user_id === currentUser.id;
+    return `<div class="run-member-chip${isMe?' me':''}"><div class="member-dot active"></div>${esc(loc.user_name||'Driver')}${isMe?' (You)':''}</div>`;
+  }).join('');
+
+  locations.forEach(loc => {
+    const uid = loc.user_id;
+    const initials = (loc.user_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    const isMe = currentUser && uid === currentUser.id;
+    const icon = memberDivIcon(initials, isMe, loc.heading);
+    if (runMemberMarkers[uid]) {
+      runMemberMarkers[uid].setLatLng([loc.lat, loc.lng]);
+      runMemberMarkers[uid].setIcon(icon);
+    } else {
+      runMemberMarkers[uid] = L.marker([loc.lat, loc.lng], { icon })
+        .addTo(runMap)
+        .bindPopup(`<strong>${esc(loc.user_name||'Driver')}</strong>`, { closeButton: false });
+    }
+  });
+
+  // Fit to all members if we don't have a destination anchoring the view
+  if (!runDestMarker && locations.length > 0) {
+    const bounds = L.latLngBounds(locations.map(l => [l.lat, l.lng]));
+    runMap.fitBounds(bounds, { padding: [60, 60] });
+  }
+}
+
+function updateRunDestination(dest) {
+  if (!runMap) return;
+  if (runDestMarker) { runDestMarker.remove(); runDestMarker = null; }
+  runDestLines.forEach(l => l.remove()); runDestLines = [];
+  if (!dest) return;
+  runDestMarker = L.marker([dest.lat, dest.lng], { icon: flagIcon() })
+    .addTo(runMap)
+    .bindPopup(`<strong>📍 Destination</strong><br>${esc(dest.label)}`, { closeButton: false });
+  Object.values(runMemberMarkers).forEach(m => {
+    const ll = m.getLatLng();
+    runDestLines.push(L.polyline([[ll.lat, ll.lng], [dest.lat, dest.lng]], { color: '#E4A530', weight: 2, dashArray: '6 6', opacity: 0.7 }).addTo(runMap));
+  });
+  const pts = [[dest.lat, dest.lng], ...Object.values(runMemberMarkers).map(m => [m.getLatLng().lat, m.getLatLng().lng])];
+  if (pts.length > 1) runMap.fitBounds(L.latLngBounds(pts), { padding: [60, 60] });
+}
+
+document.getElementById('runExitBtn').addEventListener('click', closeRunView);
+
 function closeGroupModal() {
   groupOverlay.classList.remove('open');
   document.body.style.overflow = '';
   stopGPS();
   if (locationPoll) { clearInterval(locationPoll); locationPoll = null; }
-  if (groupMap) { groupMap.remove(); groupMap = null; }
+  if (groupMap) { groupMap.remove(); groupMap = null; groupTileLayer = null; }
   memberMarkers = {};
   destMarker = null; destLines = []; pickingDest = false;
 }

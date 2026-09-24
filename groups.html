@@ -151,6 +151,26 @@
     </div>
   </div>
 
+  <!-- ═══ FULL-SCREEN RUN MODE ════════════════════════════════ -->
+  <div id="groupRunView" class="group-run-view" style="display:none">
+    <div class="run-hud-top">
+      <button class="run-exit-btn" id="runExitBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="run-group-name" id="runGroupName"></span>
+      <div class="run-gps-status">
+        <div class="gps-dot" id="runGpsDot"></div>
+        <span id="runGpsLabel">GPS off</span>
+      </div>
+    </div>
+    <div id="runMap" class="run-map"></div>
+    <div class="run-hud-bottom">
+      <div class="run-speed" id="runSpeed" style="display:none">-- mph</div>
+      <div class="run-dest" id="runDest" style="display:none"></div>
+      <div class="run-members" id="runMembers"></div>
+    </div>
+  </div>
+
   <script src="lib/leaflet.js"></script>
   <script src="groups.js"></script>
   <script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js")); }</script>

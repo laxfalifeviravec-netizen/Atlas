@@ -123,3 +123,14 @@ body { overflow: hidden; }
 @media (min-width: 681px) {
   .sidebar-toggle { display: none; }
 }
+
+/* ── Locate-me map button ─────────────────────────────────── */
+.map-locate-btn {
+  background: var(--c-surface, #141417); border: 2px solid rgba(255,255,255,0.15) !important;
+  color: var(--c-text, #f0f0f3); width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border-radius: 6px !important;
+  transition: background 0.15s;
+}
+.map-locate-btn:hover { background: var(--c-accent, #E4A530); color: #000; }
+.map-locate-btn.locating { opacity: 0.5; pointer-events: none; }

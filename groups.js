@@ -30,7 +30,7 @@ let runGroupId = null;
 // ── Theme ──────────────────────────────────────────────────
 const savedTheme = localStorage.getItem('culture-theme');
 if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
-document.getElementById('themeToggle').addEventListener('click', () => {
+document.getElementById('themeToggle')?.addEventListener('click', () => {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('culture-theme', next);
@@ -664,18 +664,18 @@ function closeGroupModal() {
   destMarker = null; destLines = []; pickingDest = false;
 }
 
-document.getElementById('groupModalClose').addEventListener('click', closeGroupModal);
+document.getElementById('groupModalClose')?.addEventListener('click', closeGroupModal);
 groupOverlay.addEventListener('click', e => { if (e.target === groupOverlay) closeGroupModal(); });
 
 // ── Create Group ───────────────────────────────────────────
 const createGroupOverlay = document.getElementById('createGroupOverlay');
 let groupIsPrivate = false;
 
-document.getElementById('createGroupBtn').addEventListener('click', () => {
+document.getElementById('createGroupBtn')?.addEventListener('click', () => {
   if (!currentUser) return openAuth();
   createGroupOverlay.classList.add('open');
 });
-document.getElementById('createGroupClose').addEventListener('click', () => createGroupOverlay.classList.remove('open'));
+document.getElementById('createGroupClose')?.addEventListener('click', () => createGroupOverlay.classList.remove('open'));
 createGroupOverlay.addEventListener('click', e => { if (e.target === createGroupOverlay) createGroupOverlay.classList.remove('open'); });
 
 // Visibility toggle
@@ -689,10 +689,11 @@ document.getElementById('visibilityToggle')?.addEventListener('click', e => {
     : 'Anyone can see and join this group.';
 });
 
-document.getElementById('submitGroupBtn').addEventListener('click', async () => {
+document.getElementById('submitGroupBtn')?.addEventListener('click', async () => {
   const name = document.getElementById('groupName').value.trim();
   const err = document.getElementById('createGroupError');
   if (!name) { err.textContent = 'Group name is required.'; return; }
+  if (!token) { err.textContent = 'You must be signed in to create a group.'; return; }
   err.textContent = '';
   const btn = document.getElementById('submitGroupBtn');
   btn.disabled = true; btn.textContent = 'Creating…';
@@ -711,13 +712,13 @@ document.getElementById('submitGroupBtn').addEventListener('click', async () => 
     const data = await res.json();
     if (!res.ok) { err.textContent = data.error || 'Failed to create group.'; return; }
     createGroupOverlay.classList.remove('open');
-    ['groupName','groupDesc','groupMeeting','groupRoute'].forEach(id => document.getElementById(id).value = '');
+    ['groupName','groupDesc','groupMeeting','groupRoute'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     groupIsPrivate = false;
-    document.getElementById('visBtnPublic').classList.add('active');
-    document.getElementById('visBtnPrivate').classList.remove('active');
-    document.getElementById('visHint').textContent = 'Anyone can see and join this group.';
+    document.getElementById('visBtnPublic')?.classList.add('active');
+    document.getElementById('visBtnPrivate')?.classList.remove('active');
+    const hint = document.getElementById('visHint'); if (hint) hint.textContent = 'Anyone can see and join this group.';
     await loadGroups();
-  } catch { err.textContent = 'Failed to create group.'; }
+  } catch (e) { console.error('createGroup client error:', e); err.textContent = 'Network error — check your connection.'; }
   finally { btn.disabled = false; btn.textContent = 'Create Group'; }
 });
 
@@ -725,11 +726,11 @@ document.getElementById('submitGroupBtn').addEventListener('click', async () => 
 const authOverlay = document.getElementById('authOverlay');
 let authMode = 'login';
 function openAuth() { authOverlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
-document.getElementById('authClose').addEventListener('click', () => { authOverlay.classList.remove('open'); document.body.style.overflow = ''; });
+document.getElementById('authClose')?.addEventListener('click', () => { authOverlay.classList.remove('open'); document.body.style.overflow = ''; });
 authOverlay.addEventListener('click', e => { if (e.target === authOverlay) { authOverlay.classList.remove('open'); document.body.style.overflow = ''; } });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { authOverlay.classList.remove('open'); createGroupOverlay.classList.remove('open'); document.body.style.overflow = ''; } });
 
-document.getElementById('authSwitchBtn').addEventListener('click', () => {
+document.getElementById('authSwitchBtn')?.addEventListener('click', () => {
   authMode = authMode === 'login' ? 'register' : 'login';
   document.getElementById('loginForm').style.display  = authMode === 'login' ? '' : 'none';
   document.getElementById('registerForm').style.display = authMode === 'register' ? '' : 'none';
@@ -738,7 +739,7 @@ document.getElementById('authSwitchBtn').addEventListener('click', () => {
   document.getElementById('authSwitchBtn').textContent = authMode === 'login' ? 'Sign Up' : 'Sign In';
 });
 
-document.getElementById('loginForm').addEventListener('submit', async e => {
+document.getElementById('loginForm')?.addEventListener('submit', async e => {
   e.preventDefault();
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
@@ -754,7 +755,7 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
   } catch { document.getElementById('loginError').textContent = 'Network error.'; }
 });
 
-document.getElementById('registerForm').addEventListener('submit', async e => {
+document.getElementById('registerForm')?.addEventListener('submit', async e => {
   e.preventDefault();
   const name = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();

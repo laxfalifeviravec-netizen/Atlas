@@ -652,7 +652,7 @@ function updateRunDestination(dest) {
   if (pts.length > 1) runMap.fitBounds(L.latLngBounds(pts), { padding: [60, 60] });
 }
 
-document.getElementById('runExitBtn').addEventListener('click', closeRunView);
+document.getElementById('runExitBtn')?.addEventListener('click', closeRunView);
 
 function closeGroupModal() {
   groupOverlay.classList.remove('open');
@@ -679,7 +679,7 @@ document.getElementById('createGroupClose').addEventListener('click', () => crea
 createGroupOverlay.addEventListener('click', e => { if (e.target === createGroupOverlay) createGroupOverlay.classList.remove('open'); });
 
 // Visibility toggle
-document.getElementById('visibilityToggle').addEventListener('click', e => {
+document.getElementById('visibilityToggle')?.addEventListener('click', e => {
   const btn = e.target.closest('.vis-btn');
   if (!btn) return;
   groupIsPrivate = btn.dataset.val === 'true';

@@ -346,24 +346,35 @@ const db = {
         const { data: mem } = await sb.from('group_members').select('group_id').eq('user_id', userId);
         mem?.forEach(m => memberOf.add(m.group_id));
       }
-      return (groups || []).map(g => ({
-        ...g, creator_name: g.users?.name || '', users: undefined,
-        member_count: countMap[g.id] || 0, is_member: memberOf.has(g.id),
-        is_creator: userId ? g.creator_id === userId : false,
-      }));
+      return (groups || [])
+        .filter(g => !g.is_private || memberOf.has(g.id) || g.creator_id === userId)
+        .map(g => ({
+          ...g, creator_name: g.users?.name || '', users: undefined,
+          member_count: countMap[g.id] || 0, is_member: memberOf.has(g.id),
+          is_creator: userId ? g.creator_id === userId : false,
+        }));
     }
-    return _groups.map(g => {
-      const u = _users.find(u => u.id === g.creator_id) || {};
-      return { ...g, creator_name: u.name || '',
-        member_count: _groupMembers.filter(m => m.group_id === g.id).length,
-        is_member: userId ? _groupMembers.some(m => m.group_id === g.id && m.user_id === userId) : false,
-        is_creator: userId ? g.creator_id === userId : false };
-    });
+    return _groups
+      .filter(g => !g.is_private || _groupMembers.some(m => m.group_id === g.id && m.user_id === userId) || g.creator_id === userId)
+      .map(g => {
+        const u = _users.find(u => u.id === g.creator_id) || {};
+        return { ...g, creator_name: u.name || '',
+          member_count: _groupMembers.filter(m => m.group_id === g.id).length,
+          is_member: userId ? _groupMembers.some(m => m.group_id === g.id && m.user_id === userId) : false,
+          is_creator: userId ? g.creator_id === userId : false };
+      });
   },
   async createGroup(fields) {
     if (USE_SUPABASE) {
-      const { data, error } = await sb.from('groups').insert(fields).select().single();
-      if (error) throw error;
+      // Try with all fields; fall back to core fields if table lacks extra columns
+      let data, error;
+      ({ data, error } = await sb.from('groups').insert(fields).select().single());
+      if (error) {
+        const core = { name: fields.name, creator_id: fields.creator_id };
+        if (fields.is_private !== undefined) core.is_private = fields.is_private;
+        ({ data, error } = await sb.from('groups').insert(core).select().single());
+        if (error) throw error;
+      }
       await sb.from('group_members').insert({ group_id: data.id, user_id: fields.creator_id });
       return data;
     }
@@ -1237,11 +1248,12 @@ app.get('/api/groups', optionalAuth, async (req, res) => {
 
 app.post('/api/groups', requireAuth, async (req, res) => {
   try {
-    const { name, description = '', meeting_point = '', route_name = '' } = req.body;
+    const { name, description = '', meeting_point = '', route_name = '', is_private = false } = req.body;
     if (!name?.trim()) return res.status(400).json({ error: 'Group name is required.' });
     const group = await db.createGroup({
       creator_id: req.user.id, name: name.trim(),
-      description: description.trim(), meeting_point: meeting_point.trim(), route_name: route_name.trim(),
+      description: description.trim(), meeting_point: meeting_point.trim(),
+      route_name: route_name.trim(), is_private: !!is_private,
     });
     const user = await db.findUserById(req.user.id);
     res.status(201).json({ group: { ...group, creator_name: user?.name || '', member_count: 1, is_member: true } });
@@ -1546,31 +1558,6 @@ app.post('/api/conversations/:id/messages', requireAuth, async (req, res) => {
 app.get('/api/messages/unread', requireAuth, async (req, res) => {
   try { res.json({ count: await db.getUnreadMessageCount(req.user.id) }); }
   catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
-});
-
-// ── Groups (simple in-memory, Supabase if table exists) ───────
-app.get('/api/groups', requireAuth, async (req, res) => {
-  try {
-    if (USE_SUPABASE) {
-      const { data, error } = await sb.from('groups').select('*').order('created_at', { ascending: false });
-      if (error) return res.json([]);
-      return res.json(data || []);
-    }
-    res.json([]);
-  } catch { res.json([]); }
-});
-
-app.post('/api/groups', requireAuth, async (req, res) => {
-  try {
-    const { name, member_ids = [] } = req.body;
-    if (!name) return res.status(400).json({ error: 'Name is required.' });
-    if (USE_SUPABASE) {
-      const { data, error } = await sb.from('groups').insert({ name: name.trim(), creator_id: req.user.id }).select().single();
-      if (error) return res.status(500).json({ error: 'Could not create group.' });
-      return res.status(201).json(data);
-    }
-    res.status(201).json({ id: Date.now(), name: name.trim(), creator_id: req.user.id });
-  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
 // ── Events ────────────────────────────────────────────────────

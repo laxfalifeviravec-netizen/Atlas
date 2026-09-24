@@ -110,7 +110,10 @@ function buildGroupCard(g) {
   card.innerHTML = `
     <div class="group-card-header">
       <div class="group-card-name">${esc(g.name)}</div>
-      <span class="group-badge${g.is_member?' member':''}">${g.is_member ? '✓ Joined' : 'Open'}</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        ${g.is_private ? `<span class="group-badge private"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Private</span>` : ''}
+        <span class="group-badge${g.is_member?' member':''}">${g.is_member ? '✓ Joined' : 'Open'}</span>
+      </div>
     </div>
     ${g.description ? `<div class="group-card-desc">${esc(g.description)}</div>` : ''}
     <div class="group-card-meta">
@@ -661,6 +664,7 @@ groupOverlay.addEventListener('click', e => { if (e.target === groupOverlay) clo
 
 // ── Create Group ───────────────────────────────────────────
 const createGroupOverlay = document.getElementById('createGroupOverlay');
+let groupIsPrivate = false;
 
 document.getElementById('createGroupBtn').addEventListener('click', () => {
   if (!currentUser) return openAuth();
@@ -669,11 +673,24 @@ document.getElementById('createGroupBtn').addEventListener('click', () => {
 document.getElementById('createGroupClose').addEventListener('click', () => createGroupOverlay.classList.remove('open'));
 createGroupOverlay.addEventListener('click', e => { if (e.target === createGroupOverlay) createGroupOverlay.classList.remove('open'); });
 
+// Visibility toggle
+document.getElementById('visibilityToggle').addEventListener('click', e => {
+  const btn = e.target.closest('.vis-btn');
+  if (!btn) return;
+  groupIsPrivate = btn.dataset.val === 'true';
+  document.querySelectorAll('.vis-btn').forEach(b => b.classList.toggle('active', b === btn));
+  document.getElementById('visHint').textContent = groupIsPrivate
+    ? 'Only members you invite can see this group.'
+    : 'Anyone can see and join this group.';
+});
+
 document.getElementById('submitGroupBtn').addEventListener('click', async () => {
   const name = document.getElementById('groupName').value.trim();
   const err = document.getElementById('createGroupError');
   if (!name) { err.textContent = 'Group name is required.'; return; }
   err.textContent = '';
+  const btn = document.getElementById('submitGroupBtn');
+  btn.disabled = true; btn.textContent = 'Creating…';
   try {
     const res = await fetch(`${API}/api/groups`, {
       method: 'POST',
@@ -683,14 +700,20 @@ document.getElementById('submitGroupBtn').addEventListener('click', async () => 
         description: document.getElementById('groupDesc').value.trim(),
         meeting_point: document.getElementById('groupMeeting').value.trim(),
         route_name: document.getElementById('groupRoute').value.trim(),
+        is_private: groupIsPrivate,
       }),
     });
     const data = await res.json();
-    if (!res.ok) { err.textContent = data.error; return; }
+    if (!res.ok) { err.textContent = data.error || 'Failed to create group.'; return; }
     createGroupOverlay.classList.remove('open');
     ['groupName','groupDesc','groupMeeting','groupRoute'].forEach(id => document.getElementById(id).value = '');
+    groupIsPrivate = false;
+    document.getElementById('visBtnPublic').classList.add('active');
+    document.getElementById('visBtnPrivate').classList.remove('active');
+    document.getElementById('visHint').textContent = 'Anyone can see and join this group.';
     await loadGroups();
   } catch { err.textContent = 'Failed to create group.'; }
+  finally { btn.disabled = false; btn.textContent = 'Create Group'; }
 });
 
 // ── Auth Modal ─────────────────────────────────────────────

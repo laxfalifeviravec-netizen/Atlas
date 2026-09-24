@@ -26,10 +26,7 @@ document.getElementById('themeToggle').addEventListener('click', () => {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('culture-theme', next);
-  if (roadsTileLayer && roadsMap) {
-    roadsMap.removeLayer(roadsTileLayer);
-    roadsTileLayer = cartoTile(roadsMap, next !== 'light');
-  }
+  if (roadsMap) applyMapTheme(roadsMap, next !== 'light');
 });
 
 // ── Auth ───────────────────────────────────────────────────
@@ -65,17 +62,21 @@ function isDarkTheme() {
   const t = document.documentElement.getAttribute('data-theme');
   return t ? t !== 'light' : window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
-function cartoTile(map, dark) {
-  return L.tileLayer(
-    `https://{s}.basemaps.cartocdn.com/${dark ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`,
-    { attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>', subdomains: 'abcd', maxZoom: 19 }
-  ).addTo(map);
+function osmTile(map) {
+  return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19
+  }).addTo(map);
+}
+function applyMapTheme(map, dark) {
+  map.getContainer().classList.toggle('dark-tiles', dark);
 }
 
 // ── Map Init ───────────────────────────────────────────────
 function initMap() {
   roadsMap = L.map('roadsMap', { zoomControl: true }).setView([39.5, -98.35], 4);
-  roadsTileLayer = cartoTile(roadsMap, isDarkTheme());
+  roadsTileLayer = osmTile(roadsMap);
+  applyMapTheme(roadsMap, isDarkTheme());
 
   // Locate-me control
   const LocateCtrl = L.Control.extend({

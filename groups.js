@@ -34,8 +34,8 @@ document.getElementById('themeToggle').addEventListener('click', () => {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('culture-theme', next);
-  if (groupTileLayer && groupMap) { groupMap.removeLayer(groupTileLayer); groupTileLayer = cartoTile(groupMap, next !== 'light'); }
-  if (runTileLayer && runMap) { runMap.removeLayer(runTileLayer); runTileLayer = cartoTile(runMap, next !== 'light'); }
+  if (groupMap) applyMapTheme(groupMap, next !== 'light');
+  if (runMap) applyMapTheme(runMap, next !== 'light');
 });
 
 // ── Map tile helper ────────────────────────────────────────
@@ -43,11 +43,14 @@ function isDarkTheme() {
   const t = document.documentElement.getAttribute('data-theme');
   return t ? t !== 'light' : window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
-function cartoTile(map, dark) {
-  return L.tileLayer(
-    `https://{s}.basemaps.cartocdn.com/${dark ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`,
-    { attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>', subdomains: 'abcd', maxZoom: 19 }
-  ).addTo(map);
+function osmTile(map) {
+  return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19
+  }).addTo(map);
+}
+function applyMapTheme(map, dark) {
+  map.getContainer().classList.toggle('dark-tiles', dark);
 }
 
 function memberDivIcon(initials, isMe, heading) {
@@ -154,7 +157,8 @@ async function openGroupModal(group) {
   memberMarkers = {};
   setTimeout(() => {
     groupMap = L.map('groupMap', { zoomControl: false }).setView([38, -97], 4);
-    groupTileLayer = cartoTile(groupMap, isDarkTheme());
+    groupTileLayer = osmTile(groupMap);
+    applyMapTheme(groupMap, isDarkTheme());
 
     // Map click → place destination when in pick mode
     groupMap.on('click', async (e) => {
@@ -513,7 +517,8 @@ function openRunView(group) {
   runMemberMarkers = {}; runDestMarker = null; runDestLines = [];
   setTimeout(() => {
     runMap = L.map('runMap', { zoomControl: false }).setView([38, -97], 4);
-    runTileLayer = cartoTile(runMap, isDarkTheme());
+    runTileLayer = osmTile(runMap);
+    applyMapTheme(runMap, isDarkTheme());
 
     // Locate me control
     const LocCtrl = L.Control.extend({

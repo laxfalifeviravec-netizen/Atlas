@@ -366,16 +366,24 @@ const db = {
   },
   async createGroup(fields) {
     if (USE_SUPABASE) {
-      // Try with all fields; fall back to core fields if table lacks extra columns
-      let data, error;
-      ({ data, error } = await sb.from('groups').insert(fields).select().single());
-      if (error) {
-        const core = { name: fields.name, creator_id: fields.creator_id };
-        if (fields.is_private !== undefined) core.is_private = fields.is_private;
-        ({ data, error } = await sb.from('groups').insert(core).select().single());
-        if (error) throw error;
+      // Try progressively simpler payloads until one succeeds
+      const attempts = [
+        fields,
+        { name: fields.name, creator_id: fields.creator_id, is_private: !!fields.is_private },
+        { name: fields.name, creator_id: fields.creator_id },
+        { name: fields.name },
+      ];
+      let data = null;
+      let lastErr = null;
+      for (const payload of attempts) {
+        const { data: d, error: e } = await sb.from('groups').insert(payload).select().single();
+        if (!e) { data = d; break; }
+        lastErr = e;
+        console.error('createGroup attempt failed:', JSON.stringify(payload), e.message);
       }
-      await sb.from('group_members').insert({ group_id: data.id, user_id: fields.creator_id });
+      if (!data) throw lastErr;
+      // Add creator as first member (best-effort — ignore if table missing)
+      try { await sb.from('group_members').insert({ group_id: data.id, user_id: fields.creator_id }); } catch {}
       return data;
     }
     const g = { id: _gid++, ...fields, created_at: now() };
@@ -1256,8 +1264,8 @@ app.post('/api/groups', requireAuth, async (req, res) => {
       route_name: route_name.trim(), is_private: !!is_private,
     });
     const user = await db.findUserById(req.user.id);
-    res.status(201).json({ group: { ...group, creator_name: user?.name || '', member_count: 1, is_member: true } });
-  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+    res.status(201).json({ group: { ...group, creator_name: user?.name || '', member_count: 1, is_member: true, is_creator: true } });
+  } catch (e) { console.error('POST /api/groups error:', e); res.status(500).json({ error: e?.message || 'Server error.' }); }
 });
 
 app.get('/api/groups/:id', optionalAuth, async (req, res) => {

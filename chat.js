@@ -17,9 +17,10 @@ async function getMe() {
   token = getToken();
   if (!token) return null;
   try {
-    const r = await fetch(`${API}/api/me`, { headers: { Authorization: `Bearer ${token}` } });
+    const r = await fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
     if (!r.ok) return null;
-    return await r.json();
+    const data = await r.json();
+    return data.user || data;
   } catch { return null; }
 }
 
@@ -101,7 +102,7 @@ async function loadGroups() {
     const r = await fetch(`${API}/api/groups`, { headers: { Authorization: `Bearer ${token}` } });
     if (!r.ok) throw new Error();
     const data = await r.json();
-    const groups = Array.isArray(data) ? data : [];
+    const groups = Array.isArray(data) ? data : (data.groups || []);
     loading.style.display = 'none';
     if (!groups.length) { empty.style.display = 'flex'; return; }
     empty.style.display = 'none';
@@ -226,10 +227,15 @@ const newMsgSearch  = document.getElementById('newMsgSearch');
 const newMsgResults = document.getElementById('newMsgResults');
 
 document.getElementById('newChatBtn').addEventListener('click', () => {
-  newMsgSearch.value = '';
-  newMsgResults.innerHTML = '';
-  newMsgOverlay.classList.add('open');
-  newMsgSearch.focus();
+  const activeTab = document.querySelector('.chat-tab.active')?.dataset.tab;
+  if (activeTab === 'groups') {
+    openCreateGroup();
+  } else {
+    newMsgSearch.value = '';
+    newMsgResults.innerHTML = '';
+    newMsgOverlay.classList.add('open');
+    newMsgSearch.focus();
+  }
 });
 document.getElementById('newMsgClose').addEventListener('click', () => newMsgOverlay.classList.remove('open'));
 newMsgOverlay.addEventListener('click', e => { if (e.target === newMsgOverlay) newMsgOverlay.classList.remove('open'); });
@@ -301,7 +307,10 @@ function renderGrpChips() {
 
 document.getElementById('newGrpCreate').addEventListener('click', async () => {
   const name = newGrpNameInp.value.trim();
-  if (!name || selectedUsers.length === 0 || !me) return;
+  if (!name) { alert('Enter a group name.'); return; }
+  if (!me) { alert('You must be signed in to create a group.'); return; }
+  const btn = document.getElementById('newGrpCreate');
+  btn.disabled = true; btn.textContent = 'Creating…';
   try {
     const r = await fetch(`${API}/api/groups`, {
       method: 'POST',
@@ -309,9 +318,13 @@ document.getElementById('newGrpCreate').addEventListener('click', async () => {
       body: JSON.stringify({ name, member_ids: selectedUsers.map(u => u.id) })
     });
     const data = await r.json();
+    if (!r.ok) { alert(data.error || 'Failed to create group.'); return; }
     newGrpOverlay.classList.remove('open');
-    openConv(data.id, name, true);
-  } catch {}
+    const groupId = (data.group || data).id;
+    await loadGroups();
+    if (groupId) openConv(groupId, name, true);
+  } catch (e) { alert('Network error.'); }
+  finally { btn.disabled = false; btn.textContent = 'Create Group'; }
 });
 
 /* ── User search helper ─── */

@@ -3,7 +3,7 @@
    Caches the app shell so it loads instantly and works offline.
    ============================================================ */
 
-const CACHE = 'culture-v6';
+const CACHE = 'culture-v7';
 
 const APP_SHELL = [
   '/',
@@ -44,6 +44,7 @@ const APP_SHELL = [
   '/icons/apple-touch-icon.png',
   '/lib/leaflet.js',
   '/lib/leaflet.css',
+  '/create-sheet.js',
 ];
 
 // Install — cache the app shell

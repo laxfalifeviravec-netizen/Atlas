@@ -65,6 +65,7 @@ create table if not exists groups (
   description   text default '',
   meeting_point text default '',
   route_name    text default '',
+  is_private    boolean default false,
   created_at    timestamptz default now()
 );
 

@@ -17,6 +17,17 @@ let pendingPoints = [];
 let pendingMarkers = [];
 let pendingPolyline = null;
 
+// Navigation state
+let navRoad = null;
+let navRoute = null;
+let navSteps = [];
+let navCurrentStep = 0;
+let navWatchId = null;
+let navRouteLayer = null;
+let navNavUserMarker = null;
+let navStartMarker = null;
+const roadRegistry = {};
+
 const DIFF_COLORS = { Easy: '#22c55e', Moderate: '#f59e0b', Hard: '#f97316', Expert: '#dc2222' };
 
 // ── Theme ──────────────────────────────────────────────────
@@ -182,17 +193,34 @@ function renderRoadList(communityRoads, curatedList) {
 
     curatedList.forEach(r => {
       const diffLabel = ['', 'Easy', 'Easy', 'Moderate', 'Hard', 'Expert'][r.difficulty] || 'Moderate';
+      const cKey = `curated-${r.id}`;
+      roadRegistry[cKey] = r;
       const item = document.createElement('div');
       item.className = 'road-item';
       item.innerHTML = `
-        <div class="road-item-name">${esc(r.name)}</div>
-        ${r.description ? `<div style="font-size:12px;color:var(--c-text-2);margin:2px 0 4px;line-height:1.4">${esc(r.description)}</div>` : ''}
-        <div class="road-item-meta">
-          <span class="road-diff diff-${diffLabel}">${diffLabel}</span>
-          ${r.state ? `<span class="road-item-region">${esc(r.state)}</span>` : ''}
-          <span style="font-size:11px;color:var(--c-text-2)">${r.length_mi} mi</span>
+        <div class="road-item-row">
+          <div class="road-item-body">
+            <div class="road-item-name">${esc(r.name)}</div>
+            ${r.description ? `<div style="font-size:12px;color:var(--c-text-2);margin:2px 0 4px;line-height:1.4">${esc(r.description)}</div>` : ''}
+            <div class="road-item-meta">
+              <span class="road-diff diff-${diffLabel}">${diffLabel}</span>
+              ${r.state ? `<span class="road-item-region">${esc(r.state)}</span>` : ''}
+              <span style="font-size:11px;color:var(--c-text-2)">${r.length_mi} mi</span>
+            </div>
+          </div>
+          <button class="road-nav-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            Go
+          </button>
         </div>`;
-      item.addEventListener('click', () => flyToRoad({ points: r.geometry, id: `curated-${r.id}`, ...r }));
+      item.addEventListener('click', e => {
+        if (e.target.closest('.road-nav-btn')) return;
+        flyToRoad({ points: r.geometry, id: cKey, ...r });
+      });
+      item.querySelector('.road-nav-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        openNavPanel(cKey);
+      });
       list.appendChild(item);
     });
   }
@@ -204,21 +232,38 @@ function renderRoadList(communityRoads, curatedList) {
     list.appendChild(header);
 
     communityRoads.forEach(r => {
+      const rKey = String(r.id);
+      roadRegistry[rKey] = r;
       const item = document.createElement('div');
       item.className = 'road-item';
       item.innerHTML = `
-        <div class="road-item-name">${esc(r.name)}</div>
-        ${r.description ? `<div style="font-size:12px;color:var(--c-text-2);margin:2px 0 4px;line-height:1.4">${esc(r.description)}</div>` : ''}
-        <div class="road-item-meta">
-          <span class="road-diff diff-${r.difficulty}">${r.difficulty}</span>
-          ${r.region ? `<span class="road-item-region">${esc(r.region)}</span>` : ''}
-          <span class="road-item-likes">
-            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            ${r.likes||0}
-          </span>
-          <span class="road-item-by">by ${esc(r.submitted_by||'Driver')}</span>
+        <div class="road-item-row">
+          <div class="road-item-body">
+            <div class="road-item-name">${esc(r.name)}</div>
+            ${r.description ? `<div style="font-size:12px;color:var(--c-text-2);margin:2px 0 4px;line-height:1.4">${esc(r.description)}</div>` : ''}
+            <div class="road-item-meta">
+              <span class="road-diff diff-${r.difficulty}">${r.difficulty}</span>
+              ${r.region ? `<span class="road-item-region">${esc(r.region)}</span>` : ''}
+              <span class="road-item-likes">
+                <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                ${r.likes||0}
+              </span>
+              <span class="road-item-by">by ${esc(r.submitted_by||'Driver')}</span>
+            </div>
+          </div>
+          <button class="road-nav-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            Go
+          </button>
         </div>`;
-      item.addEventListener('click', () => flyToRoad(r));
+      item.addEventListener('click', e => {
+        if (e.target.closest('.road-nav-btn')) return;
+        flyToRoad(r);
+      });
+      item.querySelector('.road-nav-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        openNavPanel(rKey);
+      });
       list.appendChild(item);
     });
   }
@@ -247,6 +292,10 @@ function renderRoadPolylines(roads) {
           ${r.region ? `<span style="font-size:11px;color:#888">${esc(r.region)}</span>` : ''}
         </div>
         <p style="font-size:11px;color:#888;margin-top:4px">by ${esc(r.submitted_by||'Driver')} · ♥ ${r.likes||0}</p>
+        <button class="nav-popup-btn" onclick="window.openNavPanel('${r.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          Navigate
+        </button>
       </div>`;
     line.bindPopup(popupHtml);
     roadPolylines[r.id] = line;
@@ -294,6 +343,10 @@ async function renderCuratedPolylines(roads) {
           ${r.state ? `<span style="font-size:11px;color:#888">${esc(r.state)}</span>` : ''}
         </div>
         <p style="font-size:11px;color:#888;margin-top:4px">${r.length_mi} mi · ${r.type}</p>
+        <button class="nav-popup-btn" onclick="window.openNavPanel('curated-${r.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          Navigate
+        </button>
       </div>`;
     line.bindPopup(popupHtml);
     curatedPolylines[`curated-${r.id}`] = line;
@@ -453,6 +506,207 @@ document.getElementById('registerForm').addEventListener('submit', async e => {
 });
 
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Navigation ──────────────────────────────────────────────
+
+function openNavPanel(roadId) {
+  const road = roadRegistry[String(roadId)];
+  if (!road) return;
+  navRoad = road;
+  navRoute = null;
+
+  const pts = road._snappedGeometry || road.points || road.geometry;
+  const diff = road.difficulty
+    ? (typeof road.difficulty === 'number' ? (['','Easy','Easy','Moderate','Hard','Expert'][road.difficulty] || 'Moderate') : road.difficulty)
+    : 'Moderate';
+
+  document.getElementById('navPanelName').textContent = road.name;
+  const diffEl = document.getElementById('navPanelDiff');
+  diffEl.textContent = diff;
+  diffEl.className = `road-diff diff-${diff}`;
+  document.getElementById('navRoadLen').textContent = road.length_mi ? `${road.length_mi} mi` : '—';
+  document.getElementById('navDistToStart').textContent = '…';
+  document.getElementById('navETA').textContent = '…';
+
+  document.getElementById('navPanel').classList.add('open');
+
+  if (pts && pts.length) {
+    const [rlat, rlng] = pts[0];
+    document.getElementById('navGoogleMaps').onclick = () =>
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${rlat},${rlng}&travelmode=driving`);
+    document.getElementById('navAppleMaps').onclick = () =>
+      window.open(`http://maps.apple.com/?daddr=${rlat},${rlng}&dirflg=d`);
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async pos => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        try {
+          const res = await fetch(
+            `https://router.project-osrm.org/route/v1/driving/${lng},${lat};${rlng},${rlat}?steps=true&overview=full&geometries=geojson`,
+            { signal: AbortSignal.timeout(8000) }
+          );
+          if (!res.ok) throw new Error();
+          const data = await res.json();
+          if (data.code === 'Ok' && data.routes?.[0]) {
+            navRoute = data.routes[0];
+            const distMi = (navRoute.distance / 1609.34).toFixed(1);
+            const mins = Math.round(navRoute.duration / 60);
+            document.getElementById('navDistToStart').textContent = `${distMi} mi`;
+            document.getElementById('navETA').textContent =
+              mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
+          }
+        } catch {
+          document.getElementById('navDistToStart').textContent = '—';
+          document.getElementById('navETA').textContent = '—';
+        }
+      }, () => {
+        document.getElementById('navDistToStart').textContent = '—';
+        document.getElementById('navETA').textContent = '—';
+      });
+    }
+  }
+}
+window.openNavPanel = openNavPanel;
+
+function startNavigation() {
+  if (!navRoad) return;
+  document.getElementById('navPanel').classList.remove('open');
+
+  const pts = navRoad._snappedGeometry || navRoad.points || navRoad.geometry;
+  const hud = document.getElementById('navHUD');
+  hud.classList.add('active');
+  document.getElementById('navHUDRoad').textContent = navRoad.name;
+
+  if (navRoute && pts) {
+    const routeCoords = navRoute.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+    if (navRouteLayer) navRouteLayer.remove();
+    navRouteLayer = L.polyline(routeCoords, { color: '#2563eb', weight: 5, opacity: 0.9 }).addTo(roadsMap);
+
+    roadsMap.fitBounds(L.latLngBounds([...routeCoords, ...pts]), { padding: [60, 100] });
+
+    navSteps = (navRoute.legs[0]?.steps || []).map(step => ({
+      instruction: formatNavManeuver(step.maneuver, step.name),
+      distance: step.distance,
+      type: step.maneuver.type,
+      modifier: step.maneuver.modifier,
+      location: step.maneuver.location,
+    }));
+    navCurrentStep = 0;
+    updateNavHUD();
+  } else if (pts) {
+    roadsMap.fitBounds(L.latLngBounds(pts), { padding: [60, 60] });
+    document.getElementById('navHUDInstruction').textContent = 'Head to road start';
+    document.getElementById('navHUDArrow').textContent = '↑';
+    document.getElementById('navHUDDist').textContent = '';
+  }
+
+  if (pts && pts.length) {
+    if (navStartMarker) navStartMarker.remove();
+    navStartMarker = L.marker(pts[0], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div class="nav-flag-pin">▶</div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      })
+    }).addTo(roadsMap);
+  }
+
+  if (navigator.geolocation) {
+    navWatchId = navigator.geolocation.watchPosition(onNavPosition, null, {
+      enableHighAccuracy: true, maximumAge: 2000, timeout: 10000,
+    });
+  }
+}
+
+function onNavPosition(pos) {
+  const { latitude: lat, longitude: lng } = pos.coords;
+
+  if (navNavUserMarker) navNavUserMarker.setLatLng([lat, lng]);
+  else navNavUserMarker = L.circleMarker([lat, lng], {
+    radius: 10, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1
+  }).addTo(roadsMap);
+
+  if (myLocMarker) myLocMarker.setLatLng([lat, lng]);
+  else myLocMarker = L.circleMarker([lat, lng], {
+    radius: 9, color: '#fff', weight: 2.5, fillColor: '#2563eb', fillOpacity: 1
+  }).addTo(roadsMap);
+
+  if (navSteps.length > 0 && navCurrentStep < navSteps.length - 1) {
+    const step = navSteps[navCurrentStep];
+    if (step.location) {
+      const [sLng, sLat] = step.location;
+      const dist = roadsMap.distance([lat, lng], [sLat, sLng]);
+      if (dist < 50) { navCurrentStep++; updateNavHUD(); }
+    }
+  }
+}
+
+function updateNavHUD() {
+  const step = navSteps[navCurrentStep];
+  if (!step || navCurrentStep >= navSteps.length - 1) {
+    document.getElementById('navHUDInstruction').textContent = 'Arrive at road start';
+    document.getElementById('navHUDDist').textContent = '';
+    document.getElementById('navHUDArrow').textContent = '🏁';
+    return;
+  }
+  document.getElementById('navHUDInstruction').textContent = step.instruction;
+  const m = step.distance;
+  document.getElementById('navHUDDist').textContent =
+    m < 161 ? `${Math.round(m * 3.281)} ft` : `${(m / 1609.34).toFixed(1)} mi`;
+  document.getElementById('navHUDArrow').textContent = getNavArrow(step.type, step.modifier);
+}
+
+function formatNavManeuver(m, streetName) {
+  const street = streetName ? ` onto ${streetName}` : '';
+  if (m.type === 'depart') return `Head ${m.modifier || 'north'}${street}`;
+  if (m.type === 'arrive') return 'Arrive at destination';
+  if (m.type === 'turn') return `Turn ${m.modifier || ''}${street}`;
+  if (m.type === 'continue' || m.type === 'new name') return `Continue${street}`;
+  if (m.type === 'merge') return `Merge ${m.modifier || ''}${street}`;
+  if (m.type === 'ramp' || m.type === 'on ramp') return `Take ramp${m.modifier ? ` ${m.modifier}` : ''}${street}`;
+  if (m.type === 'fork') return `Keep ${m.modifier || 'left'}${street}`;
+  if (m.type === 'roundabout' || m.type === 'rotary') return 'Enter roundabout';
+  if (m.type === 'exit roundabout') return `Exit roundabout${street}`;
+  return m.type || 'Continue';
+}
+
+function getNavArrow(type, modifier) {
+  if (type === 'arrive') return '🏁';
+  if (!modifier || modifier === 'straight') return '↑';
+  if (modifier === 'left') return '←';
+  if (modifier === 'right') return '→';
+  if (modifier === 'slight left') return '↖';
+  if (modifier === 'slight right') return '↗';
+  if (modifier === 'sharp left') return '↩';
+  if (modifier === 'sharp right') return '↪';
+  if (modifier === 'uturn') return '↩';
+  return '↑';
+}
+
+function stopNavigation() {
+  if (navWatchId != null) { navigator.geolocation.clearWatch(navWatchId); navWatchId = null; }
+  if (navRouteLayer) { navRouteLayer.remove(); navRouteLayer = null; }
+  if (navStartMarker) { navStartMarker.remove(); navStartMarker = null; }
+  if (navNavUserMarker) { navNavUserMarker.remove(); navNavUserMarker = null; }
+  document.getElementById('navHUD').classList.remove('active');
+  const r = navRoad;
+  navRoad = null; navRoute = null; navSteps = []; navCurrentStep = 0;
+  if (r) flyToRoad(r);
+}
+
+document.getElementById('navStartBtn').addEventListener('click', startNavigation);
+document.getElementById('navStopBtn').addEventListener('click', stopNavigation);
+document.getElementById('navPanelClose').addEventListener('click', () => {
+  document.getElementById('navPanel').classList.remove('open');
+  navRoad = null; navRoute = null;
+});
+document.getElementById('navPanel').addEventListener('click', e => {
+  if (e.target === document.getElementById('navPanel')) {
+    document.getElementById('navPanel').classList.remove('open');
+    navRoad = null; navRoute = null;
+  }
+});
 
 (async () => {
   initMap();

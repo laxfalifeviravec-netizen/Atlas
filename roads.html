@@ -151,6 +151,55 @@
     </div>
   </div>
 
+  <!-- ═══ NAVIGATION PANEL ════════════════════════════════════ -->
+  <div class="sheet-overlay" id="navPanel">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="nav-panel-header">
+        <div class="nav-panel-name" id="navPanelName"></div>
+        <span class="road-diff" id="navPanelDiff"></span>
+      </div>
+      <div class="nav-panel-stats">
+        <div class="nav-stat">
+          <div class="nav-stat-val" id="navDistToStart">…</div>
+          <div class="nav-stat-lbl">to start</div>
+        </div>
+        <div class="nav-stat">
+          <div class="nav-stat-val" id="navETA">…</div>
+          <div class="nav-stat-lbl">drive time</div>
+        </div>
+        <div class="nav-stat">
+          <div class="nav-stat-val" id="navRoadLen">—</div>
+          <div class="nav-stat-lbl">road length</div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" id="navStartBtn" style="margin-top:20px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        Start Navigation
+      </button>
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <button class="btn btn-outline" id="navGoogleMaps" style="flex:1;font-size:13px">Google Maps</button>
+        <button class="btn btn-outline" id="navAppleMaps" style="flex:1;font-size:13px">Apple Maps</button>
+      </div>
+      <button class="btn btn-outline btn-full" id="navPanelClose" style="margin-top:8px;opacity:.65">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ═══ NAVIGATION HUD ═══════════════════════════════════════ -->
+  <div class="nav-hud" id="navHUD">
+    <div class="nav-hud-step">
+      <div class="nav-hud-arrow" id="navHUDArrow">↑</div>
+      <div class="nav-hud-text">
+        <div class="nav-hud-instruction" id="navHUDInstruction">Head to road start</div>
+        <div class="nav-hud-dist" id="navHUDDist"></div>
+      </div>
+    </div>
+    <div class="nav-hud-footer">
+      <div class="nav-hud-road" id="navHUDRoad"></div>
+      <button class="nav-stop-btn" id="navStopBtn">Stop</button>
+    </div>
+  </div>
+
   <script src="lib/leaflet.js"></script>
   <script src="roads.js"></script>
   <script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js")); }</script>

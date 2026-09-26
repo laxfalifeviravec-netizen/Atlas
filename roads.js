@@ -582,9 +582,9 @@ function startNavigation() {
   document.getElementById('navPanel').classList.remove('open');
 
   const pts = navRoad._snappedGeometry || navRoad.points || navRoad.geometry;
+  document.body.classList.add('nav-active');
   document.getElementById('navHUD').classList.add('active');
   document.getElementById('navTopCard').classList.add('active');
-  document.getElementById('navHUDRoad').textContent = navRoad.name;
 
   // Init ETA and tracked route
   navTrackedPoints = [];
@@ -604,6 +604,7 @@ function startNavigation() {
     navRouteLayer = L.polyline(routeCoords, { color: '#2563eb', weight: 5, opacity: 0.9 }).addTo(roadsMap);
 
     roadsMap.fitBounds(L.latLngBounds([...routeCoords, ...pts]), { padding: [60, 100] });
+    roadsMap.setZoom(Math.min(roadsMap.getZoom(), 16));
 
     navSteps = (navRoute.legs[0]?.steps || []).map(step => ({
       instruction: formatNavManeuver(step.maneuver, step.name),
@@ -617,7 +618,7 @@ function startNavigation() {
   } else if (pts) {
     roadsMap.fitBounds(L.latLngBounds(pts), { padding: [60, 60] });
     document.getElementById('navHUDInstruction').textContent = 'Head to road start';
-    document.getElementById('navHUDArrow').textContent = '↑';
+    document.getElementById('navHUDArrow').innerHTML = getNavArrowSVG('depart', 'straight');
     document.getElementById('navHUDDist').textContent = '';
   }
 
@@ -641,17 +642,34 @@ function startNavigation() {
 }
 
 function onNavPosition(pos) {
-  const { latitude: lat, longitude: lng, speed } = pos.coords;
+  const { latitude: lat, longitude: lng, speed, heading } = pos.coords;
 
-  if (navNavUserMarker) navNavUserMarker.setLatLng([lat, lng]);
-  else navNavUserMarker = L.circleMarker([lat, lng], {
-    radius: 10, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1
-  }).addTo(roadsMap);
+  if (!navNavUserMarker) {
+    navNavUserMarker = L.marker([lat, lng], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div class="nav-user-wrap"><div class="nav-user-halo"></div><div class="nav-user-chevron"><svg viewBox="0 0 12 12" width="12" height="12" fill="white"><polygon points="6,1 10,10 6,7.5 2,10"/></svg></div></div>`,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+      })
+    }).addTo(roadsMap);
+  } else {
+    navNavUserMarker.setLatLng([lat, lng]);
+  }
+
+  // Rotate chevron toward heading
+  if (heading != null) {
+    const el = navNavUserMarker.getElement();
+    if (el) {
+      const chevron = el.querySelector('.nav-user-chevron');
+      if (chevron) chevron.style.transform = `rotate(${heading}deg)`;
+    }
+  }
+
+  // Keep user at ~67% from top
+  panToUserOffset(lat, lng);
 
   if (myLocMarker) myLocMarker.setLatLng([lat, lng]);
-  else myLocMarker = L.circleMarker([lat, lng], {
-    radius: 9, color: '#fff', weight: 2.5, fillColor: '#2563eb', fillOpacity: 1
-  }).addTo(roadsMap);
 
   // Speed display (m/s → mph)
   const mph = speed != null && speed >= 0 ? Math.round(speed * 2.237) : null;
@@ -690,22 +708,26 @@ function updateETA() {
     const arrival = new Date(navArrivalTime);
     document.getElementById('navArriveTime').textContent =
       arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const minsLeft = Math.max(0, Math.round((navArrivalTime - Date.now()) / 60000));
+    document.getElementById('navRemainTime').textContent =
+      minsLeft >= 60 ? `${Math.floor(minsLeft / 60)}h ${minsLeft % 60}m` : `${minsLeft} min`;
   }
 }
 
 function updateNavHUD() {
   const step = navSteps[navCurrentStep];
+  const arrowEl = document.getElementById('navHUDArrow');
   if (!step || navCurrentStep >= navSteps.length - 1) {
-    document.getElementById('navHUDInstruction').textContent = 'Arrive at road start';
+    document.getElementById('navHUDInstruction').textContent = 'Arrive at destination';
     document.getElementById('navHUDDist').textContent = '';
-    document.getElementById('navHUDArrow').textContent = '🏁';
+    arrowEl.innerHTML = getNavArrowSVG('arrive', null);
     return;
   }
   document.getElementById('navHUDInstruction').textContent = step.instruction;
   const m = step.distance;
   document.getElementById('navHUDDist').textContent =
     m < 161 ? `${Math.round(m * 3.281)} ft` : `${(m / 1609.34).toFixed(1)} mi`;
-  document.getElementById('navHUDArrow').textContent = getNavArrow(step.type, step.modifier);
+  arrowEl.innerHTML = getNavArrowSVG(step.type, step.modifier);
 }
 
 function formatNavManeuver(m, streetName) {
@@ -722,17 +744,44 @@ function formatNavManeuver(m, streetName) {
   return m.type || 'Continue';
 }
 
-function getNavArrow(type, modifier) {
-  if (type === 'arrive') return '🏁';
-  if (!modifier || modifier === 'straight') return '↑';
-  if (modifier === 'left') return '←';
-  if (modifier === 'right') return '→';
-  if (modifier === 'slight left') return '↖';
-  if (modifier === 'slight right') return '↗';
-  if (modifier === 'sharp left') return '↩';
-  if (modifier === 'sharp right') return '↪';
-  if (modifier === 'uturn') return '↩';
-  return '↑';
+function getNavArrowSVG(type, modifier) {
+  if (type === 'arrive') {
+    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><polyline points="9 12 11 14 15 10"/></svg>`;
+  }
+  if (!modifier || modifier === 'straight') {
+    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
+  }
+  if (modifier === 'left') {
+    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M5 12l7-7M5 12l7 7"/></svg>`;
+  }
+  if (modifier === 'right') {
+    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M19 12l-7-7M19 12l-7 7"/></svg>`;
+  }
+  if (modifier === 'slight left') {
+    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V8M12 8l-6 6M12 8h6"/></svg>`;
+  }
+  if (modifier === 'slight right') {
+    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V8M12 8l6 6M12 8H6"/></svg>`;
+  }
+  if (modifier === 'sharp left') {
+    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 5H7v10M7 15l-4-4 4-4"/></svg>`;
+  }
+  if (modifier === 'sharp right') {
+    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5h10v10M17 15l4-4-4-4"/></svg>`;
+  }
+  if (modifier === 'uturn') {
+    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 17V9a5 5 0 0 0-10 0v8M7 17l-4-4 4-4"/></svg>`;
+  }
+  return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
+}
+
+function panToUserOffset(lat, lng) {
+  const mapSize = roadsMap.getSize();
+  const zoom = roadsMap.getZoom();
+  const pt = roadsMap.project([lat, lng], zoom);
+  pt.y -= mapSize.y * 0.17;
+  const newCenter = roadsMap.unproject(pt, zoom);
+  roadsMap.setView(newCenter, zoom, { animate: true, pan: { duration: 0.6 } });
 }
 
 function stopNavigation() {
@@ -741,6 +790,7 @@ function stopNavigation() {
   if (navRouteLayer) { navRouteLayer.remove(); navRouteLayer = null; }
   if (navStartMarker) { navStartMarker.remove(); navStartMarker = null; }
   if (navNavUserMarker) { navNavUserMarker.remove(); navNavUserMarker = null; }
+  document.body.classList.remove('nav-active');
   document.getElementById('navHUD').classList.remove('active');
   document.getElementById('navTopCard').classList.remove('active');
 

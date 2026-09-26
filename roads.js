@@ -81,21 +81,37 @@ function isDarkTheme() {
   const t = document.documentElement.getAttribute('data-theme');
   return t ? t !== 'light' : window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
-function osmTile(map) {
-  return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19
+function cartoTile(map, dark) {
+  const url = dark
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+  return L.tileLayer(url, {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd', maxZoom: 20,
   }).addTo(map);
 }
 function applyMapTheme(map, dark) {
-  map.getContainer().classList.toggle('dark-tiles', dark);
+  if (roadsTileLayer) roadsTileLayer.remove();
+  roadsTileLayer = cartoTile(map, dark);
 }
 
 // ── Map Init ───────────────────────────────────────────────
 function initMap() {
   roadsMap = L.map('roadsMap', { zoomControl: true }).setView([39.5, -98.35], 4);
-  roadsTileLayer = osmTile(roadsMap);
-  applyMapTheme(roadsMap, isDarkTheme());
+  roadsTileLayer = cartoTile(roadsMap, isDarkTheme());
+
+  // Auto-zoom to user's location on load
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      roadsMap.setView([lat, lng], 13);
+      if (!myLocMarker) {
+        myLocMarker = L.circleMarker([lat, lng], {
+          radius: 9, color: '#fff', weight: 2.5, fillColor: '#2563eb', fillOpacity: 1
+        }).addTo(roadsMap);
+      }
+    }, () => {});
+  }
 
   // Locate-me control
   const LocateCtrl = L.Control.extend({

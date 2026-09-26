@@ -88,18 +88,14 @@ function buildConvRow(c) {
     </div>`;
 }
 
-/* ── Groups tab (uses /api/groups or falls back to empty) ─── */
+/* ── Groups tab ─── */
 async function loadGroups() {
   const loading = document.getElementById('grpsLoading');
   const empty   = document.getElementById('grpsEmpty');
   const list    = document.getElementById('grpsList');
-  if (!me) {
-    loading.style.display = 'none';
-    empty.style.display   = 'flex';
-    return;
-  }
   try {
-    const r = await fetch(`${API}/api/groups`, { headers: { Authorization: `Bearer ${token}` } });
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const r = await fetch(`${API}/api/groups`, { headers });
     if (!r.ok) throw new Error();
     const data = await r.json();
     const groups = Array.isArray(data) ? data : (data.groups || []);
@@ -109,7 +105,7 @@ async function loadGroups() {
     list.style.display  = '';
     list.innerHTML = groups.map(g => buildGroupRow(g)).join('');
     list.querySelectorAll('.chat-list-item').forEach((el, i) => {
-      el.addEventListener('click', () => openConv(groups[i].id, groups[i].name || 'Group', true));
+      el.addEventListener('click', () => { location.href = 'groups.html'; });
     });
   } catch {
     loading.style.display = 'none';
@@ -266,7 +262,10 @@ const newGrpSelected = document.getElementById('newGrpSelected');
 const newGrpNameInp  = document.getElementById('newGrpName');
 let selectedUsers = [];
 
-document.getElementById('grpsEmptyNewBtn')?.addEventListener('click', openCreateGroup);
+document.getElementById('grpsEmptyNewBtn')?.addEventListener('click', () => {
+  if (!token) { location.href = 'groups.html'; return; }
+  openCreateGroup();
+});
 document.getElementById('newGrpClose').addEventListener('click', () => newGrpOverlay.classList.remove('open'));
 newGrpOverlay.addEventListener('click', e => { if (e.target === newGrpOverlay) newGrpOverlay.classList.remove('open'); });
 
@@ -308,7 +307,7 @@ function renderGrpChips() {
 document.getElementById('newGrpCreate').addEventListener('click', async () => {
   const name = newGrpNameInp.value.trim();
   if (!name) { alert('Enter a group name.'); return; }
-  if (!me) { alert('You must be signed in to create a group.'); return; }
+  if (!token) { alert('You must be signed in to create a group.'); return; }
   const btn = document.getElementById('newGrpCreate');
   btn.disabled = true; btn.textContent = 'Creating…';
   try {
@@ -320,10 +319,9 @@ document.getElementById('newGrpCreate').addEventListener('click', async () => {
     const data = await r.json();
     if (!r.ok) { alert(data.error || 'Failed to create group.'); return; }
     newGrpOverlay.classList.remove('open');
-    const groupId = (data.group || data).id;
     await loadGroups();
-    if (groupId) openConv(groupId, name, true);
-  } catch (e) { alert('Network error.'); }
+    location.href = 'groups.html';
+  } catch { alert('Network error — check your connection.'); }
   finally { btn.disabled = false; btn.textContent = 'Create Group'; }
 });
 

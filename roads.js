@@ -26,6 +26,14 @@ let navWatchId = null;
 let navRouteLayer = null;
 let navNavUserMarker = null;
 let navStartMarker = null;
+let navArrivalTime = 0;
+let navTotalDistM = 0;
+let navCompletedDistM = 0;
+let navEtaInterval = null;
+let navTrackedPoints = [];
+let navLastTrackedPos = null;
+let destMarker = null;
+let searchDebounce = null;
 const roadRegistry = {};
 
 const DIFF_COLORS = { Easy: '#22c55e', Moderate: '#f59e0b', Hard: '#f97316', Expert: '#dc2222' };
@@ -527,6 +535,7 @@ function openNavPanel(roadId) {
   document.getElementById('navRoadLen').textContent = road.length_mi ? `${road.length_mi} mi` : '—';
   document.getElementById('navDistToStart').textContent = '…';
   document.getElementById('navETA').textContent = '…';
+  document.getElementById('navDistLabel').textContent = road._isDestination ? 'to destination' : 'to start';
 
   document.getElementById('navPanel').classList.add('open');
 
@@ -573,9 +582,21 @@ function startNavigation() {
   document.getElementById('navPanel').classList.remove('open');
 
   const pts = navRoad._snappedGeometry || navRoad.points || navRoad.geometry;
-  const hud = document.getElementById('navHUD');
-  hud.classList.add('active');
+  document.getElementById('navHUD').classList.add('active');
+  document.getElementById('navTopCard').classList.add('active');
   document.getElementById('navHUDRoad').textContent = navRoad.name;
+
+  // Init ETA and tracked route
+  navTrackedPoints = [];
+  navLastTrackedPos = null;
+  if (navRoute) {
+    navTotalDistM = navRoute.distance;
+    navCompletedDistM = 0;
+    navArrivalTime = Date.now() + navRoute.duration * 1000;
+    updateETA();
+    if (navEtaInterval) clearInterval(navEtaInterval);
+    navEtaInterval = setInterval(updateETA, 20000);
+  }
 
   if (navRoute && pts) {
     const routeCoords = navRoute.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
@@ -620,7 +641,7 @@ function startNavigation() {
 }
 
 function onNavPosition(pos) {
-  const { latitude: lat, longitude: lng } = pos.coords;
+  const { latitude: lat, longitude: lng, speed } = pos.coords;
 
   if (navNavUserMarker) navNavUserMarker.setLatLng([lat, lng]);
   else navNavUserMarker = L.circleMarker([lat, lng], {
@@ -632,6 +653,25 @@ function onNavPosition(pos) {
     radius: 9, color: '#fff', weight: 2.5, fillColor: '#2563eb', fillOpacity: 1
   }).addTo(roadsMap);
 
+  // Speed display (m/s → mph)
+  const mph = speed != null && speed >= 0 ? Math.round(speed * 2.237) : null;
+  document.getElementById('navSpeedVal').textContent = mph != null ? mph : '—';
+
+  // Record GPS trace for save-route
+  if (!navLastTrackedPos) {
+    navTrackedPoints.push([lat, lng]);
+    navLastTrackedPos = [lat, lng];
+  } else {
+    const moved = roadsMap.distance([lat, lng], navLastTrackedPos);
+    if (moved > 25) {
+      navTrackedPoints.push([lat, lng]);
+      navLastTrackedPos = [lat, lng];
+      // Update completed distance estimate
+      navCompletedDistM = Math.min(navCompletedDistM + moved, navTotalDistM);
+    }
+  }
+
+  // Advance turn step
   if (navSteps.length > 0 && navCurrentStep < navSteps.length - 1) {
     const step = navSteps[navCurrentStep];
     if (step.location) {
@@ -639,6 +679,17 @@ function onNavPosition(pos) {
       const dist = roadsMap.distance([lat, lng], [sLat, sLng]);
       if (dist < 50) { navCurrentStep++; updateNavHUD(); }
     }
+  }
+}
+
+function updateETA() {
+  const remainM = Math.max(0, navTotalDistM - navCompletedDistM);
+  const distMi = (remainM / 1609.34).toFixed(1);
+  document.getElementById('navRemainDist').textContent = `${distMi} mi`;
+  if (navArrivalTime > 0) {
+    const arrival = new Date(navArrivalTime);
+    document.getElementById('navArriveTime').textContent =
+      arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 }
 
@@ -686,14 +737,160 @@ function getNavArrow(type, modifier) {
 
 function stopNavigation() {
   if (navWatchId != null) { navigator.geolocation.clearWatch(navWatchId); navWatchId = null; }
+  if (navEtaInterval) { clearInterval(navEtaInterval); navEtaInterval = null; }
   if (navRouteLayer) { navRouteLayer.remove(); navRouteLayer = null; }
   if (navStartMarker) { navStartMarker.remove(); navStartMarker = null; }
   if (navNavUserMarker) { navNavUserMarker.remove(); navNavUserMarker = null; }
   document.getElementById('navHUD').classList.remove('active');
+  document.getElementById('navTopCard').classList.remove('active');
+
   const r = navRoad;
+  const tracked = navTrackedPoints.slice();
   navRoad = null; navRoute = null; navSteps = []; navCurrentStep = 0;
+  navArrivalTime = 0; navTotalDistM = 0; navCompletedDistM = 0;
+  navTrackedPoints = []; navLastTrackedPos = null;
+
+  // Offer to save if user drove a meaningful distance
+  if (tracked.length >= 5 && currentUser) {
+    let totalM = 0;
+    for (let i = 1; i < tracked.length; i++) totalM += roadsMap.distance(tracked[i - 1], tracked[i]);
+    if (totalM > 500) {
+      const miles = (totalM / 1609.34).toFixed(1);
+      document.getElementById('saveRouteMiles').textContent = miles;
+      document.getElementById('saveRouteName').value = '';
+      document.getElementById('saveRouteError').textContent = '';
+      document.getElementById('saveRoutePanel').classList.add('open');
+      document.getElementById('saveRoutePanel')._tracked = tracked;
+      return;
+    }
+  }
   if (r) flyToRoad(r);
 }
+
+// ── Map Search ──────────────────────────────────────────────
+
+document.getElementById('mapSearchInput').addEventListener('input', e => {
+  const q = e.target.value.trim();
+  document.getElementById('mapSearchClear').style.display = q ? '' : 'none';
+  clearTimeout(searchDebounce);
+  if (q.length < 2) { hideSearchDropdown(); return; }
+  searchDebounce = setTimeout(() => nominatimSearch(q), 400);
+});
+
+document.getElementById('mapSearchInput').addEventListener('focus', () => {
+  const q = document.getElementById('mapSearchInput').value.trim();
+  if (q.length >= 2) nominatimSearch(q);
+});
+
+document.getElementById('mapSearchClear').addEventListener('click', () => {
+  document.getElementById('mapSearchInput').value = '';
+  document.getElementById('mapSearchClear').style.display = 'none';
+  hideSearchDropdown();
+  if (destMarker) { destMarker.remove(); destMarker = null; }
+  if (navRouteLayer) { navRouteLayer.remove(); navRouteLayer = null; }
+});
+
+document.addEventListener('click', e => {
+  if (!document.getElementById('mapSearchWrap').contains(e.target)) hideSearchDropdown();
+});
+
+async function nominatimSearch(q) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5`,
+      { headers: { 'Accept-Language': 'en' }, signal: AbortSignal.timeout(6000) }
+    );
+    renderSearchDropdown(await res.json());
+  } catch { hideSearchDropdown(); }
+}
+
+function renderSearchDropdown(results) {
+  const el = document.getElementById('mapSearchResults');
+  el.innerHTML = '';
+  if (!results.length) {
+    el.innerHTML = '<div class="search-no-results">No places found</div>';
+    el.style.display = 'block'; return;
+  }
+  results.forEach(r => {
+    const parts = r.display_name.split(',');
+    const name = parts[0].trim();
+    const addr = parts.slice(1, 3).join(',').trim();
+    const item = document.createElement('div');
+    item.className = 'search-result-item';
+    item.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <div style="min-width:0">
+        <div class="search-result-name">${esc(name)}</div>
+        <div class="search-result-addr">${esc(addr)}</div>
+      </div>`;
+    item.addEventListener('click', () => selectSearchResult(r, name));
+    el.appendChild(item);
+  });
+  el.style.display = 'block';
+}
+
+function hideSearchDropdown() {
+  document.getElementById('mapSearchResults').style.display = 'none';
+}
+
+function selectSearchResult(place, name) {
+  hideSearchDropdown();
+  document.getElementById('mapSearchInput').value = name;
+  document.getElementById('mapSearchClear').style.display = '';
+
+  const lat = parseFloat(place.lat);
+  const lng = parseFloat(place.lon);
+
+  // Destination pin
+  if (destMarker) destMarker.remove();
+  destMarker = L.marker([lat, lng], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div class="nav-flag-pin" style="font-size:16px">📍</div>`,
+      iconSize: [32, 32], iconAnchor: [16, 32],
+    })
+  }).addTo(roadsMap).bindPopup(esc(name)).openPopup();
+
+  roadsMap.setView([lat, lng], 13);
+
+  // Open nav panel using a synthetic destination road
+  roadRegistry['_dest'] = { name, points: [[lat, lng]], _isDestination: true };
+  openNavPanel('_dest');
+}
+
+// ── Save route ──────────────────────────────────────────────
+
+document.getElementById('saveRouteSubmit').addEventListener('click', async () => {
+  const name = document.getElementById('saveRouteName').value.trim();
+  const err  = document.getElementById('saveRouteError');
+  if (!name) { err.textContent = 'Give this road a name.'; return; }
+  const pts  = document.getElementById('saveRoutePanel')._tracked;
+  if (!pts || pts.length < 2) { err.textContent = 'Not enough GPS points.'; return; }
+  err.textContent = '';
+
+  try {
+    const res = await fetch(`${API}/api/roads`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        difficulty: document.getElementById('saveRouteDiff').value,
+        points: pts,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) { err.textContent = data.error || 'Failed to save.'; return; }
+    document.getElementById('saveRoutePanel').classList.remove('open');
+    await loadRoads();
+    flyToRoad(data.road);
+  } catch { err.textContent = 'Failed to save road.'; }
+});
+
+document.getElementById('saveRouteSkip').addEventListener('click', () => {
+  document.getElementById('saveRoutePanel').classList.remove('open');
+});
+
+// ── Nav panel / HUD buttons ─────────────────────────────────
 
 document.getElementById('navStartBtn').addEventListener('click', startNavigation);
 document.getElementById('navStopBtn').addEventListener('click', stopNavigation);

@@ -63,6 +63,19 @@
     <!-- Map -->
     <div class="roads-map-wrap">
       <div id="roadsMap"></div>
+
+      <!-- Search bar -->
+      <div class="map-search-wrap" id="mapSearchWrap">
+        <div class="map-search-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="map-search-input" id="mapSearchInput" type="text" placeholder="Search destination…" autocomplete="off" />
+          <button class="map-search-clear" id="mapSearchClear" style="display:none" aria-label="Clear search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="map-search-results" id="mapSearchResults" style="display:none"></div>
+      </div>
+
       <!-- Mobile toggle -->
       <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle road list">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -162,7 +175,7 @@
       <div class="nav-panel-stats">
         <div class="nav-stat">
           <div class="nav-stat-val" id="navDistToStart">…</div>
-          <div class="nav-stat-lbl">to start</div>
+          <div class="nav-stat-lbl" id="navDistLabel">to start</div>
         </div>
         <div class="nav-stat">
           <div class="nav-stat-val" id="navETA">…</div>
@@ -185,18 +198,47 @@
     </div>
   </div>
 
-  <!-- ═══ NAVIGATION HUD ═══════════════════════════════════════ -->
-  <div class="nav-hud" id="navHUD">
-    <div class="nav-hud-step">
-      <div class="nav-hud-arrow" id="navHUDArrow">↑</div>
-      <div class="nav-hud-text">
-        <div class="nav-hud-instruction" id="navHUDInstruction">Head to road start</div>
-        <div class="nav-hud-dist" id="navHUDDist"></div>
-      </div>
+  <!-- ═══ NAV TOP CARD (next turn) ════════════════════════════ -->
+  <div class="nav-top-card" id="navTopCard">
+    <div class="nav-top-arrow" id="navHUDArrow">↑</div>
+    <div class="nav-top-text">
+      <div class="nav-top-dist" id="navHUDDist"></div>
+      <div class="nav-top-instruction" id="navHUDInstruction">Head to start</div>
     </div>
-    <div class="nav-hud-footer">
-      <div class="nav-hud-road" id="navHUDRoad"></div>
-      <button class="nav-stop-btn" id="navStopBtn">Stop</button>
+  </div>
+
+  <!-- ═══ NAV BOTTOM BAR (speed / ETA / stop) ══════════════════ -->
+  <div class="nav-hud" id="navHUD">
+    <div class="nav-speed-block">
+      <div class="nav-speed-val" id="navSpeedVal">—</div>
+      <div class="nav-speed-unit">mph</div>
+    </div>
+    <div class="nav-route-info">
+      <div class="nav-remain-dist" id="navRemainDist">—</div>
+      <div class="nav-arrive-time" id="navArriveTime">—</div>
+    </div>
+    <div class="nav-hud-road" id="navHUDRoad"></div>
+    <button class="nav-stop-btn" id="navStopBtn">Stop</button>
+  </div>
+
+  <!-- ═══ SAVE ROUTE SHEET ═════════════════════════════════════ -->
+  <div class="sheet-overlay" id="saveRoutePanel">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="nav-panel-header">
+        <div class="nav-panel-name">Save this drive?</div>
+      </div>
+      <p class="save-route-desc">You recorded <strong id="saveRouteMiles">--</strong> mi. Share it as a community road.</p>
+      <input class="save-route-input" id="saveRouteName" type="text" placeholder="Road name (e.g. Angeles Crest Hwy)" maxlength="100" />
+      <select class="save-route-select" id="saveRouteDiff">
+        <option value="Easy">Easy — wide, smooth</option>
+        <option value="Moderate" selected>Moderate — some technical</option>
+        <option value="Hard">Hard — tight switchbacks</option>
+        <option value="Expert">Expert — extreme corners</option>
+      </select>
+      <span class="field-error" id="saveRouteError"></span>
+      <button class="btn btn-primary btn-full" id="saveRouteSubmit" style="margin-top:16px">Share as Community Road</button>
+      <button class="btn btn-outline btn-full" id="saveRouteSkip" style="margin-top:8px;opacity:.65">Discard</button>
     </div>
   </div>
 

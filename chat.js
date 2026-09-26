@@ -5,7 +5,6 @@ let me = null;
 let token = null;
 let pollTimer = null;
 let activeConvId = null;
-let activeConvName = '';
 
 const params = new URLSearchParams(location.search);
 
@@ -24,10 +23,11 @@ async function getMe() {
   } catch { return null; }
 }
 
-/* ── Tab switching ─── */
-const chatTabs = document.getElementById('chatTabs');
+/* ── Tabs ─── */
+const chatTabs   = document.getElementById('chatTabs');
 const tabMessages = document.getElementById('tabMessages');
-const tabGroups = document.getElementById('tabGroups');
+const tabGroups   = document.getElementById('tabGroups');
+const headerTitle = document.getElementById('headerTitle');
 
 chatTabs.addEventListener('click', e => {
   const tab = e.target.closest('.chat-tab');
@@ -37,23 +37,20 @@ chatTabs.addEventListener('click', e => {
   const which = tab.dataset.tab;
   tabMessages.style.display = which === 'messages' ? '' : 'none';
   tabGroups.style.display   = which === 'groups'   ? '' : 'none';
+  headerTitle.textContent   = which === 'groups' ? 'Groups' : 'Messages';
   if (which === 'groups') loadGroups();
 });
 
-/* ── Messages tab ─── */
+/* ── Messages ─── */
 async function loadConversations() {
   const loading = document.getElementById('msgsLoading');
   const empty   = document.getElementById('msgsEmpty');
   const list    = document.getElementById('msgsList');
-  if (!me) {
-    loading.style.display = 'none';
-    empty.style.display   = 'flex';
-    return;
-  }
+  if (!me) { loading.style.display = 'none'; empty.style.display = 'flex'; return; }
   try {
     const r = await fetch(`${API}/api/conversations`, { headers: { Authorization: `Bearer ${token}` } });
     const data = await r.json();
-    const convs = Array.isArray(data) ? data : [];
+    const convs = Array.isArray(data) ? data : (data.conversations || []);
     loading.style.display = 'none';
     if (!convs.length) { empty.style.display = 'flex'; return; }
     empty.style.display = 'none';
@@ -62,24 +59,21 @@ async function loadConversations() {
     list.querySelectorAll('.chat-list-item').forEach((el, i) => {
       el.addEventListener('click', () => openConv(convs[i].id, convs[i].other_user_name || convs[i].name || 'Chat'));
     });
-  } catch {
-    loading.style.display = 'none';
-    empty.style.display   = 'flex';
-  }
+  } catch { loading.style.display = 'none'; empty.style.display = 'flex'; }
 }
 
 function buildConvRow(c) {
-  const name  = esc(c.other_user_name || c.name || 'Unknown');
-  const init  = (name[0] || '?').toUpperCase();
+  const name    = esc(c.other_user_name || c.name || 'Unknown');
+  const init    = (name[0] || '?').toUpperCase();
   const preview = esc(c.last_message || '');
   const time    = c.last_message_at ? relTime(c.last_message_at) : '';
   const unread  = c.unread_count > 0;
   return `
-    <div class="chat-list-item" data-id="${c.id}">
+    <div class="chat-list-item">
       <div class="chat-avatar">${init}</div>
       <div class="chat-item-body">
         <div class="chat-item-name">${name}</div>
-        ${preview ? `<div class="chat-item-preview">${preview}</div>` : ''}
+        ${preview ? `<div class="chat-item-preview">${preview}</div>` : '<div class="chat-item-preview">No messages yet</div>'}
       </div>
       <div class="chat-item-meta">
         ${time ? `<span class="chat-item-time">${time}</span>` : ''}
@@ -88,7 +82,7 @@ function buildConvRow(c) {
     </div>`;
 }
 
-/* ── Groups tab ─── */
+/* ── Groups ─── */
 async function loadGroups() {
   const loading = document.getElementById('grpsLoading');
   const empty   = document.getElementById('grpsEmpty');
@@ -104,45 +98,46 @@ async function loadGroups() {
     empty.style.display = 'none';
     list.style.display  = '';
     list.innerHTML = groups.map(g => buildGroupRow(g)).join('');
-    list.querySelectorAll('.chat-list-item').forEach((el, i) => {
+    list.querySelectorAll('.chat-list-item').forEach(() => {
+      // clicking navigates to the full groups page
+    });
+    list.querySelectorAll('.chat-list-item').forEach(el => {
       el.addEventListener('click', () => { location.href = 'groups.html'; });
     });
-  } catch {
-    loading.style.display = 'none';
-    empty.style.display   = 'flex';
-  }
+  } catch { loading.style.display = 'none'; empty.style.display = 'flex'; }
 }
 
 function buildGroupRow(g) {
-  const name = esc(g.name || 'Group');
-  const init = (name[0] || '?').toUpperCase();
-  const preview = esc(g.last_message || '');
-  const time    = g.last_message_at ? relTime(g.last_message_at) : '';
+  const name  = esc(g.name || 'Group');
+  const init  = (name[0] || '?').toUpperCase();
+  const count = g.member_count ? `${g.member_count} member${g.member_count === 1 ? '' : 's'}` : '';
+  const sub   = [count, esc(g.meeting_point || '')].filter(Boolean).join(' · ');
+  const badge = g.is_private
+    ? `<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:rgba(139,92,246,.15);color:#a78bfa;font-weight:600;letter-spacing:.03em">Private</span>`
+    : '';
   return `
-    <div class="chat-list-item" data-id="${g.id}">
-      <div class="chat-avatar">${init}</div>
+    <div class="chat-list-item">
+      <div class="chat-avatar is-group">${init}</div>
       <div class="chat-item-body">
-        <div class="chat-item-name">${name}</div>
-        ${preview ? `<div class="chat-item-preview">${preview}</div>` : ''}
+        <div class="chat-item-name" style="display:flex;align-items:center;gap:7px">${name}${badge}</div>
+        ${sub ? `<div class="chat-item-sub">${sub}</div>` : ''}
+        ${g.description ? `<div class="chat-item-sub" style="opacity:.7">${esc(g.description)}</div>` : ''}
       </div>
-      <div class="chat-item-meta">
-        ${time ? `<span class="chat-item-time">${time}</span>` : ''}
-      </div>
+      <svg class="chat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
     </div>`;
 }
 
 /* ── Conversation view ─── */
-const convView   = document.getElementById('convView');
-const convHeader = document.getElementById('convHeaderName');
-const convMsgs   = document.getElementById('convMessages');
-const convInput  = document.getElementById('convInput');
-const convSend   = document.getElementById('convSendBtn');
-const convBack   = document.getElementById('convBack');
+const convView  = document.getElementById('convView');
+const convMsgs  = document.getElementById('convMessages');
+const convInput = document.getElementById('convInput');
+const convBack  = document.getElementById('convBack');
 
-async function openConv(convId, name, isGroup = false) {
-  activeConvId   = convId;
-  activeConvName = name;
-  convHeader.textContent = name;
+async function openConv(convId, name) {
+  activeConvId = convId;
+  document.getElementById('convHeaderName').textContent = name;
+  const init = (name[0] || '?').toUpperCase();
+  document.getElementById('convHeaderAvatar').textContent = init;
   convMsgs.innerHTML = '';
   convView.classList.add('open');
   await loadMessages();
@@ -156,10 +151,7 @@ function closeConv() {
   stopPoll();
 }
 
-convBack.addEventListener('click', () => {
-  closeConv();
-  loadConversations();
-});
+convBack.addEventListener('click', () => { closeConv(); loadConversations(); });
 
 async function loadMessages() {
   if (!activeConvId || !me) return;
@@ -169,17 +161,17 @@ async function loadMessages() {
     });
     const data = await r.json();
     const msgs = Array.isArray(data) ? data : (data.messages || []);
-    const atBottom = convMsgs.scrollHeight - convMsgs.scrollTop - convMsgs.clientHeight < 60;
+    const atBottom = convMsgs.scrollHeight - convMsgs.scrollTop - convMsgs.clientHeight < 80;
     convMsgs.innerHTML = msgs.map(m => buildMsgBubble(m)).join('');
-    if (atBottom || convMsgs.scrollTop === 0) scrollToBottom();
+    if (atBottom || convMsgs.scrollTop === 0) convMsgs.scrollTop = convMsgs.scrollHeight;
   } catch {}
 }
 
 function buildMsgBubble(m) {
-  const mine   = m.sender_id === me.id;
-  const bubble = esc(m.content || '');
-  const sender = mine ? '' : `<div class="conv-msg-sender">${esc(m.sender_name || '')}</div>`;
-  const time   = `<div class="conv-msg-time">${relTime(m.created_at)}</div>`;
+  const mine   = m.sender_id === me?.id;
+  const bubble = esc(m.content || m.body || '');
+  const sender = (!mine && m.sender_name) ? `<div class="conv-msg-sender">${esc(m.sender_name)}</div>` : '';
+  const time   = m.created_at ? `<div class="conv-msg-time">${relTime(m.created_at)}</div>` : '';
   return `
     <div class="conv-msg ${mine ? 'mine' : 'theirs'}">
       ${sender}
@@ -202,37 +194,28 @@ async function sendMessage() {
   } catch {}
 }
 
-convSend.addEventListener('click', sendMessage);
+document.getElementById('convSendBtn').addEventListener('click', sendMessage);
 convInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(); });
 
-function scrollToBottom() {
-  convMsgs.scrollTop = convMsgs.scrollHeight;
-}
+function startPoll() { stopPoll(); pollTimer = setInterval(() => { if (activeConvId) loadMessages(); }, 3000); }
+function stopPoll()  { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
 
-function startPoll() {
-  stopPoll();
-  pollTimer = setInterval(() => { if (activeConvId) loadMessages(); }, 3000);
-}
-function stopPoll() {
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-}
-
-/* ── New message modal ─── */
+/* ── New Message sheet ─── */
 const newMsgOverlay = document.getElementById('newMsgOverlay');
 const newMsgSearch  = document.getElementById('newMsgSearch');
 const newMsgResults = document.getElementById('newMsgResults');
 
+function openNewMsg() {
+  newMsgSearch.value = '';
+  newMsgResults.innerHTML = '';
+  newMsgOverlay.classList.add('open');
+  setTimeout(() => newMsgSearch.focus(), 200);
+}
+
 document.getElementById('newChatBtn').addEventListener('click', () => {
   const activeTab = document.querySelector('.chat-tab.active')?.dataset.tab;
-  if (activeTab === 'groups') {
-    if (!token) { location.href = 'groups.html'; return; }
-    openCreateGroup();
-  } else {
-    newMsgSearch.value = '';
-    newMsgResults.innerHTML = '';
-    newMsgOverlay.classList.add('open');
-    newMsgSearch.focus();
-  }
+  if (activeTab === 'groups') { if (!token) { location.href = 'groups.html'; return; } openCreateGroup(); }
+  else openNewMsg();
 });
 document.getElementById('newMsgClose').addEventListener('click', () => newMsgOverlay.classList.remove('open'));
 newMsgOverlay.addEventListener('click', e => { if (e.target === newMsgOverlay) newMsgOverlay.classList.remove('open'); });
@@ -250,25 +233,19 @@ newMsgSearch.addEventListener('input', () => {
         body: JSON.stringify({ participant_id: u.id })
       });
       const data = await r.json();
-      openConv(data.id, u.name || u.username);
+      openConv(data.id || data.conversation?.id, u.name || u.username);
     } catch {}
   }), 300);
 });
 
-/* ── Create group modal ─── */
+/* ── Create Group sheet ─── */
 const newGrpOverlay  = document.getElementById('newGrpOverlay');
 const newGrpSearch   = document.getElementById('newGrpSearch');
 const newGrpResults  = document.getElementById('newGrpResults');
 const newGrpSelected = document.getElementById('newGrpSelected');
 const newGrpNameInp  = document.getElementById('newGrpName');
+const grpIconPreview = document.getElementById('grpIconPreview');
 let selectedUsers = [];
-
-document.getElementById('grpsNewBtn')?.addEventListener('click', () => {
-  if (!token) { location.href = 'groups.html'; return; }
-  openCreateGroup();
-});
-document.getElementById('newGrpClose').addEventListener('click', () => newGrpOverlay.classList.remove('open'));
-newGrpOverlay.addEventListener('click', e => { if (e.target === newGrpOverlay) newGrpOverlay.classList.remove('open'); });
 
 function openCreateGroup() {
   selectedUsers = [];
@@ -276,13 +253,32 @@ function openCreateGroup() {
   newGrpSearch.value  = '';
   newGrpResults.innerHTML  = '';
   newGrpSelected.innerHTML = '';
+  resetGrpIcon();
   newGrpOverlay.classList.add('open');
+  setTimeout(() => newGrpNameInp.focus(), 200);
 }
 
-let grpSearchDebounce = null;
+function resetGrpIcon() {
+  grpIconPreview.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+}
+
+newGrpNameInp.addEventListener('input', () => {
+  const v = newGrpNameInp.value.trim();
+  grpIconPreview.innerHTML = v ? esc(v[0].toUpperCase()) : '';
+  if (!v) resetGrpIcon();
+});
+
+document.getElementById('grpsEmptyNewBtn')?.addEventListener('click', () => {
+  if (!token) { location.href = 'groups.html'; return; }
+  openCreateGroup();
+});
+document.getElementById('newGrpClose').addEventListener('click', () => newGrpOverlay.classList.remove('open'));
+newGrpOverlay.addEventListener('click', e => { if (e.target === newGrpOverlay) newGrpOverlay.classList.remove('open'); });
+
+let grpDebounce = null;
 newGrpSearch.addEventListener('input', () => {
-  clearTimeout(grpSearchDebounce);
-  grpSearchDebounce = setTimeout(() => searchUsers(newGrpSearch.value.trim(), newGrpResults, u => {
+  clearTimeout(grpDebounce);
+  grpDebounce = setTimeout(() => searchUsers(newGrpSearch.value.trim(), newGrpResults, u => {
     if (selectedUsers.find(x => x.id === u.id)) return;
     selectedUsers.push(u);
     renderGrpChips();
@@ -292,13 +288,19 @@ newGrpSearch.addEventListener('input', () => {
 });
 
 function renderGrpChips() {
-  newGrpSelected.innerHTML = selectedUsers.map(u => `
-    <div class="grp-chip" data-id="${u.id}">
-      ${esc(u.name || u.username)}
-      <button class="grp-chip-remove" data-id="${u.id}">&times;</button>
-    </div>`).join('');
+  newGrpSelected.innerHTML = selectedUsers.map(u => {
+    const n = esc(u.name || u.username || '?');
+    const init = n[0].toUpperCase();
+    return `
+      <div class="grp-chip" data-id="${u.id}">
+        <div class="grp-chip-avatar">${init}</div>
+        ${n}
+        <button class="grp-chip-remove" data-id="${u.id}">×</button>
+      </div>`;
+  }).join('');
   newGrpSelected.querySelectorAll('.grp-chip-remove').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
       selectedUsers = selectedUsers.filter(x => String(x.id) !== btn.dataset.id);
       renderGrpChips();
     });
@@ -307,8 +309,10 @@ function renderGrpChips() {
 
 document.getElementById('newGrpCreate').addEventListener('click', async () => {
   const name = newGrpNameInp.value.trim();
-  if (!name) { alert('Enter a group name.'); return; }
-  if (!token) { alert('You must be signed in to create a group.'); return; }
+  const errEl = document.getElementById('newGrpError');
+  if (!name) { errEl.textContent = 'Enter a group name.'; return; }
+  if (!token) { errEl.textContent = 'You must be signed in.'; return; }
+  errEl.textContent = '';
   const btn = document.getElementById('newGrpCreate');
   btn.disabled = true; btn.textContent = 'Creating…';
   try {
@@ -318,10 +322,12 @@ document.getElementById('newGrpCreate').addEventListener('click', async () => {
       body: JSON.stringify({ name, member_ids: selectedUsers.map(u => u.id) })
     });
     const data = await r.json();
-    if (!r.ok) { alert(data.error || 'Failed to create group.'); return; }
+    if (!r.ok) { errEl.textContent = data.error || 'Failed to create group.'; return; }
     newGrpOverlay.classList.remove('open');
     await loadGroups();
-  } catch { alert('Network error — check your connection.'); }
+    // Switch to groups tab to show the new group
+    document.querySelector('[data-tab="groups"]')?.click();
+  } catch { errEl.textContent = 'Network error — try again.'; }
   finally { btn.disabled = false; btn.textContent = 'Create Group'; }
 });
 
@@ -333,10 +339,10 @@ async function searchUsers(q, container, onSelect) {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     const data = await r.json();
-    const people = data.people || data || [];
+    const people = data.people || (Array.isArray(data) ? data : []);
     container.innerHTML = people.slice(0, 8).map(u => `
       <div class="chat-user-row" data-id="${u.id}">
-        <div class="chat-avatar" style="width:36px;height:36px;font-size:15px">${(u.name || u.username || '?')[0].toUpperCase()}</div>
+        <div class="chat-avatar" style="width:38px;height:38px;font-size:16px;flex-shrink:0">${(u.name || u.username || '?')[0].toUpperCase()}</div>
         <div>
           <div class="chat-user-row-name">${esc(u.name || u.username)}</div>
           ${u.username ? `<div class="chat-user-row-handle">@${esc(u.username)}</div>` : ''}
@@ -345,12 +351,10 @@ async function searchUsers(q, container, onSelect) {
     container.querySelectorAll('.chat-user-row').forEach((el, i) => {
       el.addEventListener('click', () => onSelect(people[i]));
     });
-  } catch {
-    container.innerHTML = '';
-  }
+  } catch { container.innerHTML = ''; }
 }
 
-/* ── Deep link: ?user=id&name=name ─── */
+/* ── Deep link ─── */
 async function handleDeepLink() {
   const userId   = params.get('user');
   const userName = params.get('name');
@@ -362,32 +366,28 @@ async function handleDeepLink() {
       body: JSON.stringify({ participant_id: userId })
     });
     const data = await r.json();
-    openConv(data.id, decodeURIComponent(userName || 'Chat'));
+    openConv(data.id || data.conversation?.id, decodeURIComponent(userName || 'Chat'));
   } catch {}
 }
 
-/* ── Theme toggle ─── */
-const root = document.documentElement;
-const themeToggle = document.getElementById('themeToggle');
-const savedTheme = localStorage.getItem('theme');
-if (savedTheme) root.setAttribute('data-theme', savedTheme);
-themeToggle?.addEventListener('click', () => {
-  const cur  = root.getAttribute('data-theme');
-  const next = cur === 'light' ? 'dark' : 'light';
-  root.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
+/* ── Theme ─── */
+const savedTheme = localStorage.getItem('culture-theme') || localStorage.getItem('theme');
+if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+document.getElementById('themeToggle')?.addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('culture-theme', next);
 });
 
 /* ── Helpers ─── */
 function esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
 function relTime(ts) {
   if (!ts) return '';
   const diff = (Date.now() - new Date(ts).getTime()) / 1000;
-  if (diff < 60)   return 'now';
-  if (diff < 3600) return `${Math.floor(diff/60)}m`;
+  if (diff < 60)    return 'now';
+  if (diff < 3600)  return `${Math.floor(diff/60)}m`;
   if (diff < 86400) return `${Math.floor(diff/3600)}h`;
   return `${Math.floor(diff/86400)}d`;
 }
@@ -397,10 +397,5 @@ function relTime(ts) {
   me = await getMe();
   await loadConversations();
   await handleDeepLink();
-  document.getElementById('msgsEmptyNewBtn')?.addEventListener('click', () => {
-    newMsgSearch.value = '';
-    newMsgResults.innerHTML = '';
-    newMsgOverlay.classList.add('open');
-    newMsgSearch.focus();
-  });
+  document.getElementById('msgsEmptyNewBtn')?.addEventListener('click', openNewMsg);
 })();

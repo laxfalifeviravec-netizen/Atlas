@@ -291,6 +291,27 @@ body.nav-active .nav-hud { bottom: 0; }
 }
 .nav-stop-btn:active { background: rgba(220,38,38,.28); }
 
+/* ── Re-center button (nav mode, user panned away) ──────────── */
+.nav-recenter-btn {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--bottom-nav-h, 60px) + 100px);
+  z-index: 610;
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--c-surface, #141417);
+  border: 1.5px solid var(--c-border);
+  color: #2563eb;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 14px rgba(0,0,0,.5);
+  cursor: pointer;
+  transition: bottom 0.3s ease, background .12s;
+  -webkit-tap-highlight-color: transparent;
+}
+body.nav-active .nav-recenter-btn {
+  bottom: 100px;
+}
+.nav-recenter-btn:active { background: rgba(37,99,235,.12); }
+
 /* ── Live nav user marker ────────────────────────────────────── */
 .nav-user-wrap {
   position: relative; width: 40px; height: 40px;

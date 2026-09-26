@@ -32,6 +32,8 @@ let navCompletedDistM = 0;
 let navEtaInterval = null;
 let navTrackedPoints = [];
 let navLastTrackedPos = null;
+let navFollowing = true;
+let navLastPanTime = 0;
 let destMarker = null;
 let searchDebounce = null;
 const roadRegistry = {};
@@ -137,7 +139,21 @@ function initMap() {
   new LocateCtrl({ position: 'topright' }).addTo(roadsMap);
 
   roadsMap.on('click', onMapClick);
+
+  // Disable map-follow if user drags during navigation
+  roadsMap.on('dragstart', () => {
+    if (navWatchId != null) setNavFollowing(false);
+  });
 }
+
+document.getElementById('navRecenterBtn').addEventListener('click', () => {
+  setNavFollowing(true);
+  navLastPanTime = 0;
+  if (navNavUserMarker) {
+    const ll = navNavUserMarker.getLatLng();
+    panToUserOffset(ll.lat, ll.lng);
+  }
+});
 
 function onMapClick(e) {
   if (!addModeActive) return;
@@ -601,6 +617,8 @@ function startNavigation() {
   document.body.classList.add('nav-active');
   document.getElementById('navHUD').classList.add('active');
   document.getElementById('navTopCard').classList.add('active');
+  setNavFollowing(true);
+  navLastPanTime = 0;
 
   // Init ETA and tracked route
   navTrackedPoints = [];
@@ -620,7 +638,7 @@ function startNavigation() {
     navRouteLayer = L.polyline(routeCoords, { color: '#2563eb', weight: 5, opacity: 0.9 }).addTo(roadsMap);
 
     roadsMap.fitBounds(L.latLngBounds([...routeCoords, ...pts]), { padding: [60, 100] });
-    roadsMap.setZoom(Math.min(roadsMap.getZoom(), 16));
+    setTimeout(() => roadsMap.setZoom(16), 600);
 
     navSteps = (navRoute.legs[0]?.steps || []).map(step => ({
       instruction: formatNavManeuver(step.maneuver, step.name),
@@ -792,12 +810,22 @@ function getNavArrowSVG(type, modifier) {
 }
 
 function panToUserOffset(lat, lng) {
+  if (!navFollowing) return;
+  const now = Date.now();
+  if (now - navLastPanTime < 900) return;
+  navLastPanTime = now;
   const mapSize = roadsMap.getSize();
   const zoom = roadsMap.getZoom();
   const pt = roadsMap.project([lat, lng], zoom);
   pt.y -= mapSize.y * 0.17;
   const newCenter = roadsMap.unproject(pt, zoom);
-  roadsMap.setView(newCenter, zoom, { animate: true, pan: { duration: 0.6 } });
+  roadsMap.setView(newCenter, zoom, { animate: true, pan: { duration: 0.5 } });
+}
+
+function setNavFollowing(val) {
+  navFollowing = val;
+  const btn = document.getElementById('navRecenterBtn');
+  if (btn) btn.style.display = val ? 'none' : 'flex';
 }
 
 function stopNavigation() {
@@ -809,6 +837,8 @@ function stopNavigation() {
   document.body.classList.remove('nav-active');
   document.getElementById('navHUD').classList.remove('active');
   document.getElementById('navTopCard').classList.remove('active');
+  setNavFollowing(false);
+  document.getElementById('navRecenterBtn').style.display = 'none';
 
   const r = navRoad;
   const tracked = navTrackedPoints.slice();

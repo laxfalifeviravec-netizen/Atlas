@@ -135,6 +135,43 @@ body { overflow: hidden; }
 .map-locate-btn:hover { background: var(--c-accent, #E4A530); color: #000; }
 .map-locate-btn.locating { opacity: 0.5; pointer-events: none; }
 
+/* ── Bottom sheet (shared) ───────────────────────────────────── */
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 700;
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s ease;
+}
+.sheet-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+.sheet-overlay.open .sheet {
+  transform: translateY(0);
+}
+.sheet {
+  width: 100%;
+  background: var(--c-surface, #141417);
+  border-radius: 20px 20px 0 0;
+  padding: 0 20px 36px;
+  transform: translateY(100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--c-border);
+  margin: 12px auto 20px;
+}
+
 /* ── Navigation Panel ──────────────────────────────────────── */
 .nav-panel-header {
   display: flex;

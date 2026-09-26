@@ -225,6 +225,7 @@ const newMsgResults = document.getElementById('newMsgResults');
 document.getElementById('newChatBtn').addEventListener('click', () => {
   const activeTab = document.querySelector('.chat-tab.active')?.dataset.tab;
   if (activeTab === 'groups') {
+    if (!token) { location.href = 'groups.html'; return; }
     openCreateGroup();
   } else {
     newMsgSearch.value = '';
@@ -262,7 +263,7 @@ const newGrpSelected = document.getElementById('newGrpSelected');
 const newGrpNameInp  = document.getElementById('newGrpName');
 let selectedUsers = [];
 
-document.getElementById('grpsEmptyNewBtn')?.addEventListener('click', () => {
+document.getElementById('grpsNewBtn')?.addEventListener('click', () => {
   if (!token) { location.href = 'groups.html'; return; }
   openCreateGroup();
 });
@@ -320,7 +321,6 @@ document.getElementById('newGrpCreate').addEventListener('click', async () => {
     if (!r.ok) { alert(data.error || 'Failed to create group.'); return; }
     newGrpOverlay.classList.remove('open');
     await loadGroups();
-    location.href = 'groups.html';
   } catch { alert('Network error — check your connection.'); }
   finally { btn.disabled = false; btn.textContent = 'Create Group'; }
 });

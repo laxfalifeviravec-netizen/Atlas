@@ -654,6 +654,8 @@ function startNavigation() {
   document.body.classList.add('nav-active');
   document.getElementById('navHUD').classList.add('active');
   document.getElementById('navTopCard').classList.add('active');
+  const hudRoadEl = document.getElementById('navHUDRoadName');
+  if (hudRoadEl) hudRoadEl.textContent = navRoad.name || '';
   setNavFollowing(true);
   navLastPanTime = 0;
 
@@ -816,34 +818,35 @@ function formatNavManeuver(m, streetName) {
 }
 
 function getNavArrowSVG(type, modifier) {
+  const s = `viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="white" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"`;
   if (type === 'arrive') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><polyline points="9 12 11 14 15 10"/></svg>`;
+    return `<svg ${s}><circle cx="12" cy="12" r="8"/><polyline points="9 12 11 14 15 10"/></svg>`;
   }
   if (!modifier || modifier === 'straight') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
+    return `<svg ${s}><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
   }
   if (modifier === 'left') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M5 12l7-7M5 12l7 7"/></svg>`;
+    return `<svg ${s}><path d="M5 12h14M5 12l7-7M5 12l7 7"/></svg>`;
   }
   if (modifier === 'right') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M19 12l-7-7M19 12l-7 7"/></svg>`;
+    return `<svg ${s}><path d="M19 12H5M19 12l-7-7M19 12l-7 7"/></svg>`;
   }
   if (modifier === 'slight left') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V8M12 8l-6 6M12 8h6"/></svg>`;
+    return `<svg ${s}><path d="M12 19V8M12 8l-6 6M12 8h6"/></svg>`;
   }
   if (modifier === 'slight right') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V8M12 8l6 6M12 8H6"/></svg>`;
+    return `<svg ${s}><path d="M12 19V8M12 8l6 6M12 8H6"/></svg>`;
   }
   if (modifier === 'sharp left') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 5H7v10M7 15l-4-4 4-4"/></svg>`;
+    return `<svg ${s}><path d="M17 5H7v10M7 15l-4-4 4-4"/></svg>`;
   }
   if (modifier === 'sharp right') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5h10v10M17 15l4-4-4-4"/></svg>`;
+    return `<svg ${s}><path d="M7 5h10v10M17 15l4-4-4-4"/></svg>`;
   }
   if (modifier === 'uturn') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 17V9a5 5 0 0 0-10 0v8M7 17l-4-4 4-4"/></svg>`;
+    return `<svg ${s}><path d="M17 17V9a5 5 0 0 0-10 0v8M7 17l-4-4 4-4"/></svg>`;
   }
-  return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
+  return `<svg ${s}><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
 }
 
 function panToUserOffset(lat, lng) {

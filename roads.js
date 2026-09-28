@@ -38,6 +38,13 @@ let destMarker = null;
 let searchDebounce = null;
 const roadRegistry = {};
 
+// Group drive mode state
+const driveGroupId = new URLSearchParams(location.search).get('drive');
+let driveGroup = null;
+let driveMembers = {};
+let drivePollInterval = null;
+let driveGpsInterval = null;
+
 const DIFF_COLORS = { Easy: '#22c55e', Moderate: '#f59e0b', Hard: '#f97316', Expert: '#dc2222' };
 
 // ── Theme ──────────────────────────────────────────────────
@@ -1041,8 +1048,144 @@ document.getElementById('navPanel').addEventListener('click', e => {
   }
 });
 
+// ── Group Drive Mode ───────────────────────────────────────
+async function initGroupDrive(groupId) {
+  if (!token) return; // need to be signed in to share location
+
+  // Auto-join the group so location sharing works
+  try {
+    await fetch(`${API}/api/groups/${groupId}/join`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` }
+    });
+  } catch {}
+
+  // Fetch group info for display name
+  try {
+    const res = await fetch(`${API}/api/groups/${groupId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const { group } = await res.json();
+      driveGroup = group;
+      const nameEl = document.getElementById('driveCrewName');
+      if (nameEl) nameEl.textContent = group.name;
+    }
+  } catch {}
+
+  // Show the crew bar
+  const bar = document.getElementById('driveCrewBar');
+  if (bar) bar.style.display = 'flex';
+
+  // Start sharing own GPS to the group
+  startDriveGPS(groupId);
+
+  // Start polling member locations
+  await pollDriveLocations(groupId);
+  drivePollInterval = setInterval(() => pollDriveLocations(groupId), 5000);
+}
+
+function startDriveGPS(groupId) {
+  if (!navigator.geolocation || !token) return;
+  const send = () => {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude: lat, longitude: lng, heading } = pos.coords;
+      fetch(`${API}/api/groups/${groupId}/location`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, lng, heading: heading || 0 }),
+      }).catch(() => {});
+    }, () => {});
+  };
+  send();
+  driveGpsInterval = setInterval(send, 5000);
+}
+
+async function pollDriveLocations(groupId) {
+  if (!token || !roadsMap) return;
+  try {
+    const res = await fetch(`${API}/api/groups/${groupId}/locations`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const { locations } = await res.json();
+    updateDriveMarkers(locations);
+    updateDriveCrewBar(locations);
+  } catch {}
+}
+
+function driveMemberIcon(initials, isMe) {
+  const color = isMe ? '#dc2626' : '#1A73E8';
+  return L.divIcon({
+    className: '',
+    html: `<div style="position:relative;width:40px;height:40px">
+      <div style="position:absolute;inset:0;border-radius:50%;background:${color};opacity:0.22;animation:nav-halo-pulse 2s ease-out infinite"></div>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:${color};color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;border:2px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.5)">${esc(initials)}</div>
+    </div>`,
+    iconSize: [40, 40], iconAnchor: [20, 20],
+  });
+}
+
+function updateDriveMarkers(locations) {
+  if (!roadsMap) return;
+  const activeIds = new Set(locations.map(l => String(l.user_id)));
+
+  // Remove stale markers
+  for (const uid of Object.keys(driveMembers)) {
+    if (!activeIds.has(uid)) { driveMembers[uid].remove(); delete driveMembers[uid]; }
+  }
+
+  locations.forEach(loc => {
+    if (currentUser && loc.user_id === currentUser.id) return; // skip self — nav already shows own dot
+    const uid = String(loc.user_id);
+    const initials = (loc.user_name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    const icon = driveMemberIcon(initials, false);
+    if (driveMembers[uid]) {
+      driveMembers[uid].setLatLng([loc.lat, loc.lng]);
+      driveMembers[uid].setIcon(icon);
+    } else {
+      driveMembers[uid] = L.marker([loc.lat, loc.lng], { icon })
+        .addTo(roadsMap)
+        .bindPopup(`<strong>${esc(loc.user_name || 'Driver')}</strong>`, { closeButton: false });
+    }
+  });
+}
+
+function updateDriveCrewBar(locations) {
+  const countEl = document.getElementById('driveCrewCount');
+  const avatarsEl = document.getElementById('driveCrewAvatars');
+  if (!countEl || !avatarsEl) return;
+
+  const total = locations.length;
+  countEl.textContent = total === 1 ? '1 live' : `${total} live`;
+
+  const shown = locations.slice(0, 4);
+  avatarsEl.innerHTML = shown.map(loc => {
+    const isMe = currentUser && loc.user_id === currentUser.id;
+    const initials = (loc.user_name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    return `<div class="drive-crew-avatar${isMe ? ' me' : ''}" title="${esc(loc.user_name || 'Driver')}">${esc(initials)}</div>`;
+  }).join('');
+}
+
+function stopGroupDrive() {
+  if (drivePollInterval) { clearInterval(drivePollInterval); drivePollInterval = null; }
+  if (driveGpsInterval) { clearInterval(driveGpsInterval); driveGpsInterval = null; }
+  Object.values(driveMembers).forEach(m => m.remove());
+  driveMembers = {};
+  const bar = document.getElementById('driveCrewBar');
+  if (bar) bar.style.display = 'none';
+}
+
+document.getElementById('driveCrewLeave')?.addEventListener('click', () => {
+  stopGroupDrive();
+  // Remove ?drive from URL without reload
+  const url = new URL(location.href);
+  url.searchParams.delete('drive');
+  history.replaceState(null, '', url);
+});
+
 (async () => {
   initMap();
   await loadMe();
   await loadRoads();
+  if (driveGroupId) await initGroupDrive(driveGroupId);
 })();

@@ -404,6 +404,59 @@ body.nav-active .nav-recenter-btn {
   .map-search-wrap { left: 12px; right: 48px; max-width: 300px; }
 }
 
+/* ── Group Drive crew bar ────────────────────────────────────── */
+.drive-crew-bar {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: var(--bottom-nav-h, 60px);
+  z-index: 598;
+  background: rgba(12, 12, 15, 0.88);
+  border-top: 1px solid rgba(26, 115, 232, 0.3);
+  padding: 9px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: bottom 0.3s ease;
+}
+body.nav-active .drive-crew-bar {
+  bottom: 88px;
+}
+.drive-crew-inner {
+  display: flex; align-items: center; gap: 8px;
+  flex: 1; min-width: 0;
+  color: #1A73E8;
+}
+.drive-crew-name {
+  font-size: 13px; font-weight: 600; color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.drive-crew-count {
+  font-size: 11px; color: rgba(255,255,255,.5);
+  white-space: nowrap; flex-shrink: 0;
+}
+.drive-crew-avatars {
+  display: flex; gap: 4px; flex-shrink: 0;
+}
+.drive-crew-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #1A73E8; color: #fff;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  flex-shrink: 0;
+}
+.drive-crew-avatar.me { background: #dc2626; }
+.drive-crew-leave {
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 50%; color: rgba(255,255,255,.6);
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; transition: background .12s;
+}
+.drive-crew-leave:active { background: rgba(255,255,255,.18); }
+
 /* ── Save route form ─────────────────────────────────────────── */
 .save-route-desc { font-size: 13px; color: var(--c-text-2, #8B8B96); margin: 0 0 16px; line-height: 1.5; }
 .save-route-input, .save-route-select {

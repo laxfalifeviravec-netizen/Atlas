@@ -1607,6 +1607,24 @@ app.get('/api/users/:id/cars', async (req, res) => {
   catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
+app.get('/api/users/:id/roads', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('roads')
+        .select('*, users!roads_user_id_fkey(name)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      const roads = (data || []).map(r => ({ ...r, submitted_by: r.users?.name || 'Anonymous', users: undefined }));
+      return res.json({ roads });
+    }
+    const roads = _roads
+      .filter(r => r.user_id === userId)
+      .map(r => { const u = _users.find(u => u.id === r.user_id) || {}; return { ...r, submitted_by: u.name || 'Anonymous' }; });
+    res.json({ roads });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
 app.post('/api/cars', requireAuth, async (req, res) => {
   try {
     const { year, make, model, color = '', mods = '' } = req.body;

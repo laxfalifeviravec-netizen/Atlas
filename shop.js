@@ -4,7 +4,6 @@ const API = (location.hostname === 'localhost' || location.hostname === '127.0.0
   ? 'http://localhost:3001' : '';
 
 let token = localStorage.getItem('culture-token');
-if (!token) location.replace('index.html');
 let page = 1;
 let totalPages = 1;
 let allPosts = [];
@@ -21,10 +20,10 @@ document.getElementById('themeToggle').addEventListener('click', () => {
 
 // ── Auth ───────────────────────────────────────────────────
 async function loadMe() {
-  if (!token) return location.replace('index.html');
+  if (!token) return;
   try {
     const res = await fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) { token = null; localStorage.removeItem('culture-token'); location.replace('index.html'); return; }
+    if (!res.ok) { token = null; localStorage.removeItem('culture-token'); return; }
     const { user } = await res.json();
     renderNav(user);
   } catch {}

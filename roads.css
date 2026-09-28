@@ -409,6 +409,19 @@ body.nav-active .nav-recenter-btn {
 .save-route-input:focus, .save-route-select:focus { border-color: var(--c-accent); }
 .save-route-input::placeholder { color: var(--c-text-2, #8B8B96); }
 
+/* ── Like button on road list items ─────────────────────────── */
+.road-like-btn {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: none; border: none; cursor: pointer; padding: 2px 4px;
+  color: var(--c-text-2, #8B8B96); font-size: 11px; font-family: inherit;
+  border-radius: 4px; transition: color .12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.road-like-btn:active, .road-like-btn-active {
+  color: #ef4444;
+}
+.road-like-btn-active svg { fill: #ef4444; stroke: #ef4444; }
+
 /* ── Navigate button on road items ──────────────────────────── */
 .road-item-row { display: flex; align-items: flex-start; gap: 8px; }
 .road-item-body { flex: 1; min-width: 0; }

@@ -46,8 +46,12 @@ function getTargetId() {
 }
 
 async function loadProfile() {
-  const targetId = getTargetId();
-  if (!targetId) { location.href = 'community.html'; return; }
+  let targetId = getTargetId();
+  if (!targetId) {
+    if (!currentUser) { location.href = 'community.html'; return; }
+    targetId = currentUser.id;
+    history.replaceState(null, '', `profile.html?id=${targetId}`);
+  }
 
   try {
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -147,9 +151,11 @@ document.querySelectorAll('.profile-tab').forEach(tab => {
     document.getElementById('tabPostsPanel').style.display  = which === 'posts'  ? '' : 'none';
     document.getElementById('tabSavedPanel').style.display  = which === 'saved'  ? '' : 'none';
     document.getElementById('tabGaragePanel').style.display = which === 'garage' ? '' : 'none';
+    document.getElementById('tabRoadsPanel').style.display  = which === 'roads'  ? '' : 'none';
 
     if (which === 'saved' && profileUser) loadSaved();
     if (which === 'garage' && profileUser) loadGarage(profileUser.id);
+    if (which === 'roads' && profileUser) loadContributedRoads(profileUser.id);
   });
 });
 
@@ -191,6 +197,33 @@ async function loadGarage(userId) {
     if (!cars || cars.length === 0) { empty.style.display = 'flex'; return; }
     cars.forEach(car => grid.appendChild(buildCarCard(car, isOwn)));
   } catch { grid.innerHTML = ''; empty.style.display = 'flex'; }
+}
+
+// ── Contributed Roads ───────────────────────────────────────
+async function loadContributedRoads(userId) {
+  const list  = document.getElementById('roadsContribList');
+  const empty = document.getElementById('roadsContribEmpty');
+  list.innerHTML = '<div class="profile-empty"><div class="spinner"></div></div>';
+  empty.style.display = 'none';
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const res = await fetch(`${API}/api/users/${userId}/roads`, { headers });
+    const { roads } = await res.json();
+    list.innerHTML = '';
+    if (!roads || roads.length === 0) { empty.style.display = 'flex'; return; }
+    roads.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'road-contrib-item';
+      item.innerHTML = `
+        <div class="road-contrib-name">${esc(r.name)}</div>
+        <div class="road-contrib-meta">
+          <span class="road-diff diff-${esc(r.difficulty)}">${esc(r.difficulty)}</span>
+          ${r.region ? `<span style="font-size:11px;color:var(--c-text-2)">${esc(r.region)}</span>` : ''}
+          <span style="font-size:11px;color:var(--c-text-2)">♥ ${r.likes||0}</span>
+        </div>`;
+      list.appendChild(item);
+    });
+  } catch { list.innerHTML = ''; empty.style.display = 'flex'; }
 }
 
 function buildCarCard(car, canDelete) {

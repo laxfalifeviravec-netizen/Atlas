@@ -284,10 +284,10 @@ function renderRoadList(communityRoads, curatedList) {
             <div class="road-item-meta">
               <span class="road-diff diff-${r.difficulty}">${r.difficulty}</span>
               ${r.region ? `<span class="road-item-region">${esc(r.region)}</span>` : ''}
-              <span class="road-item-likes">
-                <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                ${r.likes||0}
-              </span>
+              <button class="road-like-btn" data-id="${r.id}" data-liked="0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <span class="road-like-count">${r.likes||0}</span>
+              </button>
               <span class="road-item-by">by ${esc(r.submitted_by||'Driver')}</span>
             </div>
           </div>
@@ -297,12 +297,16 @@ function renderRoadList(communityRoads, curatedList) {
           </button>
         </div>`;
       item.addEventListener('click', e => {
-        if (e.target.closest('.road-nav-btn')) return;
+        if (e.target.closest('.road-nav-btn') || e.target.closest('.road-like-btn')) return;
         flyToRoad(r);
       });
       item.querySelector('.road-nav-btn').addEventListener('click', e => {
         e.stopPropagation();
         openNavPanel(rKey);
+      });
+      item.querySelector('.road-like-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        likeRoad(r, item.querySelector('.road-like-btn'));
       });
       list.appendChild(item);
     });
@@ -546,6 +550,39 @@ document.getElementById('registerForm').addEventListener('submit', async e => {
 });
 
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Road likes ─────────────────────────────────────────────
+async function likeRoad(road, btn) {
+  if (!currentUser) return openAuth();
+  if (btn.disabled) return;
+  btn.disabled = true;
+  const liked = btn.dataset.liked === '1';
+  const countEl = btn.querySelector('.road-like-count');
+  const prev = parseInt(countEl.textContent) || 0;
+
+  // Optimistic update
+  btn.dataset.liked = liked ? '0' : '1';
+  countEl.textContent = liked ? prev - 1 : prev + 1;
+  btn.classList.toggle('road-like-btn-active', !liked);
+
+  try {
+    const res = await fetch(`${API}/api/roads/${road.id}/like`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error();
+    road.likes = data.likes;
+    countEl.textContent = data.likes;
+  } catch {
+    // Revert on failure
+    btn.dataset.liked = liked ? '1' : '0';
+    countEl.textContent = prev;
+    btn.classList.toggle('road-like-btn-active', liked);
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 // ── Navigation ──────────────────────────────────────────────
 

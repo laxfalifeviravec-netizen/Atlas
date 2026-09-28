@@ -1,5 +1,170 @@
 /* One Culture — Shop page styles */
 
+/* ── Mods of the Week ─────────────────────────────────────── */
+.motw-section {
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.motw-inner {
+  padding: 14px 0 4px;
+}
+
+.motw-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 16px 12px;
+  border-bottom: 2px solid var(--motw-color, var(--c-accent));
+}
+
+.motw-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.motw-eyebrow {
+  font-family: var(--font-head);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--c-text);
+  line-height: 1;
+}
+
+.motw-week {
+  font-size: 11px;
+  color: var(--c-text-2);
+  letter-spacing: 0.3px;
+}
+
+.motw-sponsor-tag {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-decoration: none;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.motw-sponsor-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--c-text-2);
+}
+
+.motw-sponsor-name {
+  font-family: var(--font-head);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: var(--motw-color, var(--c-accent));
+}
+
+/* Horizontally scrolling card row */
+.motw-cards {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+}
+.motw-cards::-webkit-scrollbar { display: none; }
+
+.motw-card {
+  flex-shrink: 0;
+  width: 220px;
+  background: var(--c-bg);
+  border: 1.5px solid var(--c-border);
+  border-radius: 14px;
+  overflow: hidden;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  scroll-snap-align: start;
+  transition: border-color .15s, transform .12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.motw-card:active {
+  transform: scale(0.975);
+  border-color: var(--motw-color, var(--c-accent));
+}
+
+.motw-card-icon {
+  height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44px;
+  background: linear-gradient(135deg, rgba(255,255,255,.03) 0%, rgba(255,255,255,.07) 100%);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.motw-card-body {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.motw-card-cat {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--motw-color, var(--c-accent));
+}
+
+.motw-card-title {
+  font-family: var(--font-head);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--c-text);
+  line-height: 1.15;
+  letter-spacing: 0.3px;
+}
+
+.motw-card-desc {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--c-text-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+.motw-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  gap: 8px;
+}
+
+.motw-card-price {
+  font-family: var(--font-head);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--c-text);
+  letter-spacing: 0.2px;
+}
+
+.motw-card-cta {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--motw-color, var(--c-accent));
+  white-space: nowrap;
+}
+
 /* ── Category tabs ─── */
 .shop-cats {
   display: flex;

@@ -1,5 +1,46 @@
 /* One Culture — Shop JS */
 
+/* ── Mods of the Week sponsor config ─────────────────────────
+   Update this object weekly to swap in a new brand sponsor.
+   Set enabled: false to hide the section entirely.
+   ─────────────────────────────────────────────────────────── */
+const MOTW = {
+  enabled: true,
+  week: 'Sept 29 – Oct 5, 2026',
+  sponsor: {
+    name: 'COBB Tuning',
+    tagline: 'Official Performance Partner',
+    url: 'https://cobbtuning.com',
+    color: '#E8622A',           // brand accent (used for badges + CTA)
+  },
+  mods: [
+    {
+      title: 'Accessport V3',
+      category: 'Performance',
+      price: '$695',
+      description: 'The world\'s best-selling aftermarket ECU device. Tune, monitor, and diagnose your car.',
+      url: 'https://cobbtuning.com/accessport',
+      icon: '⚡',
+    },
+    {
+      title: 'Stage 2 Power Package',
+      category: 'Performance',
+      price: '$1,495',
+      description: 'Intake, downpipe, and Accessport map. Proven gains on WRX, STI, and FXT platforms.',
+      url: 'https://cobbtuning.com',
+      icon: '🚀',
+    },
+    {
+      title: 'SF Intake System',
+      category: 'Performance',
+      price: '$399',
+      description: 'High-flow short ram intake with performance filter. More air, better sound.',
+      url: 'https://cobbtuning.com',
+      icon: '🌬️',
+    },
+  ],
+};
+
 const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
   ? 'http://localhost:3001' : '';
 
@@ -110,6 +151,44 @@ function buildShopCard(p) {
 
 document.getElementById('loadMoreBtn').addEventListener('click', () => { page++; loadShop(); });
 
+// ── Mods of the Week ────────────────────────────────────────
+function renderMOTW() {
+  const section = document.getElementById('motwSection');
+  if (!MOTW.enabled || !MOTW.mods.length) { section.style.display = 'none'; return; }
+
+  const { sponsor, mods, week } = MOTW;
+  const color = sponsor.color || 'var(--c-accent)';
+
+  const cards = mods.map(m => `
+    <a class="motw-card" href="${esc(m.url)}" target="_blank" rel="noopener noreferrer" style="--motw-color:${color}">
+      <div class="motw-card-icon">${m.icon || '🔧'}</div>
+      <div class="motw-card-body">
+        <div class="motw-card-cat">${esc(m.category)}</div>
+        <div class="motw-card-title">${esc(m.title)}</div>
+        ${m.description ? `<div class="motw-card-desc">${esc(m.description)}</div>` : ''}
+        <div class="motw-card-footer">
+          ${m.price ? `<span class="motw-card-price">${esc(m.price)}</span>` : ''}
+          <span class="motw-card-cta">View Deal →</span>
+        </div>
+      </div>
+    </a>`).join('');
+
+  section.innerHTML = `
+    <div class="motw-inner">
+      <div class="motw-header" style="--motw-color:${color}">
+        <div class="motw-header-left">
+          <span class="motw-eyebrow">Mods of the Week</span>
+          <span class="motw-week">${esc(week)}</span>
+        </div>
+        <a class="motw-sponsor-tag" href="${esc(sponsor.url)}" target="_blank" rel="noopener noreferrer" style="--motw-color:${color}">
+          <span class="motw-sponsor-label">Sponsored by</span>
+          <span class="motw-sponsor-name">${esc(sponsor.name)}</span>
+        </a>
+      </div>
+      <div class="motw-cards">${cards}</div>
+    </div>`;
+}
+
 function esc(str) {
   return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -125,6 +204,7 @@ function formatTime(ts) {
 }
 
 (async () => {
+  renderMOTW();
   await loadMe();
   await loadShop(true);
 })();

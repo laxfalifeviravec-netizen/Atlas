@@ -199,7 +199,121 @@
 .chat-send-btn:hover { background: var(--c-accent-h); }
 .chat-send-btn svg { width: 18px; height: 18px; }
 
-/* New DM modal: search results */
+/* ── New DM modal ─────────────────────────────────────────────── */
+.dm-new-modal {
+  padding: 0;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dm-new-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+  gap: 4px;
+}
+.dm-new-title {
+  font-family: var(--font-head);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--c-text);
+  flex: 1;
+  text-align: center;
+  margin-right: 28px; /* balance the close button */
+}
+
+.dm-to-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+.dm-to-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text);
+  flex-shrink: 0;
+}
+.dm-to-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--c-text);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  min-width: 0;
+}
+.dm-to-input::placeholder { color: var(--c-text-2); }
+
+.dm-section {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+.dm-section-label {
+  padding: 10px 16px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--c-text-2);
+}
+
+.dm-contact-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.dm-contact-row:active { background: var(--c-surface); }
+
+.dm-contact-avatar {
+  width: 46px; height: 46px;
+  font-size: 16px;
+}
+
+.dm-contact-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1.5px solid var(--c-border);
+  border-radius: 8px;
+  color: var(--c-text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: border-color .12s, background .12s;
+  pointer-events: none; /* row click handles it */
+}
+.dm-contact-row:hover .dm-contact-btn {
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+}
+
+.dm-loading {
+  display: flex;
+  justify-content: center;
+  padding: 30px;
+}
+.dm-contact-empty {
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--c-text-2);
+  text-align: center;
+}
+
+/* keep old .search-input-row for backward compat */
 .search-input-row {
   display: flex;
   align-items: center;

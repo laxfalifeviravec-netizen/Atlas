@@ -670,6 +670,19 @@ const db = {
     _follows.push({ follower_id: followerId, following_id: followingId });
     return { following: true };
   },
+  async getFollowing(userId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('follows')
+        .select('following_id, users!follows_following_id_fkey(id, name, avatar, bio)')
+        .eq('follower_id', userId);
+      return (data || []).map(f => f.users).filter(Boolean);
+    }
+    return _follows
+      .filter(f => f.follower_id === userId)
+      .map(f => _users.find(u => u.id === f.following_id))
+      .filter(Boolean)
+      .map(u => ({ id: u.id, name: u.name, avatar: u.avatar, bio: u.bio }));
+  },
   async unfollowUser(followerId, followingId) {
     if (USE_SUPABASE) {
       await sb.from('follows').delete().eq('follower_id', followerId).eq('following_id', followingId);
@@ -1490,6 +1503,11 @@ app.delete('/api/follow/:id', requireAuth, async (req, res) => {
   try {
     res.json(await db.unfollowUser(req.user.id, parseInt(req.params.id)));
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.get('/api/me/following', requireAuth, async (req, res) => {
+  try { res.json({ users: await db.getFollowing(req.user.id) }); }
+  catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
 // ── Notification routes ───────────────────────────────────────

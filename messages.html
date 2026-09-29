@@ -67,19 +67,22 @@
     </form>
   </div>
 
-  <!-- New DM modal: search users -->
+  <!-- New DM modal: Instagram-style To: search -->
   <div class="modal-overlay" id="newDmOverlay">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>New Message</h3>
-        <button class="modal-close" id="newDmClose">&times;</button>
+    <div class="modal dm-new-modal">
+      <div class="dm-new-header">
+        <button class="modal-close" id="newDmClose" style="margin-right:4px">&times;</button>
+        <span class="dm-new-title">New Message</span>
       </div>
-      <div class="modal-body">
-        <div class="search-input-row">
-          <svg class="srch-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="search" id="dmSearchInput" class="srch-input" placeholder="Search people…" autocomplete="off" />
-        </div>
-        <div id="dmSearchResults" style="margin-top:8px"></div>
+      <div class="dm-to-bar">
+        <span class="dm-to-label">To:</span>
+        <input type="search" id="dmSearchInput" class="dm-to-input" placeholder="Search…" autocomplete="off" />
+      </div>
+      <!-- Suggested / search results -->
+      <div id="dmSuggestedSection" class="dm-section">
+        <div class="dm-section-label" id="dmSectionLabel">Suggested</div>
+        <div id="dmContactList"></div>
+        <div id="dmContactEmpty" class="dm-contact-empty" style="display:none"></div>
       </div>
     </div>
   </div>

@@ -91,12 +91,13 @@ function isDarkTheme() {
   return t ? t !== 'light' : window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 function cartoTile(map, dark) {
-  const url = dark
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-  return L.tileLayer(url, {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd', maxZoom: 20,
+  const container = map.getContainer();
+  container.style.filter = dark
+    ? 'invert(1) hue-rotate(180deg) brightness(0.85) saturate(0.85)'
+    : '';
+  return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM contributors</a>',
+    maxZoom: 19,
   }).addTo(map);
 }
 function applyMapTheme(map, dark) {

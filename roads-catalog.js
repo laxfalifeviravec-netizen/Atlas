@@ -150,14 +150,14 @@ function closeDetail() {
 /* ── Theme toggle ─── */
 const root = document.documentElement;
 const themeToggle = document.getElementById('themeToggle');
-const savedTheme = localStorage.getItem('theme');
+const savedTheme = localStorage.getItem('culture-theme');
 if (savedTheme) root.setAttribute('data-theme', savedTheme);
 
 themeToggle?.addEventListener('click', () => {
   const cur = root.getAttribute('data-theme');
   const next = cur === 'light' ? 'dark' : 'light';
   root.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
+  localStorage.setItem('culture-theme', next);
 });
 
 /* ── Helpers ─── */

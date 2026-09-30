@@ -473,7 +473,8 @@ newPostOverlay.addEventListener('click', e => {
   if (e.target === newPostOverlay) { newPostOverlay.classList.remove('open'); document.body.style.overflow = ''; }
 });
 // create-sheet.js intercepts .bnav-post in capture phase; this is the fallback
-document.getElementById('newPostBtnNav').addEventListener('click', () => {
+const _newPostBtnNav = document.getElementById('newPostBtnNav');
+if (_newPostBtnNav) _newPostBtnNav.addEventListener('click', () => {
   if (typeof window.openCreateSheet === 'function') window.openCreateSheet();
   else openNewPost();
 });

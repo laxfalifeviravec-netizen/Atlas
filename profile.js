@@ -93,6 +93,16 @@ function renderProfile(user) {
   document.getElementById('statFollowerCount').textContent = fmtNum(user.follower_count);
   document.getElementById('statFollowingCount').textContent = fmtNum(user.following_count);
 
+  document.getElementById('statFollowers').onclick = () => {
+    location.href = `following.html?tab=followers&id=${user.id}`;
+  };
+  document.getElementById('statFollowing').onclick = () => {
+    location.href = `following.html?tab=following&id=${user.id}`;
+  };
+  document.getElementById('statPosts').onclick = () => {
+    document.getElementById('tabPosts')?.click();
+  };
+
   renderActions(user);
 }
 
@@ -117,7 +127,7 @@ function renderActions(user) {
       const msgBtn = document.getElementById('msgBtn');
       msgBtn.style.display = '';
       msgBtn.addEventListener('click', () => {
-        location.href = `messages.html?user=${user.id}&name=${encodeURIComponent(user.name)}`;
+        location.href = `chat.html?user=${user.id}&name=${encodeURIComponent(user.name)}`;
       });
     }
   }

@@ -221,7 +221,8 @@ document.getElementById('newPostClose').addEventListener('click', () => {
 newPostOverlay.addEventListener('click', e => {
   if (e.target === newPostOverlay) { newPostOverlay.classList.remove('open'); document.body.style.overflow = ''; }
 });
-document.getElementById('newPostBtnNav').addEventListener('click', openNewPost);
+const _newPostBtnNav = document.getElementById('newPostBtnNav');
+if (_newPostBtnNav) _newPostBtnNav.addEventListener('click', openNewPost);
 
 uploadZone.addEventListener('click', () => postImageInput.click());
 uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor = 'var(--c-accent)'; });

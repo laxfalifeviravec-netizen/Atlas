@@ -98,9 +98,6 @@ async function loadGroups() {
     empty.style.display = 'none';
     list.style.display  = '';
     list.innerHTML = groups.map(g => buildGroupRow(g)).join('');
-    list.querySelectorAll('.chat-list-item').forEach(() => {
-      // clicking navigates to the full groups page
-    });
     list.querySelectorAll('.chat-list-item').forEach(el => {
       el.addEventListener('click', () => { location.href = 'groups.html'; });
     });

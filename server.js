@@ -1193,12 +1193,22 @@ app.post('/api/posts', requireAuth, upload.single('image'), async (req, res) => 
     if (!req.file) return res.status(400).json({ error: 'An image is required.' });
     const { caption = '', road_name = '', region = '', mod_title = '', mod_price = '', mod_url = '', mod_category = '' } = req.body;
     const image_url = await storeImage(req.file);
-    const post = await db.createPost({
+    const fields = {
       user_id: req.user.id, image_url,
       caption: caption.trim(), road_name: road_name.trim(), region: region.trim(),
       mod_title: mod_title.trim(), mod_price: mod_price.trim(),
       mod_url: mod_url.trim(), mod_category: mod_category.trim(),
-    });
+    };
+    let post;
+    try {
+      post = await db.createPost(fields);
+    } catch (innerErr) {
+      // Retry without mod columns if they don't exist in the schema yet
+      if (innerErr.message?.includes('mod_') || innerErr.code === '42703') {
+        const { mod_title: _mt, mod_price: _mp, mod_url: _mu, mod_category: _mc, ...baseFields } = fields;
+        post = await db.createPost(baseFields);
+      } else throw innerErr;
+    }
     const user = await db.findUserById(req.user.id);
     res.status(201).json({ post: { ...post, user_name: user?.name || '', user_avatar: user?.avatar || null, liked: false } });
   } catch (e) {

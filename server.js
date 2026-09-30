@@ -1123,6 +1123,47 @@ app.post('/api/auth/reset-password', async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
+// ── Google Sign-In ────────────────────────────────────────────
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+
+app.get('/api/auth/google-client-id', (req, res) => {
+  res.json({ clientId: GOOGLE_CLIENT_ID || null });
+});
+
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ error: 'Missing credential.' });
+
+    // Verify credential with Google's tokeninfo endpoint
+    const infoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+    if (!infoRes.ok) return res.status(401).json({ error: 'Invalid Google credential.' });
+    const info = await infoRes.json();
+
+    if (GOOGLE_CLIENT_ID && info.aud !== GOOGLE_CLIENT_ID) {
+      return res.status(401).json({ error: 'Credential audience mismatch.' });
+    }
+    if (!info.email_verified || info.email_verified === 'false') {
+      return res.status(401).json({ error: 'Google email not verified.' });
+    }
+
+    const email = info.email.toLowerCase();
+    let user = await db.findUserByEmail(email);
+    if (!user) {
+      // Auto-register via Google
+      user = await db.createUser({
+        name: info.name || email.split('@')[0],
+        email,
+        password_hash: null,
+        avatar: info.picture || null,
+        bio: '',
+        plan: 'Explorer',
+      });
+    }
+    res.json({ token: makeToken(user), user: safeUser(user) });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
 // ── Post routes ───────────────────────────────────────────────
 app.get('/api/posts', optionalAuth, async (req, res) => {
   try {

@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "One Culture — Driving Community",
   "short_name": "One Culture",
   "description": "The social network for driving enthusiasts. Share roads, join groups, find gear.",
@@ -21,7 +22,29 @@
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "https://images.unsplash.com/photo-1544636331-9d95400dcc31?w=1290&h=2796&fit=crop&q=80",
+      "sizes": "1290x2796",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Community feed with road posts"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=1290&h=2796&fit=crop&q=80",
+      "sizes": "1290x2796",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Explore curated driving roads"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1290&h=2796&fit=crop&q=80",
+      "sizes": "1290x2796",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Group drives with live location"
+    }
+  ],
   "categories": ["social", "sports", "navigation"],
   "lang": "en-US"
 }

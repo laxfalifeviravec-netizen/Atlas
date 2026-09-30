@@ -57,17 +57,17 @@ async function loadConversations() {
     list.style.display  = '';
     list.innerHTML = convs.map(c => buildConvRow(c)).join('');
     list.querySelectorAll('.chat-list-item').forEach((el, i) => {
-      el.addEventListener('click', () => openConv(convs[i].id, convs[i].other_user_name || convs[i].name || 'Chat'));
+      el.addEventListener('click', () => openConv(convs[i].id, convs[i].other_name || convs[i].other_user_name || convs[i].name || 'Chat'));
     });
   } catch { loading.style.display = 'none'; empty.style.display = 'flex'; }
 }
 
 function buildConvRow(c) {
-  const name    = esc(c.other_user_name || c.name || 'Unknown');
+  const name    = esc(c.other_name || c.other_user_name || c.name || 'Unknown');
   const init    = (name[0] || '?').toUpperCase();
-  const preview = esc(c.last_message || '');
-  const time    = c.last_message_at ? relTime(c.last_message_at) : '';
-  const unread  = c.unread_count > 0;
+  const preview = esc(c.last_message?.body || c.last_message || '');
+  const time    = (c.last_message?.created_at || c.last_message_at) ? relTime(c.last_message?.created_at || c.last_message_at) : '';
+  const unread  = (c.unread || c.unread_count || 0) > 0;
   return `
     <div class="chat-list-item">
       <div class="chat-avatar">${init}</div>
@@ -188,7 +188,7 @@ async function sendMessage() {
     await fetch(`${API}/api/conversations/${activeConvId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ content: text })
+      body: JSON.stringify({ body: text })
     });
     await loadMessages();
   } catch {}
@@ -230,10 +230,10 @@ newMsgSearch.addEventListener('input', () => {
       const r = await fetch(`${API}/api/conversations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ participant_id: u.id })
+        body: JSON.stringify({ user_id: u.id })
       });
       const data = await r.json();
-      openConv(data.id || data.conversation?.id, u.name || u.username);
+      openConv(data.conversation_id || data.id, u.name || u.username);
     } catch {}
   }), 300);
 });
@@ -339,7 +339,7 @@ async function searchUsers(q, container, onSelect) {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     const data = await r.json();
-    const people = data.people || (Array.isArray(data) ? data : []);
+    const people = data.users || data.people || (Array.isArray(data) ? data : []);
     container.innerHTML = people.slice(0, 8).map(u => `
       <div class="chat-user-row" data-id="${u.id}">
         <div class="chat-avatar" style="width:38px;height:38px;font-size:16px;flex-shrink:0">${(u.name || u.username || '?')[0].toUpperCase()}</div>

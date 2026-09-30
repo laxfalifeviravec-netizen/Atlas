@@ -51,26 +51,29 @@ async function loadConversations() {
     }
 
     conversations.forEach(conv => {
-      const other = conv.other_user;
-      if (!other) return;
-      const init = other.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-      const avatar = other.avatar
-        ? `<img src="${esc(other.avatar)}" alt="" />`
+      const otherName   = conv.other_name || '?';
+      const otherAvatar = conv.other_avatar || null;
+      const init = otherName.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+      const avatar = otherAvatar
+        ? `<img src="${esc(otherAvatar)}" alt="" />`
         : init;
-      const hasUnread = conv.unread_count > 0;
+      const hasUnread = (conv.unread || 0) > 0;
+      const lastMsg   = conv.last_message?.body || 'Start the conversation…';
+      const lastTime  = conv.last_message?.created_at || null;
 
       const row = document.createElement('div');
       row.className = 'conv-row';
       row.innerHTML = `
         <div class="conv-avatar">${avatar}</div>
         <div class="conv-info">
-          <div class="conv-name">${esc(other.name)}</div>
-          <div class="conv-preview ${hasUnread ? 'unread' : ''}">${esc(conv.last_message || 'Start the conversation…')}</div>
+          <div class="conv-name">${esc(otherName)}</div>
+          <div class="conv-preview ${hasUnread ? 'unread' : ''}">${esc(lastMsg)}</div>
         </div>
         <div class="conv-meta">
-          <div class="conv-time">${fmtTime(conv.updated_at)}</div>
+          <div class="conv-time">${lastTime ? fmtTime(lastTime) : ''}</div>
           ${hasUnread ? '<div class="conv-unread-dot"></div>' : ''}
         </div>`;
+      const other = { id: conv.other_user_id, name: otherName, avatar: otherAvatar };
       row.addEventListener('click', () => openChat(conv.id, other));
       list.appendChild(row);
     });
@@ -277,8 +280,9 @@ async function startConversation(userId, other) {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: userId })
     });
-    const { conversation } = await res.json();
-    openChat(conversation.id, other);
+    const data = await res.json();
+    const convId = data.conversation_id || data.id;
+    if (convId) openChat(convId, other);
   } catch {}
 }
 

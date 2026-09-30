@@ -180,14 +180,19 @@ const db = {
   },
 
   // ── Posts ──
-  async getPosts(page, limit, userId) {
+  async getPosts(page, limit, userId, followingIds = null) {
     const offset = (page - 1) * limit;
     if (USE_SUPABASE) {
-      const { data, count } = await sb.from('posts')
+      let query = sb.from('posts')
         .select(`id, user_id, image_url, caption, road_name, region, likes, created_at,
                  users!posts_user_id_fkey(name, avatar)`, { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
+        .order('created_at', { ascending: false });
+      if (followingIds && followingIds.length > 0) {
+        query = query.in('user_id', followingIds);
+      } else if (followingIds !== null) {
+        return { posts: [], total: 0 };
+      }
+      const { data, count } = await query.range(offset, offset + limit - 1);
       const likedIds = new Set();
       if (userId && data?.length) {
         const { data: lk } = await sb.from('post_likes')
@@ -203,14 +208,18 @@ const db = {
         total: count || 0,
       };
     }
-    const sorted = [..._posts].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    let source = [..._posts].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    if (followingIds !== null) {
+      if (followingIds.length === 0) return { posts: [], total: 0 };
+      source = source.filter(p => followingIds.includes(p.user_id));
+    }
     return {
-      posts: sorted.slice(offset, offset + limit).map(p => {
+      posts: source.slice(offset, offset + limit).map(p => {
         const u = _users.find(u => u.id === p.user_id) || {};
         return { ...p, user_name: u.name || '', user_avatar: u.avatar || null,
           liked: userId ? _postLikes.has(`${userId}-${p.id}`) : false };
       }),
-      total: _posts.length,
+      total: source.length,
     };
   },
   async createPost(fields) {
@@ -1169,7 +1178,12 @@ app.get('/api/posts', optionalAuth, async (req, res) => {
   try {
     const page  = Math.max(1, parseInt(req.query.page)  || 1);
     const limit = Math.min(24, parseInt(req.query.limit) || 12);
-    const { posts, total } = await db.getPosts(page, limit, req.user?.id);
+    let followingIds = null;
+    if (req.query.feed === 'following' && req.user) {
+      const followed = await db.getFollowing(req.user.id);
+      followingIds = followed.map(u => u.id);
+    }
+    const { posts, total } = await db.getPosts(page, limit, req.user?.id, followingIds);
     res.json({ posts, total, page, pages: Math.ceil(total / limit) });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });

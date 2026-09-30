@@ -1739,12 +1739,12 @@ async function seed() {
   });
 
   const demoPosts = [
-    { image_url: 'https://images.unsplash.com/photo-sCj3PwIdRvM?w=800&auto=format&fit=crop', caption: 'Tail of the Dragon — 318 curves in 11 miles. Nothing else comes close.', road_name: 'Tail of the Dragon (US-129)', region: 'Southeast' },
-    { image_url: 'https://images.unsplash.com/photo-NeH9w4CdmnA?w=800&auto=format&fit=crop', caption: 'Beartooth Highway at sunrise. Worth every switchback.', road_name: 'Beartooth Highway (US-212)', region: 'Mountain West' },
-    { image_url: 'https://images.unsplash.com/photo-F8NXa0WH5wk?w=800&auto=format&fit=crop', caption: 'Pacific Coast Highway. Windows down, ocean to the left. Nothing beats it.', road_name: 'Pacific Coast Highway (CA-1)', region: 'West Coast' },
-    { image_url: 'https://images.unsplash.com/photo-ZUwJ_aP1ED8?w=800&auto=format&fit=crop', caption: 'Million Dollar Highway descending to Ouray. Colorado\'s finest tarmac.', road_name: 'Million Dollar Highway (US-550)', region: 'Mountain West' },
-    { image_url: 'https://images.unsplash.com/photo-tT829CAphnM?w=800&auto=format&fit=crop', caption: 'Skyline Drive in the fall. The M3 felt right at home.', road_name: 'Skyline Drive', region: 'Northeast' },
-    { image_url: 'https://images.unsplash.com/photo-AMgve6dPt-k?w=800&auto=format&fit=crop', caption: 'Going-to-the-Sun Road through Glacier NP. One of the greats.', road_name: 'Going-to-the-Sun Road', region: 'Mountain West' },
+    { image_url: 'https://images.unsplash.com/photo-1544636331-9d95400dcc31?w=800&auto=format&fit=crop&q=80', caption: 'Tail of the Dragon — 318 curves in 11 miles. Nothing else comes close.', road_name: 'Tail of the Dragon (US-129)', region: 'Southeast' },
+    { image_url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80', caption: 'Beartooth Highway at sunrise. Worth every switchback.', road_name: 'Beartooth Highway (US-212)', region: 'Mountain West' },
+    { image_url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=80', caption: 'Pacific Coast Highway. Windows down, ocean to the left. Nothing beats it.', road_name: 'Pacific Coast Highway (CA-1)', region: 'West Coast' },
+    { image_url: 'https://images.unsplash.com/photo-1580274455191-1d9d5f78f3d7?w=800&auto=format&fit=crop&q=80', caption: 'Million Dollar Highway descending to Ouray. Colorado\'s finest tarmac.', road_name: 'Million Dollar Highway (US-550)', region: 'Mountain West' },
+    { image_url: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&auto=format&fit=crop&q=80', caption: 'Skyline Drive in the fall. The M3 felt right at home.', road_name: 'Skyline Drive', region: 'Northeast' },
+    { image_url: 'https://images.unsplash.com/photo-1617531653332-bd46c16f7d10?w=800&auto=format&fit=crop&q=80', caption: 'Going-to-the-Sun Road through Glacier NP. One of the greats.', road_name: 'Going-to-the-Sun Road', region: 'Mountain West' },
   ];
   for (const p of demoPosts) {
     await db.createPost({ user_id: teamUser.id, ...p });
@@ -1779,9 +1779,25 @@ async function seed() {
   for (const e of demoEvents) { await db.createEvent(e); }
 }
 
+// ── Patch broken seed post images (one-time migration) ───────
+async function patchSeedImages() {
+  if (!USE_SUPABASE) return;
+  const patches = [
+    { caption: 'Tail of the Dragon', image_url: 'https://images.unsplash.com/photo-1544636331-9d95400dcc31?w=800&auto=format&fit=crop&q=80' },
+    { caption: 'Beartooth Highway',  image_url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80' },
+    { caption: 'Pacific Coast Highway', image_url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=80' },
+    { caption: 'Million Dollar Highway', image_url: 'https://images.unsplash.com/photo-1580274455191-1d9d5f78f3d7?w=800&auto=format&fit=crop&q=80' },
+    { caption: 'Skyline Drive',      image_url: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&auto=format&fit=crop&q=80' },
+    { caption: 'Going-to-the-Sun',   image_url: 'https://images.unsplash.com/photo-1617531653332-bd46c16f7d10?w=800&auto=format&fit=crop&q=80' },
+  ];
+  for (const { caption, image_url } of patches) {
+    await sb.from('posts').update({ image_url }).ilike('caption', `%${caption}%`).ilike('image_url', '%unsplash.com/photo-__%');
+  }
+}
+
 if (require.main === module) {
-  seed().then(() => app.listen(PORT, () => console.log(`One Culture API running on http://localhost:${PORT}`))).catch(console.error);
+  seed().then(patchSeedImages).then(() => app.listen(PORT, () => console.log(`One Culture API running on http://localhost:${PORT}`))).catch(console.error);
 } else {
-  seed().catch(console.error);
+  seed().then(patchSeedImages).catch(console.error);
   module.exports = app;
 }

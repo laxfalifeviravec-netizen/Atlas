@@ -362,60 +362,80 @@ function renderRoadPolylines(roads) {
 const CURATED_DIFF_COLORS = { 1: '#22c55e', 2: '#22c55e', 3: '#f59e0b', 4: '#f97316', 5: '#dc2222' };
 let curatedPolylines = {};
 
+// Build a Leaflet layer for one curated road (no OSRM snap — geometry is pre-defined)
+function buildCuratedLayer(r) {
+  const pts = r.geometry;
+  if (!pts || pts.length < 2) return null;
+  const color = CURATED_DIFF_COLORS[r.difficulty] || '#dc2222';
+  const diffLabel = ['', 'Easy', 'Easy', 'Moderate', 'Hard', 'Expert'][r.difficulty] || 'Moderate';
+
+  const popupHtml = `
+    <div class="road-popup">
+      <h4>${esc(r.name)}</h4>
+      ${r.description ? `<p>${esc(r.description)}</p>` : ''}
+      <div class="popup-meta">
+        <span class="road-diff diff-${diffLabel}">${diffLabel}</span>
+        ${r.state ? `<span style="font-size:11px;color:#888">${esc(r.state)}</span>` : ''}
+      </div>
+      <p style="font-size:11px;color:#888;margin-top:4px">${r.length_mi} mi · ${r.type}</p>
+      <button class="nav-popup-btn" onclick="window.openNavPanel('curated-${r.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        Navigate
+      </button>
+    </div>`;
+
+  const group = L.layerGroup();
+  L.polyline(pts, { color, weight: 5, opacity: 0.9 }).bindPopup(popupHtml).addTo(group);
+  L.circleMarker(pts[0], { radius: 5, color, fillColor: color, fillOpacity: 1, weight: 2 })
+    .bindPopup(popupHtml).addTo(group);
+  return group;
+}
+
 async function renderCuratedPolylines(roads) {
   Object.values(curatedPolylines).forEach(p => p.remove());
   curatedPolylines = {};
 
-  // Snap all roads to real roads in batches of 4 to avoid rate-limiting
-  const BATCH = 4;
-  for (let i = 0; i < roads.length; i += BATCH) {
-    const batch = roads.slice(i, i + BATCH);
-    await Promise.all(batch.map(async r => {
-      if (!r.geometry || r.geometry.length < 2) return;
-      const snapped = await snapToRoad(r.id, r.geometry);
-      r._snappedGeometry = snapped;
-    }));
-    // Small pause between batches to be polite to OSRM
-    if (i + BATCH < roads.length) await new Promise(res => setTimeout(res, 300));
+  // Pre-build all layers (sync, no network calls)
+  roads.forEach(r => {
+    const layer = buildCuratedLayer(r);
+    if (layer) curatedPolylines[`curated-${r.id}`] = layer;
+  });
+
+  // Viewport-aware rendering: show only roads whose start point is in the current view
+  // (or all roads when zoomed out to national level)
+  function refreshVisible() {
+    const zoom = roadsMap.getZoom();
+    const bounds = roadsMap.getBounds().pad(0.3); // 30% padding
+    const showAll = zoom <= 5;
+
+    Object.entries(curatedPolylines).forEach(([key, layer]) => {
+      const road = roads.find(r => `curated-${r.id}` === key);
+      if (!road || !road.geometry || road.geometry.length < 2) return;
+
+      const [lat, lng] = road.geometry[0];
+      const inView = showAll || bounds.contains(L.latLng(lat, lng));
+
+      if (inView && !roadsMap.hasLayer(layer)) layer.addTo(roadsMap);
+      else if (!inView && roadsMap.hasLayer(layer)) layer.remove();
+    });
   }
 
-  roads.forEach(r => {
-    if (!r.geometry || r.geometry.length < 2) return;
-    const pts = r._snappedGeometry || r.geometry;
-    const color = CURATED_DIFF_COLORS[r.difficulty] || '#dc2222';
-    const diffLabel = ['', 'Easy', 'Easy', 'Moderate', 'Hard', 'Expert'][r.difficulty] || 'Moderate';
-    const line = L.polyline(pts, { color, weight: 5, opacity: 0.9 }).addTo(roadsMap);
-
-    const popupHtml = `
-      <div class="road-popup">
-        <h4>${esc(r.name)}</h4>
-        ${r.description ? `<p>${esc(r.description)}</p>` : ''}
-        <div class="popup-meta">
-          <span class="road-diff diff-${diffLabel}">${diffLabel}</span>
-          ${r.state ? `<span style="font-size:11px;color:#888">${esc(r.state)}</span>` : ''}
-        </div>
-        <p style="font-size:11px;color:#888;margin-top:4px">${r.length_mi} mi · ${r.type}</p>
-        <button class="nav-popup-btn" onclick="window.openNavPanel('curated-${r.id}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-          Navigate
-        </button>
-      </div>`;
-    line.bindPopup(popupHtml);
-    curatedPolylines[`curated-${r.id}`] = line;
-
-    L.circleMarker(pts[0], {
-      radius: 5, color, fillColor: color, fillOpacity: 1, weight: 2
-    }).addTo(roadsMap).bindPopup(popupHtml);
-  });
+  refreshVisible();
+  roadsMap.off('moveend', refreshVisible); // remove any prior listener
+  roadsMap.on('moveend', refreshVisible);
 }
 
 function flyToRoad(road) {
-  const pts = road._snappedGeometry || road.points || road.geometry;
+  const pts = road.points || road.geometry;
   if (!pts || pts.length === 0) return;
   const bounds = L.latLngBounds(pts);
   roadsMap.fitBounds(bounds, { padding: [60, 60] });
-  const poly = roadPolylines[road.id] || curatedPolylines[road.id];
-  if (poly) poly.openPopup();
+  // openPopup on the polyline inside the layer group if present
+  const layer = roadPolylines[road.id] || curatedPolylines[`curated-${road.id}`] || curatedPolylines[road.id];
+  if (layer) {
+    if (layer.openPopup) layer.openPopup();
+    else if (layer.eachLayer) layer.eachLayer(l => { if (l.openPopup) l.openPopup(); });
+  }
   document.getElementById('roadsSidebar').classList.remove('open');
 }
 
@@ -600,7 +620,7 @@ function openNavPanel(roadId) {
   navRoad = road;
   navRoute = null;
 
-  const pts = road._snappedGeometry || road.points || road.geometry;
+  const pts = road.points || road.geometry;
   const diff = road.difficulty
     ? (typeof road.difficulty === 'number' ? (['','Easy','Easy','Moderate','Hard','Expert'][road.difficulty] || 'Moderate') : road.difficulty)
     : 'Moderate';
@@ -658,7 +678,7 @@ function startNavigation() {
   if (!navRoad) return;
   document.getElementById('navPanel').classList.remove('open');
 
-  const pts = navRoad._snappedGeometry || navRoad.points || navRoad.geometry;
+  const pts = navRoad.points || navRoad.geometry;
   document.body.classList.add('nav-active');
   document.getElementById('navHUD').classList.add('active');
   document.getElementById('navTopCard').classList.add('active');

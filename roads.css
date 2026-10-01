@@ -124,6 +124,20 @@ body { overflow: hidden; }
   .sidebar-toggle { display: none; }
 }
 
+/* ── Back button ─────────────────────────────────────────── */
+.map-back-btn {
+  position: absolute; top: 12px; right: 12px; z-index: 1000;
+  background: var(--c-surface); border: 1px solid var(--c-border);
+  border-radius: 20px; padding: 9px 16px; cursor: pointer;
+  font-size: 13px; font-weight: 600; font-family: var(--font-ui);
+  color: var(--c-text); box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  display: none; align-items: center; gap: 6px; min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 680px) {
+  .map-back-btn { display: flex; }
+}
+
 /* ── Locate-me map button ─────────────────────────────────── */
 .map-locate-btn {
   background: var(--c-surface, #141417); border: 2px solid rgba(255,255,255,0.15) !important;

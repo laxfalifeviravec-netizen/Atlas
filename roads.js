@@ -182,6 +182,13 @@ function onMapClick(e) {
 // ── Load Roads ─────────────────────────────────────────────
 let curatedRoads = [];
 
+// Sample an array down to at most maxN evenly-spaced points (keeps first + last)
+function samplePoints(pts, maxN) {
+  if (pts.length <= maxN) return pts;
+  const step = (pts.length - 1) / (maxN - 1);
+  return Array.from({ length: maxN }, (_, i) => pts[Math.round(i * step)]);
+}
+
 // Snap waypoints to real roads via OSRM (browser-side, cached in localStorage)
 async function snapToRoad(id, waypoints) {
   const cacheKey = `culture-road-snap-v1-${id}`;
@@ -362,9 +369,9 @@ function renderRoadPolylines(roads) {
 const CURATED_DIFF_COLORS = { 1: '#22c55e', 2: '#22c55e', 3: '#f59e0b', 4: '#f97316', 5: '#dc2222' };
 let curatedPolylines = {};
 
-// Build a Leaflet layer for one curated road (no OSRM snap — geometry is pre-defined)
-function buildCuratedLayer(r) {
-  const pts = r.geometry;
+// Build a Leaflet layer for one curated road
+function buildCuratedLayer(r, snappedPts) {
+  const pts = snappedPts || r.geometry;
   if (!pts || pts.length < 2) return null;
   const color = CURATED_DIFF_COLORS[r.difficulty] || '#dc2222';
   const diffLabel = ['', 'Easy', 'Easy', 'Moderate', 'Hard', 'Expert'][r.difficulty] || 'Moderate';
@@ -395,11 +402,14 @@ async function renderCuratedPolylines(roads) {
   Object.values(curatedPolylines).forEach(p => p.remove());
   curatedPolylines = {};
 
-  // Pre-build all layers (sync, no network calls)
-  roads.forEach(r => {
-    const layer = buildCuratedLayer(r);
+  // Snap each road's geometry to actual road paths via OSRM, then build layers
+  await Promise.all(roads.map(async r => {
+    if (!r.geometry || r.geometry.length < 2) return;
+    const waypoints = samplePoints(r.geometry, 25);
+    const snapped = await snapToRoad(`curated-${r.id}`, waypoints);
+    const layer = buildCuratedLayer(r, snapped);
     if (layer) curatedPolylines[`curated-${r.id}`] = layer;
-  });
+  }));
 
   // Viewport-aware rendering: show only roads whose start point is in the current view
   // (or all roads when zoomed out to national level)

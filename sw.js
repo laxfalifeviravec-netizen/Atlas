@@ -3,7 +3,7 @@
    Caches the app shell so it loads instantly and works offline.
    ============================================================ */
 
-const CACHE = 'culture-v22';
+const CACHE = 'culture-v23';
 
 const APP_SHELL = [
   '/',
@@ -44,6 +44,7 @@ const APP_SHELL = [
   '/marketplace.css',
   '/marketplace.js',
   '/pricing.html',
+  '/privacy.html',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',

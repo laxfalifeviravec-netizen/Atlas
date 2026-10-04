@@ -410,6 +410,34 @@ document.getElementById('saveProfileBtn').addEventListener('click', async () => 
   finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
 });
 
+document.getElementById('signOutBtn').addEventListener('click', () => {
+  localStorage.removeItem('culture-token');
+  location.replace('index.html');
+});
+
+document.getElementById('deleteAccountBtn').addEventListener('click', async () => {
+  if (!confirm('Permanently delete your account and all your data? This cannot be undone.')) return;
+  const btn = document.getElementById('deleteAccountBtn');
+  btn.disabled = true; btn.textContent = 'Deleting…';
+  try {
+    const res = await fetch(`${API}/api/auth/me`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      localStorage.removeItem('culture-token');
+      location.replace('index.html');
+    } else {
+      const d = await res.json();
+      document.getElementById('editError').textContent = d.error || 'Could not delete account.';
+      btn.disabled = false; btn.textContent = 'Delete Account';
+    }
+  } catch {
+    document.getElementById('editError').textContent = 'Network error. Try again.';
+    btn.disabled = false; btn.textContent = 'Delete Account';
+  }
+});
+
 // ── Auth modal ─────────────────────────────────────────────
 const authOverlay = document.getElementById('authOverlay');
 let authMode = 'login';

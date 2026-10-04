@@ -1007,7 +1007,38 @@ const db = {
     this._resetTokens.delete(token);
     return entry.email;
   },
+
+  async deleteUser(id) {
+    if (USE_SUPABASE) {
+      await sb.from('users').delete().eq('id', id);
+      return { ok: true };
+    }
+    const idx = _users.findIndex(u => u.id === id);
+    if (idx !== -1) _users.splice(idx, 1);
+    return { ok: true };
+  },
 };
+
+// ── Apple Sign In helpers ────────────────────────────────────
+const APPLE_SERVICE_ID = process.env.APPLE_SERVICE_ID || '';
+let _appleKeysCache = null, _appleKeysCacheTs = 0;
+async function getAppleKeys() {
+  const now = Date.now();
+  if (_appleKeysCache && now - _appleKeysCacheTs < 3_600_000) return _appleKeysCache;
+  const res = await fetch('https://appleid.apple.com/auth/keys');
+  _appleKeysCache = (await res.json()).keys;
+  _appleKeysCacheTs = now;
+  return _appleKeysCache;
+}
+async function verifyAppleToken(idToken) {
+  const keys = await getAppleKeys();
+  const decoded = jwt.decode(idToken, { complete: true });
+  if (!decoded?.header) throw new Error('bad token');
+  const jwk = keys.find(k => k.kid === decoded.header.kid);
+  if (!jwk) throw new Error('key not found');
+  const pub = crypto.createPublicKey({ key: jwk, format: 'jwk' });
+  return jwt.verify(idToken, pub, { algorithms: ['RS256'] });
+}
 
 // ── Auth routes ───────────────────────────────────────────────
 app.post('/api/auth/register', authLimiter, async (req, res) => {
@@ -1139,6 +1170,10 @@ app.get('/api/auth/google-client-id', (req, res) => {
   res.json({ clientId: GOOGLE_CLIENT_ID || null });
 });
 
+app.get('/api/auth/apple-client-id', (req, res) => {
+  res.json({ clientId: APPLE_SERVICE_ID || null });
+});
+
 app.post('/api/auth/google', async (req, res) => {
   try {
     const { credential } = req.body;
@@ -1171,6 +1206,34 @@ app.post('/api/auth/google', async (req, res) => {
     }
     res.json({ token: makeToken(user), user: safeUser(user) });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/auth/apple', async (req, res) => {
+  try {
+    const { id_token, user_name } = req.body;
+    if (!id_token) return res.status(400).json({ error: 'Missing id_token.' });
+    const payload = await verifyAppleToken(id_token);
+    const email = (payload.email || `${payload.sub}@privaterelay.appleid.com`).toLowerCase();
+    let user = await db.findUserByEmail(email);
+    if (!user) {
+      user = await db.createUser({
+        name: user_name || email.split('@')[0],
+        email,
+        password_hash: null,
+        avatar: null,
+        bio: '',
+        plan: 'Explorer',
+      });
+    }
+    res.json({ token: makeToken(user), user: safeUser(user) });
+  } catch (e) { console.error('Apple auth:', e.message); res.status(401).json({ error: 'Apple sign-in failed.' }); }
+});
+
+app.delete('/api/auth/me', requireAuth, async (req, res) => {
+  try {
+    await db.deleteUser(req.user.id);
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Could not delete account.' }); }
 });
 
 // ── Post routes ───────────────────────────────────────────────

@@ -1777,12 +1777,13 @@ app.get('/api/roads', async (req, res) => {
 
 app.post('/api/roads', requireAuth, async (req, res) => {
   try {
-    const { name, region = '', description = '', difficulty = 'Moderate', points } = req.body;
-    if (!name || !Array.isArray(points) || points.length < 2)
-      return res.status(400).json({ error: 'Road name and at least 2 coordinates are required.' });
+    const { name, region = '', description = '', difficulty = 'Moderate', points, point_type = 'road', spot_category = '' } = req.body;
+    const isWaypoint = point_type === 'waypoint';
+    if (!name || !Array.isArray(points) || points.length < (isWaypoint ? 1 : 2))
+      return res.status(400).json({ error: isWaypoint ? 'Road name and a map point are required.' : 'Road name and at least 2 coordinates are required.' });
     const road = await db.createRoad({
       user_id: req.user.id, name: name.trim(), region: region.trim(),
-      description: description.trim(), difficulty, points,
+      description: description.trim(), difficulty, points, point_type, spot_category,
     });
     const user = await db.findUserById(req.user.id);
     res.status(201).json({ road: { ...road, submitted_by: user?.name || '' } });

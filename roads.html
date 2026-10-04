@@ -51,8 +51,11 @@
 
       <!-- Add mode instructions -->
       <div class="add-mode-hint" id="addModeHint" style="display:none">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-        <p>Click on the map to place waypoints for your road. Click <strong>Done</strong> when finished (min 2 points).</p>
+        <div class="add-mode-type-toggle">
+          <button class="add-type-btn active" id="addTypeRoad" data-type="road">Trace Road</button>
+          <button class="add-type-btn" id="addTypeSpot" data-type="waypoint">Mark a Spot</button>
+        </div>
+        <p id="addModeHintText">Click on the map to place waypoints for your road. Click <strong>Done</strong> when finished (min 2 points).</p>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button class="btn btn-primary btn-sm" id="doneAddRoadBtn">Done</button>
           <button class="btn btn-outline btn-sm" id="cancelAddRoadBtn">Cancel</button>
@@ -120,7 +123,7 @@
   <div class="modal-overlay" id="addRoadOverlay" role="dialog" aria-modal="true">
     <div class="modal">
       <div class="modal-header">
-        <h3>Name This Road</h3>
+        <h3 id="addRoadModalTitle">Name This Road</h3>
         <button class="modal-close" id="addRoadClose">&times;</button>
       </div>
       <div class="modal-body">
@@ -133,12 +136,23 @@
             <option>Southeast</option><option>Northeast</option>
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group road-only-field">
           <select id="roadDifficulty">
             <option value="Easy">Easy — wide, smooth, gentle curves</option>
             <option value="Moderate" selected>Moderate — some technical sections</option>
             <option value="Hard">Hard — narrow, tight switchbacks</option>
             <option value="Expert">Expert — extreme corners, no margin</option>
+          </select>
+        </div>
+        <div class="form-group spot-only-field" style="display:none">
+          <select id="spotCategory">
+            <option value="viewpoint">Viewpoint</option>
+            <option value="corner">Good Corner</option>
+            <option value="fuel">Fuel Stop</option>
+            <option value="food">Food / Coffee</option>
+            <option value="photo">Photo Spot</option>
+            <option value="meetup">Meetup Point</option>
+            <option value="other">Other</option>
           </select>
         </div>
         <div class="form-group"><textarea id="roadDesc" placeholder="Describe what makes this road special…" rows="2" maxlength="400"></textarea></div>

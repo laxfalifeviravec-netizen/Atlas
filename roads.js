@@ -13,6 +13,7 @@ let myLocMarker = null;
 let allRoads = [];
 let roadPolylines = {};
 let addModeActive = false;
+let addModeType = 'road'; // 'road' or 'waypoint'
 let pendingPoints = [];
 let pendingMarkers = [];
 let pendingPolyline = null;
@@ -166,16 +167,26 @@ document.getElementById('navRecenterBtn').addEventListener('click', () => {
 function onMapClick(e) {
   if (!addModeActive) return;
   const { lat, lng } = e.latlng;
+
+  // Waypoint mode: only one point allowed
+  if (addModeType === 'waypoint') {
+    pendingMarkers.forEach(m => m.remove()); pendingMarkers = [];
+    pendingPoints = [];
+  }
+
   pendingPoints.push([lat, lng]);
 
   const marker = L.circleMarker([lat, lng], {
-    radius: 6, color: '#dc2222', fillColor: '#dc2222', fillOpacity: 1, weight: 2
+    radius: addModeType === 'waypoint' ? 9 : 6,
+    color: '#dc2222', fillColor: '#dc2222', fillOpacity: 1, weight: 2
   }).addTo(roadsMap);
   pendingMarkers.push(marker);
 
-  if (pendingPolyline) pendingPolyline.remove();
-  if (pendingPoints.length >= 2) {
-    pendingPolyline = L.polyline(pendingPoints, { color: '#dc2222', weight: 3, dashArray: '6 4' }).addTo(roadsMap);
+  if (addModeType === 'road') {
+    if (pendingPolyline) pendingPolyline.remove();
+    if (pendingPoints.length >= 2) {
+      pendingPolyline = L.polyline(pendingPoints, { color: '#dc2222', weight: 3, dashArray: '6 4' }).addTo(roadsMap);
+    }
   }
 }
 
@@ -231,7 +242,7 @@ async function loadRoads() {
     const total = roads.length + curatedRoads.length;
     document.getElementById('roadCount').textContent = `${total} road${total===1?'':'s'} mapped`;
     renderRoadList(roads, curatedRoads);
-    renderRoadPolylines(roads);
+    await renderRoadPolylines(roads);
     await renderCuratedPolylines(curatedRoads);
   } catch {}
 }
@@ -332,38 +343,55 @@ function renderRoadList(communityRoads, curatedList) {
   }
 }
 
-function renderRoadPolylines(roads) {
-  // Clear old
-  Object.values(roadPolylines).forEach(p => p.remove());
+async function renderRoadPolylines(roads) {
+  Object.values(roadPolylines).forEach(p => { if (p.remove) p.remove(); });
   roadPolylines = {};
 
-  roads.forEach(r => {
-    if (!r.points || r.points.length < 2) return;
+  await Promise.all(roads.map(async r => {
+    if (!r.points || r.points.length < 1) return;
     const color = DIFF_COLORS[r.difficulty] || '#dc2222';
-    const line = L.polyline(r.points, { color, weight: 4, opacity: 0.85 }).addTo(roadsMap);
+
+    const isWaypoint = r.point_type === 'waypoint' || r.points.length === 1;
 
     const popupHtml = `
       <div class="road-popup">
         <h4>${esc(r.name)}</h4>
         ${r.description ? `<p>${esc(r.description)}</p>` : ''}
         <div class="popup-meta">
-          <span class="road-diff diff-${r.difficulty}">${r.difficulty}</span>
+          ${isWaypoint
+            ? `<span class="road-diff diff-${r.difficulty}" style="background:#6366f1">${esc(r.spot_category || 'Spot')}</span>`
+            : `<span class="road-diff diff-${r.difficulty}">${r.difficulty}</span>`}
           ${r.region ? `<span style="font-size:11px;color:#888">${esc(r.region)}</span>` : ''}
         </div>
         <p style="font-size:11px;color:#888;margin-top:4px">by ${esc(r.submitted_by||'Driver')} · ♥ ${r.likes||0}</p>
-        <button class="nav-popup-btn" onclick="window.openNavPanel('${r.id}')">
+        ${!isWaypoint ? `<button class="nav-popup-btn" onclick="window.openNavPanel('${r.id}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
           Navigate
-        </button>
+        </button>` : ''}
       </div>`;
-    line.bindPopup(popupHtml);
-    roadPolylines[r.id] = line;
 
-    // Start marker
-    L.circleMarker(r.points[0], {
+    if (isWaypoint) {
+      const pin = L.circleMarker(r.points[0], {
+        radius: 8, color: '#6366f1', fillColor: '#6366f1', fillOpacity: 1, weight: 2
+      }).addTo(roadsMap).bindPopup(popupHtml);
+      roadPolylines[r.id] = pin;
+      return;
+    }
+
+    // Snap community road to actual road path via OSRM
+    const waypoints = samplePoints(r.points, 25);
+    const snapped = await snapToRoad(`community-${r.id}`, waypoints);
+
+    const line = L.polyline(snapped, { color, weight: 4, opacity: 0.85 }).addTo(roadsMap);
+    line.bindPopup(popupHtml);
+
+    const startMarker = L.circleMarker(snapped[0], {
       radius: 5, color, fillColor: color, fillOpacity: 1, weight: 2
     }).addTo(roadsMap).bindPopup(popupHtml);
-  });
+
+    const group = L.layerGroup([line, startMarker]);
+    roadPolylines[r.id] = group;
+  }));
 }
 
 const CURATED_DIFF_COLORS = { 1: '#22c55e', 2: '#22c55e', 3: '#f59e0b', 4: '#f97316', 5: '#dc2222' };
@@ -438,8 +466,11 @@ async function renderCuratedPolylines(roads) {
 function flyToRoad(road) {
   const pts = road.points || road.geometry;
   if (!pts || pts.length === 0) return;
-  const bounds = L.latLngBounds(pts);
-  roadsMap.fitBounds(bounds, { padding: [60, 60] });
+  if (pts.length === 1) {
+    roadsMap.setView(pts[0], 15);
+  } else {
+    roadsMap.fitBounds(L.latLngBounds(pts), { padding: [60, 60] });
+  }
   // openPopup on the polyline inside the layer group if present
   const layer = roadPolylines[road.id] || curatedPolylines[`curated-${road.id}`] || curatedPolylines[road.id];
   if (layer) {
@@ -457,19 +488,53 @@ document.getElementById('addRoadBtn').addEventListener('click', () => {
 
 document.getElementById('cancelAddRoadBtn').addEventListener('click', cancelAddMode);
 document.getElementById('doneAddRoadBtn').addEventListener('click', () => {
-  if (pendingPoints.length < 2) { alert('Click at least 2 points on the map to define the road.'); return; }
+  const minPts = addModeType === 'waypoint' ? 1 : 2;
+  if (pendingPoints.length < minPts) {
+    alert(addModeType === 'waypoint' ? 'Click one spot on the map.' : 'Click at least 2 points on the map to define the road.');
+    return;
+  }
   cancelAddMode(false);
+  const isSpot = addModeType === 'waypoint';
+  document.getElementById('addRoadModalTitle').textContent = isSpot ? 'Name This Spot' : 'Name This Road';
+  document.getElementById('submitRoadBtn').textContent = isSpot ? 'Submit Spot' : 'Submit Road';
+  document.getElementById('roadName').placeholder = isSpot ? 'Spot name (e.g. Best Viewpoint on 33)' : 'Road name (e.g. Angeles Crest Highway)';
+  document.querySelectorAll('.road-only-field').forEach(el => el.style.display = isSpot ? 'none' : '');
+  document.querySelectorAll('.spot-only-field').forEach(el => el.style.display = isSpot ? '' : 'none');
   document.getElementById('addRoadOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 });
 
 function enterAddMode() {
   addModeActive = true;
+  addModeType = 'road';
   pendingPoints = []; pendingMarkers = []; pendingPolyline = null;
   document.getElementById('addModeHint').style.display = 'flex';
   document.getElementById('addRoadBtn').style.display = 'none';
+  document.getElementById('addTypeRoad').classList.add('active');
+  document.getElementById('addTypeSpot').classList.remove('active');
+  document.getElementById('addModeHintText').innerHTML = 'Click on the map to place waypoints for your road. Click <strong>Done</strong> when finished (min 2 points).';
   roadsMap.getContainer().style.cursor = 'crosshair';
 }
+
+document.getElementById('addTypeRoad').addEventListener('click', () => {
+  addModeType = 'road';
+  document.getElementById('addTypeRoad').classList.add('active');
+  document.getElementById('addTypeSpot').classList.remove('active');
+  document.getElementById('addModeHintText').innerHTML = 'Click on the map to place waypoints for your road. Click <strong>Done</strong> when finished (min 2 points).';
+  pendingMarkers.forEach(m => m.remove()); pendingMarkers = [];
+  if (pendingPolyline) { pendingPolyline.remove(); pendingPolyline = null; }
+  pendingPoints = [];
+});
+
+document.getElementById('addTypeSpot').addEventListener('click', () => {
+  addModeType = 'waypoint';
+  document.getElementById('addTypeSpot').classList.add('active');
+  document.getElementById('addTypeRoad').classList.remove('active');
+  document.getElementById('addModeHintText').innerHTML = 'Click one spot on the map to pin it. Click <strong>Done</strong> when finished.';
+  pendingMarkers.forEach(m => m.remove()); pendingMarkers = [];
+  if (pendingPolyline) { pendingPolyline.remove(); pendingPolyline = null; }
+  pendingPoints = [];
+});
 
 function cancelAddMode(clearPending = true) {
   addModeActive = false;
@@ -506,6 +571,8 @@ document.getElementById('submitRoadBtn').addEventListener('click', async () => {
         difficulty: document.getElementById('roadDifficulty').value,
         description: document.getElementById('roadDesc').value.trim(),
         points: pendingPoints,
+        point_type: addModeType,
+        spot_category: addModeType === 'waypoint' ? document.getElementById('spotCategory').value : '',
       }),
     });
     const data = await res.json();

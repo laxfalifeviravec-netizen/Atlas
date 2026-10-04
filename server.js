@@ -946,6 +946,22 @@ const db = {
     const e = { id: _evId++, ...fields, created_at: now() };
     _events.push(e); return e;
   },
+  async deleteEvent(eventId, userId) {
+    if (USE_SUPABASE) {
+      const { data: e } = await sb.from('events').select('creator_id').eq('id', eventId).single();
+      if (!e) return { error: 'not_found' };
+      if (e.creator_id !== userId) return { error: 'forbidden' };
+      await sb.from('event_rsvps').delete().eq('event_id', eventId);
+      await sb.from('events').delete().eq('id', eventId);
+      return { ok: true };
+    }
+    const idx = _events.findIndex(e => e.id === eventId);
+    if (idx === -1) return { error: 'not_found' };
+    if (_events[idx].creator_id !== userId) return { error: 'forbidden' };
+    _events.splice(idx, 1);
+    _eventRsvps = _eventRsvps.filter(r => r.event_id !== eventId);
+    return { ok: true };
+  },
   async toggleEventRsvp(eventId, userId) {
     if (USE_SUPABASE) {
       const { data: existing } = await sb.from('event_rsvps').select().eq('event_id', eventId).eq('user_id', userId).single();
@@ -1964,6 +1980,15 @@ app.post('/api/events/:id/rsvp', requireAuth, async (req, res) => {
 app.get('/api/events/:id/attendees', async (req, res) => {
   try { res.json({ attendees: await db.getEventAttendees(parseInt(req.params.id)) }); }
   catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.delete('/api/events/:id', requireAuth, async (req, res) => {
+  try {
+    const result = await db.deleteEvent(parseInt(req.params.id), req.user.id);
+    if (result.error === 'not_found') return res.status(404).json({ error: 'Event not found.' });
+    if (result.error === 'forbidden') return res.status(403).json({ error: 'Only the organiser can delete this event.' });
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
 // ── Car Garage ────────────────────────────────────────────────

@@ -28,6 +28,8 @@ async function loadMe() {
 }
 
 // ── Load events ────────────────────────────────────────────────
+let allEvents = [];
+
 async function loadEvents() {
   const loading = document.getElementById('eventsLoading');
   const empty   = document.getElementById('eventsEmpty');
@@ -40,14 +42,15 @@ async function loadEvents() {
   try {
     const res = await fetch(`${API}/api/events`);
     const { events } = await res.json();
+    allEvents = events || [];
     loading.style.display = 'none';
 
-    if (!events || events.length === 0) {
+    if (allEvents.length === 0) {
       empty.style.display = '';
       return;
     }
 
-    events.forEach(evt => {
+    allEvents.forEach(evt => {
       list.appendChild(buildEventCard(evt));
     });
   } catch {
@@ -123,6 +126,7 @@ async function openEventDetail(evt) {
 
   const canRsvp = !isPast && token;
   const isGoing = evt.going;
+  const isCreator = currentUser && currentUser.id === evt.creator_id;
 
   document.getElementById('evtDetailBody').innerHTML = `
     <div class="evt-detail-date">${esc(dateStr)} at ${esc(timeStr)}</div>
@@ -138,14 +142,32 @@ async function openEventDetail(evt) {
         ${isGoing ? 'Can\'t go' : 'I\'m going!'}
       </button>
     </div>` : `<div class="evt-rsvp-row"><span class="evt-going-label">${evt.attendee_count || 0} going${isPast ? ' — past event' : ''}</span></div>`}
+    ${isCreator ? `<button class="btn btn-full" id="deleteEvtBtn" style="margin-top:12px;border:1px solid #dc2626;color:#dc2626;background:transparent">Delete Event</button>` : ''}
     ${attendeesHtml}`;
 
   if (canRsvp) {
     document.getElementById('rsvpBtn').addEventListener('click', () => toggleRsvp(evt));
   }
+  if (isCreator) {
+    document.getElementById('deleteEvtBtn').addEventListener('click', () => deleteEvent(evt));
+  }
 
   detailOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+
+async function deleteEvent(evt) {
+  if (!confirm(`Delete "${evt.title}"? This cannot be undone.`)) return;
+  try {
+    const res = await fetch(`${API}/api/events/${evt.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) { alert('Could not delete event.'); return; }
+    detailOverlay.classList.remove('open');
+    document.body.style.overflow = '';
+    await loadEvents();
+  } catch { alert('Network error.'); }
 }
 
 async function toggleRsvp(evt) {

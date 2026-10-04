@@ -828,14 +828,20 @@ document.getElementById('onboardingDone')?.addEventListener('click', () => {
 
 async function requestPushPermission() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  if (localStorage.getItem('culture-push-asked')) return;
-  localStorage.setItem('culture-push-asked', '1');
+  // Only prompt once; but always re-send subscription if already granted
+  const alreadyAsked = localStorage.getItem('culture-push-asked');
+  if (!alreadyAsked) localStorage.setItem('culture-push-asked', '1');
   try {
     const r = await fetch(`${API}/api/push/vapid-key`);
     const { publicKey } = await r.json();
     if (!publicKey) return;
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return;
+    if (alreadyAsked) {
+      // Already asked before — don't prompt again, but re-send existing subscription
+      if (Notification.permission !== 'granted') return;
+    } else {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return;
+    }
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,

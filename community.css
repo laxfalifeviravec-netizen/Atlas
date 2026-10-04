@@ -165,6 +165,56 @@ body {
 }
 
 /* ── Feed tabs ─────────────────────────────────────────────── */
+/* ── Feature shortcuts row ─────────────────────────────────── */
+.feature-shortcuts {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 12px 16px;
+  background: var(--c-bg);
+  border-bottom: 1px solid var(--c-border);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.feature-shortcuts::-webkit-scrollbar { display: none; }
+
+.fshort-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  flex-shrink: 0;
+  width: 64px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fshort-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-text);
+  transition: background 0.15s, transform 0.1s;
+}
+.fshort-item:active .fshort-icon {
+  background: var(--c-surface-2, #1e1e24);
+  transform: scale(0.94);
+}
+
+.fshort-item span {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-text-2);
+  text-align: center;
+  line-height: 1.2;
+  font-family: var(--font-ui);
+}
+
 .feed-tabs {
   display: flex;
   background: var(--c-surface);

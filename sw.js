@@ -3,7 +3,7 @@
    Caches the app shell so it loads instantly and works offline.
    ============================================================ */
 
-const CACHE = 'culture-v23';
+const CACHE = 'culture-v24';
 
 const APP_SHELL = [
   '/',
@@ -45,6 +45,7 @@ const APP_SHELL = [
   '/marketplace.js',
   '/pricing.html',
   '/privacy.html',
+  '/terms.html',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -68,6 +69,22 @@ self.addEventListener('activate', e => {
       Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
+});
+
+// Push notifications
+self.addEventListener('push', e => {
+  const data = e.data?.json() || {};
+  e.waitUntil(self.registration.showNotification(data.title || 'One Culture', {
+    body: data.body || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    data: { type: data.type, post_id: data.post_id },
+  }));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(clients.openWindow('/community.html'));
 });
 
 // Fetch — serve from cache first, then network; always update cache for app shell

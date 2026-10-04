@@ -15,6 +15,8 @@ const fs         = require('fs');
 const crypto     = require('crypto');
 const rateLimit  = require('express-rate-limit');
 const { Resend } = require('resend');
+const sharp    = require('sharp');
+const webpush  = require('web-push');
 
 const app = express();
 const PORT       = process.env.PORT || 3001;
@@ -25,6 +27,13 @@ const RESEND_KEY = process.env.RESEND_API_KEY || '';
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Culture <noreply@one-culture.app>';
 
 const resendClient = RESEND_KEY ? new Resend(RESEND_KEY) : null;
+
+const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY  || '';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
+const VAPID_EMAIL       = process.env.VAPID_EMAIL       || 'mailto:admin@one-culture.app';
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+}
 
 // ── Rate limiters ─────────────────────────────────────────────
 const authLimiter = rateLimit({
@@ -84,12 +93,27 @@ const upload = multer({
   },
 });
 
-async function storeImage(file) {
+async function storeImage(file, opts = {}) {
   if (USE_SUPABASE) {
-    const ext = path.extname(file.originalname).toLowerCase() || (file.mimetype.startsWith('video/') ? '.mp4' : '.jpg');
+    const isVideo = file.mimetype.startsWith('video/');
+    let buffer = file.buffer;
+    let contentType = file.mimetype;
+    let ext = path.extname(file.originalname).toLowerCase() || (isVideo ? '.mp4' : '.jpg');
+
+    if (!isVideo) {
+      const maxW = opts.maxWidth  || 1200;
+      const maxH = opts.maxHeight || 1200;
+      buffer = await sharp(file.buffer)
+        .resize(maxW, maxH, { fit: opts.fit || 'inside', withoutEnlargement: true })
+        .jpeg({ quality: opts.quality || 85 })
+        .toBuffer();
+      contentType = 'image/jpeg';
+      ext = '.jpg';
+    }
+
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-    const { error } = await sb.storage.from('uploads').upload(filename, file.buffer, {
-      contentType: file.mimetype, upsert: false,
+    const { error } = await sb.storage.from('uploads').upload(filename, buffer, {
+      contentType, upsert: false,
     });
     if (error) throw error;
     const { data } = sb.storage.from('uploads').getPublicUrl(filename);
@@ -114,6 +138,8 @@ let _events = [];       // { id, creator_id, title, description, date, location,
 let _eventRsvps = [];   // { event_id, user_id }
 let _cars = [];         // { id, user_id, year, make, model, color, mods, created_at }
 let _convId = 1, _msgId = 1, _evId = 1, _carId = 1;
+let _blocks = [], _reports = [], _pushSubs = [];
+let _repId = 1, _psId = 1;
 function now() { return new Date().toISOString(); }
 
 // ── Middleware ────────────────────────────────────────────────
@@ -180,7 +206,7 @@ const db = {
   },
 
   // ── Posts ──
-  async getPosts(page, limit, userId, followingIds = null) {
+  async getPosts(page, limit, userId, followingIds = null, blockedIds = []) {
     const offset = (page - 1) * limit;
     if (USE_SUPABASE) {
       let query = sb.from('posts')
@@ -192,6 +218,7 @@ const db = {
       } else if (followingIds !== null) {
         return { posts: [], total: 0 };
       }
+      if (blockedIds.length > 0) query = query.not('user_id', 'in', `(${blockedIds.join(',')})`);
       const { data, count } = await query.range(offset, offset + limit - 1);
       const likedIds = new Set();
       if (userId && data?.length) {
@@ -213,6 +240,7 @@ const db = {
       if (followingIds.length === 0) return { posts: [], total: 0 };
       source = source.filter(p => followingIds.includes(p.user_id));
     }
+    if (blockedIds.length > 0) source = source.filter(p => !blockedIds.includes(p.user_id));
     return {
       posts: source.slice(offset, offset + limit).map(p => {
         const u = _users.find(u => u.id === p.user_id) || {};
@@ -729,12 +757,11 @@ const db = {
     _notifications.filter(n => n.user_id === userId && !n.read).forEach(n => { n.read = true; });
   },
   async createNotification(fields) {
-    if (fields.user_id === fields.actor_id) return; // no self-notifications
-    if (USE_SUPABASE) {
-      await sb.from('notifications').insert(fields);
-      return;
-    }
-    _notifications.push({ id: _nid++, ...fields, read: false, created_at: now() });
+    if (fields.user_id === fields.actor_id) return;
+    if (USE_SUPABASE) await sb.from('notifications').insert(fields);
+    else _notifications.push({ id: _nid++, ...fields, read: false, created_at: now() });
+    const titles = { like: `${fields.actor_name} liked your post`, comment: `${fields.actor_name} commented on your post`, follow: `${fields.actor_name} started following you`, message: `New message from ${fields.actor_name}` };
+    sendPushToUser(fields.user_id, { title: titles[fields.type] || 'New notification', body: '', type: fields.type, post_id: fields.post_id }).catch(() => {});
   },
 
   // ── Search ──
@@ -849,6 +876,13 @@ const db = {
       const unread = msgs.filter(m => m.sender_id !== userId && !m.read).length;
       return { id: convId, other_user_id: other?.user_id, other_name: otherUser.name || '?', other_avatar: otherUser.avatar || null, last_message: msgs[0] || null, unread };
     }).filter(c => c.other_user_id);
+  },
+  async getConversationMembers(convId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('conversation_members').select('user_id').eq('conv_id', convId);
+      return (data || []).map(r => r.user_id);
+    }
+    return _convMembers.filter(m => m.conv_id === convId).map(m => m.user_id);
   },
   async getMessages(convId, userId) {
     if (USE_SUPABASE) {
@@ -1008,6 +1042,104 @@ const db = {
     return entry.email;
   },
 
+  // ── Blocks ──
+  async blockUser(blockerId, blockedId) {
+    if (USE_SUPABASE) {
+      await sb.from('blocks').upsert({ blocker_id: blockerId, blocked_id: blockedId }, { onConflict: 'blocker_id,blocked_id' });
+      return { ok: true };
+    }
+    if (!_blocks.find(b => b.blocker_id === blockerId && b.blocked_id === blockedId))
+      _blocks.push({ blocker_id: blockerId, blocked_id: blockedId });
+    return { ok: true };
+  },
+  async unblockUser(blockerId, blockedId) {
+    if (USE_SUPABASE) {
+      await sb.from('blocks').delete().eq('blocker_id', blockerId).eq('blocked_id', blockedId);
+      return { ok: true };
+    }
+    _blocks = _blocks.filter(b => !(b.blocker_id === blockerId && b.blocked_id === blockedId));
+    return { ok: true };
+  },
+  async isBlocked(blockerId, blockedId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('blocks').select('blocker_id').eq('blocker_id', blockerId).eq('blocked_id', blockedId).maybeSingle();
+      return !!data;
+    }
+    return !!_blocks.find(b => b.blocker_id === blockerId && b.blocked_id === blockedId);
+  },
+  async getBlockedIds(userId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('blocks').select('blocked_id').eq('blocker_id', userId);
+      return (data || []).map(b => b.blocked_id);
+    }
+    return _blocks.filter(b => b.blocker_id === userId).map(b => b.blocked_id);
+  },
+
+  // ── Reports ──
+  async reportContent(fields) {
+    if (USE_SUPABASE) { await sb.from('reports').insert(fields); return { ok: true }; }
+    _reports.push({ id: _repId++, ...fields, created_at: now() });
+    return { ok: true };
+  },
+
+  // ── Push subscriptions ──
+  async savePushSubscription(userId, sub) {
+    if (USE_SUPABASE) {
+      await sb.from('push_subscriptions').upsert(
+        { user_id: userId, endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth },
+        { onConflict: 'endpoint' }
+      );
+      return { ok: true };
+    }
+    const idx = _pushSubs.findIndex(s => s.endpoint === sub.endpoint);
+    if (idx !== -1) _pushSubs[idx].user_id = userId;
+    else _pushSubs.push({ id: _psId++, user_id: userId, endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth });
+    return { ok: true };
+  },
+  async deletePushSubscription(endpoint) {
+    if (USE_SUPABASE) { await sb.from('push_subscriptions').delete().eq('endpoint', endpoint); return { ok: true }; }
+    _pushSubs = _pushSubs.filter(s => s.endpoint !== endpoint);
+    return { ok: true };
+  },
+  async getUserPushSubscriptions(userId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('push_subscriptions').select('*').eq('user_id', userId);
+      return data || [];
+    }
+    return _pushSubs.filter(s => s.user_id === userId);
+  },
+
+  // ── Suggested users (most followed, not already followed) ──
+  async getSuggestedUsers(forUserId, limit = 8) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('follows')
+        .select('following_id, users!follows_following_id_fkey(id, name, avatar, bio, plan)')
+        .not('following_id', 'eq', forUserId)
+        .limit(100);
+      if (!data) return [];
+      const counts = {};
+      data.forEach(r => { counts[r.following_id] = (counts[r.following_id] || 0) + 1; });
+      const followingMe = forUserId ? (await sb.from('follows').select('following_id').eq('follower_id', forUserId)).data?.map(f => f.following_id) || [] : [];
+      const ranked = Object.entries(counts)
+        .filter(([id]) => !followingMe.includes(parseInt(id)) && parseInt(id) !== forUserId)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([id]) => data.find(r => r.following_id === parseInt(id))?.users)
+        .filter(Boolean);
+      return ranked;
+    }
+    const counts = {};
+    _follows.forEach(f => { counts[f.following_id] = (counts[f.following_id] || 0) + 1; });
+    const myFollows = new Set(_follows.filter(f => f.follower_id === forUserId).map(f => f.following_id));
+    return Object.entries(counts)
+      .filter(([id]) => !myFollows.has(parseInt(id)) && parseInt(id) !== forUserId)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([id]) => _users.find(u => u.id === parseInt(id)))
+      .filter(Boolean)
+      .map(u => ({ id: u.id, name: u.name, avatar: u.avatar, bio: u.bio, plan: u.plan }));
+  },
+
   async deleteUser(id) {
     if (USE_SUPABASE) {
       await sb.from('users').delete().eq('id', id);
@@ -1018,6 +1150,22 @@ const db = {
     return { ok: true };
   },
 };
+
+// ── Push helper ───────────────────────────────────────────────
+async function sendPushToUser(userId, payload) {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
+  try {
+    const subs = await db.getUserPushSubscriptions(userId);
+    const body = JSON.stringify(payload);
+    await Promise.all(subs.map(async sub => {
+      try {
+        await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, body);
+      } catch (e) {
+        if (e.statusCode === 410 || e.statusCode === 404) db.deletePushSubscription(sub.endpoint).catch(() => {});
+      }
+    }));
+  } catch {}
+}
 
 // ── Apple Sign In helpers ────────────────────────────────────
 const APPLE_SERVICE_ID = process.env.APPLE_SERVICE_ID || '';
@@ -1101,7 +1249,7 @@ app.patch('/api/auth/me', requireAuth, upload.single('avatar'), async (req, res)
     const fields = {};
     if (name?.trim()) fields.name = name.trim();
     if (bio !== undefined) fields.bio = bio.trim();
-    if (req.file) fields.avatar = await storeImage(req.file);
+    if (req.file) fields.avatar = await storeImage(req.file, { maxWidth: 400, maxHeight: 400, fit: 'cover', quality: 80 });
     const user = await db.updateUser(req.user.id, fields);
     if (!user) return res.status(404).json({ error: 'User not found.' });
     res.json({ user: safeUser(user), token: makeToken(user) });
@@ -1236,6 +1384,68 @@ app.delete('/api/auth/me', requireAuth, async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Could not delete account.' }); }
 });
 
+// ── Block routes ─────────────────────────────────────────────
+app.post('/api/block/:userId', requireAuth, async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.userId);
+    if (targetId === req.user.id) return res.status(400).json({ error: 'Cannot block yourself.' });
+    await db.blockUser(req.user.id, targetId);
+    // Also unfollow both directions
+    await db.unfollow(req.user.id, targetId).catch(() => {});
+    await db.unfollow(targetId, req.user.id).catch(() => {});
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.delete('/api/block/:userId', requireAuth, async (req, res) => {
+  try {
+    await db.unblockUser(req.user.id, parseInt(req.params.userId));
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// ── Report route ──────────────────────────────────────────────
+app.post('/api/report', requireAuth, async (req, res) => {
+  try {
+    const { target_type, target_id, reason = '' } = req.body;
+    if (!target_type || !target_id) return res.status(400).json({ error: 'Missing target.' });
+    if (!['post', 'user'].includes(target_type)) return res.status(400).json({ error: 'Invalid target_type.' });
+    await db.reportContent({ reporter_id: req.user.id, target_type, target_id: parseInt(target_id), reason });
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// ── Push subscription routes ──────────────────────────────────
+app.get('/api/push/vapid-key', (req, res) => {
+  res.json({ publicKey: VAPID_PUBLIC_KEY || null });
+});
+
+app.post('/api/push/subscribe', requireAuth, async (req, res) => {
+  try {
+    const sub = req.body;
+    if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth)
+      return res.status(400).json({ error: 'Invalid subscription object.' });
+    await db.savePushSubscription(req.user.id, sub);
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.delete('/api/push/subscribe', requireAuth, async (req, res) => {
+  try {
+    const { endpoint } = req.body;
+    if (endpoint) await db.deletePushSubscription(endpoint);
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// ── Suggested users ───────────────────────────────────────────
+app.get('/api/users/suggested', optionalAuth, async (req, res) => {
+  try {
+    const users = await db.getSuggestedUsers(req.user?.id || 0, 8);
+    res.json({ users });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
 // ── Post routes ───────────────────────────────────────────────
 app.get('/api/posts', optionalAuth, async (req, res) => {
   try {
@@ -1246,7 +1456,8 @@ app.get('/api/posts', optionalAuth, async (req, res) => {
       const followed = await db.getFollowing(req.user.id);
       followingIds = followed.map(u => u.id);
     }
-    const { posts, total } = await db.getPosts(page, limit, req.user?.id, followingIds);
+    const blockedIds = req.user ? await db.getBlockedIds(req.user.id) : [];
+    const { posts, total } = await db.getPosts(page, limit, req.user?.id, followingIds, blockedIds);
     res.json({ posts, total, page, pages: Math.ceil(total / limit) });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
@@ -1621,8 +1832,10 @@ app.get('/api/posts/:id', optionalAuth, async (req, res) => {
 // ── Follow routes ─────────────────────────────────────────────
 app.post('/api/follow/:id', requireAuth, async (req, res) => {
   try {
-    const result = await db.followUser(req.user.id, parseInt(req.params.id));
+    const targetId = parseInt(req.params.id);
+    const result = await db.followUser(req.user.id, targetId);
     if (result.error === 'self') return res.status(400).json({ error: 'Cannot follow yourself.' });
+    if (result.following) db.createNotification({ user_id: targetId, actor_id: req.user.id, actor_name: req.user.name || '', type: 'follow', post_id: null }).catch(() => {});
     res.json(result);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
@@ -1705,6 +1918,11 @@ app.post('/api/conversations/:id/messages', requireAuth, async (req, res) => {
     const msgs = await db.getMessages(convId, req.user.id);
     if (!msgs) return res.status(403).json({ error: 'Access denied.' });
     const msg = await db.sendMessage(convId, req.user.id, body.trim());
+    // Notify the other participant
+    const convMembers = await db.getConversationMembers(convId).catch(() => []);
+    convMembers.filter(id => id !== req.user.id).forEach(recipientId => {
+      db.createNotification({ user_id: recipientId, actor_id: req.user.id, actor_name: req.user.name || '', type: 'message', post_id: null }).catch(() => {});
+    });
     res.status(201).json({ message: msg });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });

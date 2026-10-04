@@ -336,6 +336,13 @@ function buildPostCard(p) {
     delBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
     delBtn.addEventListener('click', () => deletePost(p.id, card));
     card.querySelector('.post-card-actions').appendChild(delBtn);
+  } else if (currentUser) {
+    const reportBtn = document.createElement('button');
+    reportBtn.className = 'post-action-btn post-report-btn';
+    reportBtn.title = 'Report post';
+    reportBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`;
+    reportBtn.addEventListener('click', () => reportPost(p.id, reportBtn));
+    card.querySelector('.post-card-actions').appendChild(reportBtn);
   }
   return card;
 }
@@ -750,6 +757,23 @@ async function deletePost(postId, cardEl) {
   } catch {}
 }
 
+// ── Report post ────────────────────────────────────────────
+async function reportPost(postId, btn) {
+  if (!currentUser) return openAuth();
+  const reason = prompt('Why are you reporting this post? (optional)') ?? '';
+  if (reason === null) return;
+  btn.disabled = true;
+  try {
+    await fetch(`${API}/api/report`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_type: 'post', target_id: postId, reason })
+    });
+    btn.title = 'Reported';
+    btn.style.opacity = '0.4';
+  } catch {} finally { btn.disabled = false; }
+}
+
 // ── Share post ─────────────────────────────────────────────
 function sharePost(postId) {
   const url = `${location.origin}/community.html?post=${postId}`;
@@ -784,7 +808,8 @@ document.getElementById('onboardingDone')?.addEventListener('click', () => {
 // ── Init ───────────────────────────────────────────────────
 (async () => {
   await loadMe();
-  const _cp = new URLSearchParams(location.search).get('create');
+  const _sp = new URLSearchParams(location.search);
+  const _cp = _sp.get('create');
   if (_cp === 'post') openNewPost();
   else if (_cp === 'story') openNewStory();
   await Promise.all([loadFeed(true), loadStories()]);
@@ -792,5 +817,41 @@ document.getElementById('onboardingDone')?.addEventListener('click', () => {
     document.getElementById('notifBtn').style.display = '';
     loadNotifications();
     notifPollTimer = setInterval(loadNotifications, 30000);
+    // Show onboarding for brand-new users
+    if (_sp.get('new') === '1' && !localStorage.getItem('culture-onboarded')) {
+      showOnboarding();
+    }
+    // Request push permission after a short delay
+    setTimeout(requestPushPermission, 4000);
   }
 })();
+
+async function requestPushPermission() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (localStorage.getItem('culture-push-asked')) return;
+  localStorage.setItem('culture-push-asked', '1');
+  try {
+    const r = await fetch(`${API}/api/push/vapid-key`);
+    const { publicKey } = await r.json();
+    if (!publicKey) return;
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+    await fetch(`${API}/api/push/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(sub),
+    });
+  } catch {}
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}

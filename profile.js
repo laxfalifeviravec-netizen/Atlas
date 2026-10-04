@@ -121,7 +121,8 @@ function renderActions(user) {
       <button class="btn ${isFollowing ? 'btn-unfollow' : 'btn-follow'}" id="followBtn">
         ${isFollowing ? 'Following' : 'Follow'}
       </button>
-      <button class="btn btn-outline" id="msgBtn" style="display:none">Message</button>`;
+      <button class="btn btn-outline" id="msgBtn" style="display:none">Message</button>
+      <button class="btn btn-outline" id="blockBtn" style="display:none;color:#dc2626;border-color:#dc2626">Block</button>`;
     document.getElementById('followBtn').addEventListener('click', toggleFollow);
     if (currentUser) {
       const msgBtn = document.getElementById('msgBtn');
@@ -129,8 +130,27 @@ function renderActions(user) {
       msgBtn.addEventListener('click', () => {
         location.href = `chat.html?user=${user.id}&name=${encodeURIComponent(user.name)}`;
       });
+      const blockBtn = document.getElementById('blockBtn');
+      blockBtn.style.display = '';
+      blockBtn.addEventListener('click', () => blockUser(user.id, blockBtn));
     }
   }
+}
+
+async function blockUser(userId, btn) {
+  if (!confirm('Block this user? They will no longer be able to interact with you.')) return;
+  btn.disabled = true;
+  try {
+    await fetch(`${API}/api/block/${userId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    btn.textContent = 'Blocked';
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    document.getElementById('followBtn').style.display = 'none';
+    document.getElementById('msgBtn').style.display = 'none';
+  } catch { btn.disabled = false; }
 }
 
 async function toggleFollow() {

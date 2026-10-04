@@ -422,7 +422,7 @@
         const d = await r.json();
         if (!r.ok) { document.getElementById('regErr').textContent = d.error || 'Registration failed.'; return; }
         localStorage.setItem('culture-token', d.token);
-        location.replace('community.html');
+        location.replace('community.html?new=1');
       } catch { document.getElementById('regErr').textContent = 'Network error. Try again.'; }
       finally { setLoading(btn, false); }
     });

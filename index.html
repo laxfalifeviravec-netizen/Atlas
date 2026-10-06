@@ -591,29 +591,45 @@
         document.getElementById('loginErr').textContent = 'Apple sign-in failed: ' + code;
       });
 
-      appleBtn.addEventListener('click', () => {
-        if (typeof AppleID === 'undefined') {
-          document.getElementById('loginErr').textContent = 'Apple Sign In not available. Check your connection.';
-          return;
-        }
-        AppleID.auth.signIn();
-      });
-
-      // Init Apple SDK once script loads
       // PWA installed on iOS doesn't support popups — detect standalone mode
       const isStandalone = window.navigator.standalone === true;
+      let appleClientId = null;
+
+      appleBtn.addEventListener('click', () => {
+        if (!appleClientId) {
+          document.getElementById('loginErr').textContent = 'Apple Sign In not available.';
+          return;
+        }
+        if (isStandalone || typeof AppleID === 'undefined') {
+          // Bypass SDK — navigate directly to Apple OAuth URL (works in PWA/WKWebView)
+          const params = new URLSearchParams({
+            response_type: 'code id_token',
+            client_id: appleClientId,
+            redirect_uri: window.location.origin + '/api/auth/apple/callback',
+            scope: 'name email',
+            response_mode: 'form_post',
+            state: Math.random().toString(36).slice(2),
+          });
+          window.location.href = 'https://appleid.apple.com/auth/authorize?' + params.toString();
+        } else {
+          AppleID.auth.signIn();
+        }
+      });
+
       function initApple(clientId) {
+        appleClientId = clientId;
         if (!clientId || typeof AppleID === 'undefined') return;
         AppleID.auth.init({
           clientId,
           scope: 'name email',
           redirectURI: window.location.origin + '/api/auth/apple/callback',
-          usePopup: !isStandalone,
+          usePopup: true,
         });
       }
 
       fetch('/api/auth/apple-client-id').then(r => r.json()).then(d => {
         if (d.clientId) {
+          appleClientId = d.clientId;
           if (typeof AppleID !== 'undefined') initApple(d.clientId);
           else document.getElementById('appleIdScript').addEventListener('load', () => initApple(d.clientId));
         }

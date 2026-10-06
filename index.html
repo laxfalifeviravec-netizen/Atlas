@@ -342,6 +342,24 @@
   <script>
     // Handle Apple Sign In redirect callback (iOS native flow)
     (function() {
+      // Check URL fragment for Apple response_mode=fragment
+      const hash = location.hash.slice(1);
+      if (hash && hash.includes('id_token')) {
+        const p = new URLSearchParams(hash);
+        const idToken = p.get('id_token');
+        if (idToken) {
+          history.replaceState(null, '', '/');
+          fetch('/api/auth/apple', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_token: idToken }),
+          }).then(r => r.json()).then(d => {
+            if (d.token) { localStorage.setItem('culture-token', d.token); location.replace('community.html'); }
+          }).catch(() => {});
+          return;
+        }
+      }
+      // Check query params
       const p = new URLSearchParams(location.search);
       const appleToken = p.get('apple_token');
       const appleError = p.get('apple_error');
@@ -351,7 +369,6 @@
         return;
       }
       if (appleError) {
-        // Show error after page loads
         window.__appleError = appleError;
       }
     })();
@@ -604,9 +621,9 @@
           const params = new URLSearchParams();
           params.set('response_type', 'code id_token');
           params.set('client_id', appleClientId);
-          params.set('redirect_uri', window.location.origin + '/api/auth/apple/callback');
+          params.set('redirect_uri', window.location.origin + '/');
           params.set('scope', 'name email');
-          params.set('response_mode', 'form_post');
+          params.set('response_mode', 'fragment');
           params.set('state', Math.random().toString(36).slice(2));
           window.location.href = 'https://appleid.apple.com/auth/authorize?' + params.toString();
         } else {

@@ -591,13 +591,14 @@
       });
 
       // Init Apple SDK once script loads
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       function initApple(clientId) {
         if (!clientId || typeof AppleID === 'undefined') return;
         AppleID.auth.init({
           clientId,
           scope: 'name email',
           redirectURI: window.location.origin + '/api/auth/apple/callback',
-          usePopup: true,
+          usePopup: !isMobile,
         });
       }
 

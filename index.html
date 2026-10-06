@@ -344,10 +344,15 @@
     (function() {
       const p = new URLSearchParams(location.search);
       const appleToken = p.get('apple_token');
+      const appleError = p.get('apple_error');
       if (appleToken) {
         localStorage.setItem('culture-token', appleToken);
         location.replace('community.html');
         return;
+      }
+      if (appleError) {
+        // Show error after page loads
+        window.__appleError = appleError;
       }
     })();
 
@@ -543,6 +548,9 @@
   <!-- Apple Sign In -->
   <script>
     (function() {
+      if (window.__appleError) {
+        document.getElementById('loginErr').textContent = 'Apple sign-in error: ' + window.__appleError;
+      }
       const appleBtn = document.getElementById('appleBtn');
 
       async function handleAppleResponse(idToken, userName) {

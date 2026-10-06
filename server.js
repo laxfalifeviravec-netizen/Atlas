@@ -1406,19 +1406,20 @@ app.get('/api/auth/apple/callback', (req, res) => {
 });
 app.post('/api/auth/apple/callback', async (req, res) => {
   console.log('Apple POST callback body keys:', Object.keys(req.body || {}));
+  const sendPage = (token, error) => {
+    res.setHeader('Content-Type', 'text/html');
+    res.send(`<!doctype html><html><head><meta charset="utf-8"></head><body><script>
+      ${token ? `localStorage.setItem('culture-token', ${JSON.stringify(token)}); location.replace('/community.html');` : `location.replace('/?apple_error=${encodeURIComponent(error || 'failed')}');`}
+    </script></body></html>`);
+  };
   try {
     const id_token = req.body.id_token;
-    if (!id_token) {
-      console.log('Apple callback: no id_token, body:', JSON.stringify(req.body));
-      return res.redirect('/?apple_error=missing_token');
-    }
+    if (!id_token) { console.log('Apple callback missing id_token, body:', JSON.stringify(req.body)); return sendPage(null, 'missing_token'); }
     const userJson = req.body.user ? JSON.parse(req.body.user) : null;
     const name = userJson?.name ? `${userJson.name.firstName || ''} ${userJson.name.lastName || ''}`.trim() : null;
     const result = await handleAppleAuth(id_token, name);
-    // Set cookie so PWA can read token on next open, and redirect to community
-    res.setHeader('Set-Cookie', `apple-auth-token=${encodeURIComponent(result.token)}; Path=/; Max-Age=300; SameSite=Lax`);
-    res.redirect(`/community.html?apple_token=${encodeURIComponent(result.token)}`);
-  } catch (e) { console.error('Apple callback:', e.message); res.redirect('/?apple_error=failed'); }
+    sendPage(result.token, null);
+  } catch (e) { console.error('Apple callback:', e.message); sendPage(null, 'failed'); }
 });
 
 app.delete('/api/auth/me', requireAuth, async (req, res) => {

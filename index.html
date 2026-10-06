@@ -585,9 +585,10 @@
         const userName = n ? `${n.firstName || ''} ${n.lastName || ''}`.trim() : null;
         handleAppleResponse(id_token, userName);
       });
-      document.addEventListener('AppleIDSignInOnFailure', () => {
+      document.addEventListener('AppleIDSignInOnFailure', (e) => {
         appleBtn.disabled = false;
-        document.getElementById('loginErr').textContent = 'Apple sign-in was cancelled.';
+        const code = e.detail?.error || 'unknown';
+        document.getElementById('loginErr').textContent = 'Apple sign-in failed: ' + code;
       });
 
       appleBtn.addEventListener('click', () => {
@@ -599,14 +600,13 @@
       });
 
       // Init Apple SDK once script loads
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       function initApple(clientId) {
         if (!clientId || typeof AppleID === 'undefined') return;
         AppleID.auth.init({
           clientId,
           scope: 'name email',
           redirectURI: window.location.origin + '/api/auth/apple/callback',
-          usePopup: !isMobile,
+          usePopup: true,
         });
       }
 

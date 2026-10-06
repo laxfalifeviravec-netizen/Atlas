@@ -616,7 +616,6 @@
           document.getElementById('loginErr').textContent = 'Apple Sign In not available.';
           return;
         }
-        document.getElementById('loginErr').textContent = 'mobile:' + isMobileDevice;
         if (isMobileDevice) {
           // Direct navigation — works in Safari, PWA, and WKWebView on iOS
           const params = new URLSearchParams();

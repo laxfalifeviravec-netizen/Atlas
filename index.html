@@ -340,6 +340,17 @@
   </div>
 
   <script>
+    // Handle Apple Sign In redirect callback (iOS native flow)
+    (function() {
+      const p = new URLSearchParams(location.search);
+      const appleToken = p.get('apple_token');
+      if (appleToken) {
+        localStorage.setItem('culture-token', appleToken);
+        location.replace('community.html');
+        return;
+      }
+    })();
+
     if (localStorage.getItem('culture-token')) location.replace('community.html');
 
     const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
@@ -585,7 +596,7 @@
         AppleID.auth.init({
           clientId,
           scope: 'name email',
-          redirectURI: window.location.origin + '/index.html',
+          redirectURI: window.location.origin + '/api/auth/apple/callback',
           usePopup: true,
         });
       }

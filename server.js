@@ -1372,25 +1372,42 @@ app.post('/api/auth/google', async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
+async function handleAppleAuth(id_token, user_name) {
+  const payload = await verifyAppleToken(id_token);
+  const email = (payload.email || `${payload.sub}@privaterelay.appleid.com`).toLowerCase();
+  let user = await db.findUserByEmail(email);
+  if (!user) {
+    user = await db.createUser({
+      name: user_name || email.split('@')[0],
+      email,
+      password_hash: null,
+      avatar: null,
+      bio: '',
+      plan: 'Explorer',
+    });
+  }
+  return { token: makeToken(user), user: safeUser(user) };
+}
+
 app.post('/api/auth/apple', async (req, res) => {
   try {
     const { id_token, user_name } = req.body;
     if (!id_token) return res.status(400).json({ error: 'Missing id_token.' });
-    const payload = await verifyAppleToken(id_token);
-    const email = (payload.email || `${payload.sub}@privaterelay.appleid.com`).toLowerCase();
-    let user = await db.findUserByEmail(email);
-    if (!user) {
-      user = await db.createUser({
-        name: user_name || email.split('@')[0],
-        email,
-        password_hash: null,
-        avatar: null,
-        bio: '',
-        plan: 'Explorer',
-      });
-    }
-    res.json({ token: makeToken(user), user: safeUser(user) });
+    const result = await handleAppleAuth(id_token, user_name);
+    res.json(result);
   } catch (e) { console.error('Apple auth:', e.message); res.status(401).json({ error: 'Apple sign-in failed.' }); }
+});
+
+// iOS redirect-mode callback — Apple POSTs here after native Sign in with Apple
+app.post('/api/auth/apple/callback', express.urlencoded({ extended: true }), async (req, res) => {
+  try {
+    const id_token = req.body.id_token;
+    if (!id_token) return res.redirect('/?apple_error=missing_token');
+    const userJson = req.body.user ? JSON.parse(req.body.user) : null;
+    const name = userJson?.name ? `${userJson.name.firstName || ''} ${userJson.name.lastName || ''}`.trim() : null;
+    const result = await handleAppleAuth(id_token, name);
+    res.redirect(`/?apple_token=${encodeURIComponent(result.token)}`);
+  } catch (e) { console.error('Apple callback:', e.message); res.redirect('/?apple_error=failed'); }
 });
 
 app.delete('/api/auth/me', requireAuth, async (req, res) => {

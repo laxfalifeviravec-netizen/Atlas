@@ -1430,7 +1430,7 @@ app.post('/api/auth/apple/callback', async (req, res) => {
     const name = userJson?.name ? `${userJson.name.firstName || ''} ${userJson.name.lastName || ''}`.trim() : null;
     const result = await handleAppleAuth(id_token, name);
     sendPage(result.token, null);
-  } catch (e) { console.error('Apple callback:', e.message); sendPage(null, encodeURIComponent(e.message)); }
+  } catch (e) { console.error('Apple callback:', e.message); sendPage(null, 'failed'); }
 });
 
 app.delete('/api/auth/me', requireAuth, async (req, res) => {

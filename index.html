@@ -585,7 +585,7 @@
         AppleID.auth.init({
           clientId,
           scope: 'name email',
-          redirectURI: window.location.origin,
+          redirectURI: window.location.origin + '/index.html',
           usePopup: true,
         });
       }

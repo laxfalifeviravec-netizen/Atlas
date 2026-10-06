@@ -1363,7 +1363,7 @@ app.post('/api/auth/google', async (req, res) => {
       user = await db.createUser({
         name: info.name || email.split('@')[0],
         email,
-        password_hash: null,
+        password_hash: '$social$google$' + require('crypto').randomBytes(16).toString('hex'),
         avatar: info.picture || null,
         bio: '',
         plan: 'Explorer',
@@ -1381,7 +1381,7 @@ async function handleAppleAuth(id_token, user_name) {
     user = await db.createUser({
       name: user_name || email.split('@')[0],
       email,
-      password_hash: null,
+      password_hash: '$social$apple$' + require('crypto').randomBytes(16).toString('hex'),
       avatar: null,
       bio: '',
       plan: 'Explorer',

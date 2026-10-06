@@ -146,6 +146,7 @@ function now() { return new Date().toISOString(); }
 app.set('trust proxy', 1); // Vercel / any reverse proxy
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(apiLimiter);
 if (!IS_VERCEL) app.use(express.static(path.join(__dirname)));
 if (!USE_SUPABASE) app.use('/uploads', express.static(UPLOADS_DIR));
@@ -1399,7 +1400,7 @@ app.post('/api/auth/apple', async (req, res) => {
 });
 
 // iOS redirect-mode callback — Apple POSTs here after native Sign in with Apple
-app.post('/api/auth/apple/callback', express.urlencoded({ extended: true }), async (req, res) => {
+app.post('/api/auth/apple/callback', async (req, res) => {
   try {
     const id_token = req.body.id_token;
     if (!id_token) return res.redirect('/?apple_error=missing_token');

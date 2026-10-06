@@ -608,7 +608,6 @@
         document.getElementById('loginErr').textContent = 'Apple sign-in failed: ' + code;
       });
 
-      const isMobileDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
       let appleClientId = null;
 
       appleBtn.addEventListener('click', () => {
@@ -616,19 +615,11 @@
           document.getElementById('loginErr').textContent = 'Apple Sign In not available.';
           return;
         }
-        if (isMobileDevice) {
-          // Direct navigation — works in Safari, PWA, and WKWebView on iOS
-          const params = new URLSearchParams();
-          params.set('response_type', 'code id_token');
-          params.set('client_id', appleClientId);
-          params.set('redirect_uri', window.location.origin + '/api/auth/apple/callback');
-          params.set('scope', 'name email');
-          params.set('response_mode', 'form_post');
-          params.set('state', Math.random().toString(36).slice(2));
-          window.location.href = 'https://appleid.apple.com/auth/authorize?' + params.toString();
-        } else {
-          AppleID.auth.signIn();
+        if (typeof AppleID === 'undefined') {
+          document.getElementById('loginErr').textContent = 'Apple Sign In not available. Check your connection.';
+          return;
         }
+        AppleID.auth.signIn();
       });
 
       function initApple(clientId) {

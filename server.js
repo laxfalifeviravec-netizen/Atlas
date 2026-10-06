@@ -1407,7 +1407,9 @@ app.post('/api/auth/apple/callback', async (req, res) => {
     const userJson = req.body.user ? JSON.parse(req.body.user) : null;
     const name = userJson?.name ? `${userJson.name.firstName || ''} ${userJson.name.lastName || ''}`.trim() : null;
     const result = await handleAppleAuth(id_token, name);
-    res.redirect(`/?apple_token=${encodeURIComponent(result.token)}`);
+    // Set cookie so PWA can read token on next open, and redirect to community
+    res.setHeader('Set-Cookie', `apple-auth-token=${encodeURIComponent(result.token)}; Path=/; Max-Age=300; SameSite=Lax`);
+    res.redirect(`/community.html?apple_token=${encodeURIComponent(result.token)}`);
   } catch (e) { console.error('Apple callback:', e.message); res.redirect('/?apple_error=failed'); }
 });
 

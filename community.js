@@ -5,6 +5,12 @@
 const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
   ? 'http://localhost:3001' : '';
 
+// Handle Apple Sign In redirect token
+(function() {
+  const p = new URLSearchParams(location.search);
+  const t = p.get('apple_token');
+  if (t) { localStorage.setItem('culture-token', t); history.replaceState(null, '', 'community.html'); }
+})();
 let token = localStorage.getItem('culture-token');
 if (!token) location.replace('index.html');
 let currentUser = null;

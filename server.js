@@ -1400,10 +1400,18 @@ app.post('/api/auth/apple', async (req, res) => {
 });
 
 // iOS redirect-mode callback — Apple POSTs here after native Sign in with Apple
+app.get('/api/auth/apple/callback', (req, res) => {
+  console.log('Apple GET callback:', JSON.stringify(req.query));
+  res.redirect('/?apple_error=got_get_not_post');
+});
 app.post('/api/auth/apple/callback', async (req, res) => {
+  console.log('Apple POST callback body keys:', Object.keys(req.body || {}));
   try {
     const id_token = req.body.id_token;
-    if (!id_token) return res.redirect('/?apple_error=missing_token');
+    if (!id_token) {
+      console.log('Apple callback: no id_token, body:', JSON.stringify(req.body));
+      return res.redirect('/?apple_error=missing_token');
+    }
     const userJson = req.body.user ? JSON.parse(req.body.user) : null;
     const name = userJson?.name ? `${userJson.name.firstName || ''} ${userJson.name.lastName || ''}`.trim() : null;
     const result = await handleAppleAuth(id_token, name);

@@ -621,9 +621,9 @@
           const params = new URLSearchParams();
           params.set('response_type', 'code id_token');
           params.set('client_id', appleClientId);
-          params.set('redirect_uri', window.location.origin + '/');
+          params.set('redirect_uri', window.location.origin + '/api/auth/apple/callback');
           params.set('scope', 'name email');
-          params.set('response_mode', 'fragment');
+          params.set('response_mode', 'form_post');
           params.set('state', Math.random().toString(36).slice(2));
           window.location.href = 'https://appleid.apple.com/auth/authorize?' + params.toString();
         } else {

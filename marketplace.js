@@ -9,6 +9,7 @@ let token = localStorage.getItem('culture-token');
 let currentUser = null;
 let activeCategory = 'All';
 let listingFile = null;
+let allListings = [];
 
 // ── Theme ──────────────────────────────────────────────────
 const savedTheme = localStorage.getItem('culture-theme');
@@ -55,13 +56,26 @@ async function loadListings(category) {
     const url = category && category !== 'All' ? `${API}/api/marketplace?category=${encodeURIComponent(category)}` : `${API}/api/marketplace`;
     const res = await fetch(url);
     const { listings } = await res.json();
-    grid.innerHTML = '';
-    if (listings.length === 0) {
-      grid.innerHTML = `<div class="market-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="56" height="56"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg><p>No listings yet.</p></div>`;
-      return;
-    }
-    listings.forEach(l => grid.appendChild(buildListingCard(l)));
+    allListings = listings;
+    renderGrid(listings);
   } catch { grid.innerHTML = '<p style="padding:24px;color:var(--c-text-2)">Failed to load listings.</p>'; }
+}
+
+function renderGrid(listings) {
+  const grid = document.getElementById('marketGrid');
+  grid.innerHTML = '';
+  if (!listings.length) {
+    grid.innerHTML = `<div class="market-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="56" height="56"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg><p>No listings yet.</p><small>Be the first to list something</small></div>`;
+    return;
+  }
+  listings.forEach(l => grid.appendChild(buildListingCard(l)));
+}
+
+function filterAndRender() {
+  const q = (document.getElementById('marketSearch')?.value || '').toLowerCase().trim();
+  let results = activeCategory === 'All' ? allListings : allListings.filter(l => l.category === activeCategory);
+  if (q) results = results.filter(l => (l.title + ' ' + l.category + ' ' + (l.description || '')).toLowerCase().includes(q));
+  renderGrid(results);
 }
 
 function catIcon(cat) {
@@ -76,12 +90,11 @@ function buildListingCard(l) {
   card.innerHTML = `
     <div class="listing-card-img">
       ${imgUrl ? `<img src="${imgUrl}" alt="${esc(l.title)}" loading="lazy" />` : `<div class="no-img">${catIcon(l.category)}</div>`}
-      <span class="listing-card-cat">${esc(l.category)}</span>
     </div>
     <div class="listing-card-body">
-      <div class="listing-card-title">${esc(l.title)}</div>
       <div class="listing-card-price">${esc(l.price)}</div>
-      <div class="listing-card-meta">by ${esc(l.seller_name||'Seller')}</div>
+      <div class="listing-card-title">${esc(l.title)}</div>
+      <div class="listing-card-location">${esc(l.seller_name||'Seller')}</div>
     </div>`;
   card.addEventListener('click', () => openListingModal(l));
   return card;
@@ -93,19 +106,40 @@ const listingOverlay = document.getElementById('listingOverlay');
 function openListingModal(l) {
   const imgUrl = l.image_url ? (l.image_url.startsWith('http') ? l.image_url : `${API}${l.image_url}`) : null;
   const isOwner = currentUser && currentUser.id === l.user_id;
+  const sellerInitials = (l.seller_name || 'S').split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
 
   document.getElementById('listingModalContent').innerHTML = `
     <div class="listing-detail-img">
       ${imgUrl ? `<img src="${imgUrl}" alt="${esc(l.title)}" />` : `<div class="no-img-lg">${catIcon(l.category)}</div>`}
     </div>
     <div class="listing-detail-body">
-      <div class="listing-detail-title">${esc(l.title)}</div>
       <div class="listing-detail-price">${esc(l.price)}</div>
-      <div class="listing-detail-seller">Listed by ${esc(l.seller_name||'Seller')} · ${esc(l.category)}</div>
-      ${l.description ? `<div class="listing-detail-desc">${esc(l.description)}</div>` : ''}
-      ${l.contact ? `<div class="listing-detail-contact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.71 19a19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>${esc(l.contact)}</div>` : ''}
+      <div class="listing-detail-title">${esc(l.title)}</div>
+      <span class="listing-detail-cat">${esc(l.category)}</span>
+
+      <div class="listing-seller-row">
+        <div class="listing-seller-avatar">${sellerInitials}</div>
+        <div class="listing-seller-info">
+          <div class="listing-seller-name">${esc(l.seller_name || 'Seller')}</div>
+          <div class="listing-seller-joined">One Culture member</div>
+        </div>
+      </div>
+
+      ${!isOwner && currentUser ? `<button class="listing-msg-btn" id="msgSellerBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Message Seller</button>` : ''}
+      ${!isOwner && !currentUser ? `<button class="listing-msg-btn" id="msgSellerBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Sign in to Message</button>` : ''}
+
+      ${l.description ? `<div class="listing-detail-desc"><div class="listing-detail-desc-label">Description</div>${esc(l.description)}</div>` : ''}
+
       ${isOwner ? `<button class="listing-delete-btn" id="deleteListingBtn">Delete listing</button>` : ''}
     </div>`;
+
+  const msgBtn = document.getElementById('msgSellerBtn');
+  if (msgBtn) {
+    msgBtn.addEventListener('click', () => {
+      if (!currentUser) { listingOverlay.classList.remove('open'); document.body.style.overflow = ''; openAuth(); return; }
+      location.href = `messages.html`;
+    });
+  }
 
   if (isOwner) {
     document.getElementById('deleteListingBtn').addEventListener('click', async () => {
@@ -123,6 +157,9 @@ function openListingModal(l) {
 document.getElementById('listingClose').addEventListener('click', () => { listingOverlay.classList.remove('open'); document.body.style.overflow = ''; });
 listingOverlay.addEventListener('click', e => { if (e.target === listingOverlay) { listingOverlay.classList.remove('open'); document.body.style.overflow = ''; } });
 
+// ── Search ─────────────────────────────────────────────────
+document.getElementById('marketSearch').addEventListener('input', filterAndRender);
+
 // ── Category tabs ──────────────────────────────────────────
 document.getElementById('marketCats').addEventListener('click', e => {
   const tab = e.target.closest('.cat-tab');
@@ -130,7 +167,7 @@ document.getElementById('marketCats').addEventListener('click', e => {
   document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
   activeCategory = tab.dataset.cat;
-  loadListings(activeCategory);
+  filterAndRender();
 });
 
 // ── Create Listing ─────────────────────────────────────────

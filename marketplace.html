@@ -31,22 +31,32 @@
   </header>
 
   <main class="market-main">
-    <div class="market-header">
-      <h1>Marketplace</h1>
-      <button class="btn btn-primary btn-sm" id="createListingBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Sell
-      </button>
+
+    <!-- Search bar -->
+    <div class="market-search-sticky">
+      <div class="market-search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="market-search" id="marketSearch" type="search" placeholder="Search listings…" autocomplete="off" />
+      </div>
     </div>
 
-    <!-- Category tabs -->
+    <!-- Category chips -->
     <div class="market-cats" id="marketCats">
-      <button class="cat-tab active" data-cat="All">All</button>
-      <button class="cat-tab" data-cat="Cars">Cars</button>
-      <button class="cat-tab" data-cat="Mods">Mods</button>
-      <button class="cat-tab" data-cat="Wheels">Wheels</button>
-      <button class="cat-tab" data-cat="Electronics">Electronics</button>
-      <button class="cat-tab" data-cat="Other">Other</button>
+      <button class="cat-tab active" data-cat="All"><span class="cat-icon">🏪</span>All</button>
+      <button class="cat-tab" data-cat="Cars"><span class="cat-icon">🚗</span>Cars</button>
+      <button class="cat-tab" data-cat="Mods"><span class="cat-icon">🔧</span>Mods</button>
+      <button class="cat-tab" data-cat="Wheels"><span class="cat-icon">🛞</span>Wheels</button>
+      <button class="cat-tab" data-cat="Electronics"><span class="cat-icon">📡</span>Electronics</button>
+      <button class="cat-tab" data-cat="Other"><span class="cat-icon">📦</span>Other</button>
+    </div>
+
+    <!-- Section header -->
+    <div class="market-section-header">
+      <h2>Listings</h2>
+      <button class="market-sell-btn" id="createListingBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Sell
+      </button>
     </div>
 
     <div class="market-grid" id="marketGrid">

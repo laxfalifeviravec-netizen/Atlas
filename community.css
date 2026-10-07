@@ -285,10 +285,65 @@ body {
   display: flex; align-items: center; justify-content: center;
 }
 /* Post image — square 1:1 like Instagram default */
-.post-card-img-wrap { position: relative; background: #000; width: 100%; aspect-ratio: 1 / 1; }
+.post-card-img-wrap { position: relative; background: #000; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; }
 .post-card-img-wrap img,
 .post-card-img-wrap video { width: 100%; height: 100%; display: block; object-fit: cover; }
 .post-card-video { cursor: pointer; }
+
+/* ── Multi-image carousel ────────────────────────────────── */
+.carousel-track {
+  display: flex; width: 100%; height: 100%;
+  overflow-x: auto; scroll-snap-type: x mandatory;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.carousel-track::-webkit-scrollbar { display: none; }
+.carousel-slide {
+  flex: 0 0 100%; scroll-snap-align: start;
+  width: 100%; height: 100%;
+}
+.carousel-slide img, .carousel-slide video {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.carousel-dots {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 5px; pointer-events: none;
+}
+.carousel-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,0.45); transition: background 0.2s;
+}
+.carousel-dot.active { background: #fff; }
+.carousel-count {
+  position: absolute; top: 10px; right: 10px;
+  background: rgba(0,0,0,0.55); color: #fff;
+  font-size: 12px; font-weight: 600; padding: 3px 8px;
+  border-radius: 12px; pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+/* ── Multi-file upload thumbs ────────────────────────────── */
+.upload-thumbs {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  margin-top: 10px;
+}
+.upload-thumb {
+  position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden;
+  background: var(--c-bg);
+}
+.upload-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.upload-thumb-rm {
+  position: absolute; top: 4px; right: 4px;
+  background: rgba(0,0,0,0.65); color: #fff; border: none; border-radius: 50%;
+  width: 22px; height: 22px; font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+}
+.upload-add-more {
+  border: 1.5px dashed var(--c-border); border-radius: 8px;
+  background: none; cursor: pointer; color: var(--c-text-2);
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 26px; transition: border-color 0.15s;
+}
+.upload-add-more:hover { border-color: var(--c-accent); }
 
 /* Actions row */
 .post-card-actions {

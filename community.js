@@ -270,10 +270,40 @@ function isVideoUrl(url) {
   return /\.(mp4|webm|mov|m4v|avi)(\?|$)/i.test(url);
 }
 
+function buildCarousel(urls) {
+  if (!urls || urls.length <= 1) return '';
+  const slides = urls.map(u => {
+    const src = u.startsWith('http') ? u : `${API}${u}`;
+    const isV = isVideoUrl(src);
+    return `<div class="carousel-slide">${isV
+      ? `<video src="${src}" muted loop playsinline preload="metadata"></video>`
+      : `<img src="${src}" loading="lazy" />`}</div>`;
+  }).join('');
+  const dots = urls.map((_, i) => `<div class="carousel-dot${i===0?' active':''}"></div>`).join('');
+  return `<div class="carousel-track" data-count="${urls.length}">${slides}</div>
+          <div class="carousel-dots">${dots}</div>
+          <div class="carousel-count">1 / ${urls.length}</div>`;
+}
+
+function initCarousel(wrap) {
+  const track = wrap.querySelector('.carousel-track');
+  if (!track) return;
+  const dots = wrap.querySelectorAll('.carousel-dot');
+  const countEl = wrap.querySelector('.carousel-count');
+  const total = parseInt(track.dataset.count);
+  track.addEventListener('scroll', () => {
+    const idx = Math.round(track.scrollLeft / track.clientWidth);
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    if (countEl) countEl.textContent = `${idx + 1} / ${total}`;
+  }, { passive: true });
+}
+
 function buildPostCard(p) {
   const initials = (p.user_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-  const mediaSrc = p.image_url.startsWith('http') ? p.image_url : `${API}${p.image_url}`;
+  const urls = (p.image_urls?.length ? p.image_urls : (p.image_url ? [p.image_url] : [])).map(u => u.startsWith('http') ? u : `${API}${u}`);
+  const mediaSrc = urls[0] || '';
   const isVideo  = isVideoUrl(mediaSrc);
+  const multi    = urls.length > 1;
   const timeStr  = formatTime(p.created_at);
 
   const card = document.createElement('article');
@@ -287,9 +317,11 @@ function buildPostCard(p) {
       </div>
     </div>
     <div class="post-card-img-wrap">
-      ${isVideo
-        ? `<video src="${mediaSrc}" muted loop playsinline preload="metadata" class="post-card-video"></video>`
-        : `<img src="${mediaSrc}" alt="${esc(p.road_name||'Road photo')}" loading="lazy" />`}
+      ${multi
+        ? buildCarousel(urls)
+        : isVideo
+          ? `<video src="${mediaSrc}" muted loop playsinline preload="metadata" class="post-card-video"></video>`
+          : `<img src="${mediaSrc}" alt="${esc(p.road_name||'Road photo')}" loading="lazy" />`}
     </div>
     <div class="post-card-actions">
       <button class="post-action-btn like-btn${p.liked?' liked':''}" data-id="${p.id}" data-liked="${p.liked}" aria-label="Like">
@@ -322,6 +354,8 @@ function buildPostCard(p) {
   card.querySelector('.comment-btn').addEventListener('click', () => openPostModal(p));
   card.querySelector('.share-btn').addEventListener('click', () => sharePost(p.id));
   card.querySelector('.save-btn').addEventListener('click', e => toggleSave(p, e.currentTarget));
+
+  initCarousel(card.querySelector('.post-card-img-wrap'));
 
   const mediaEl = card.querySelector('.post-card-img-wrap img, .post-card-img-wrap video');
   if (mediaEl) {
@@ -486,7 +520,7 @@ const newPostOverlay = document.getElementById('newPostOverlay');
 const uploadZone = document.getElementById('uploadZone');
 const postImageInput = document.getElementById('postImageInput');
 const uploadPreview  = document.getElementById('uploadPreview');
-let postFile = null;
+let postFiles = [];
 
 function openNewPost() {
   if (!currentUser) return openAuth();
@@ -508,39 +542,69 @@ if (_newPostBtnNav) _newPostBtnNav.addEventListener('click', () => {
   else openNewPost();
 });
 
+postImageInput.setAttribute('multiple', 'true');
+
 uploadZone.addEventListener('click', () => postImageInput.click());
 uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor = 'var(--c-accent)'; });
 uploadZone.addEventListener('dragleave', () => { uploadZone.style.borderColor = ''; });
 uploadZone.addEventListener('drop', e => {
   e.preventDefault(); uploadZone.style.borderColor = '';
-  const file = e.dataTransfer.files[0];
-  if (file) setPostFile(file);
+  addPostFiles(Array.from(e.dataTransfer.files));
 });
-postImageInput.addEventListener('change', e => { if (e.target.files[0]) setPostFile(e.target.files[0]); });
+postImageInput.addEventListener('change', e => {
+  addPostFiles(Array.from(e.target.files));
+  e.target.value = '';
+});
 
-function setPostFile(file) {
-  postFile = file;
-  const isVideo = file.type.startsWith('video/');
-  const videoPreview = document.getElementById('uploadVideoPreview');
-  const url = URL.createObjectURL(file);
-  if (isVideo) {
-    videoPreview.src = url;
-    videoPreview.style.display = 'block';
-    uploadPreview.style.display = 'none';
-  } else {
-    uploadPreview.src = url;
-    uploadPreview.style.display = 'block';
-    videoPreview.style.display = 'none';
-  }
+function addPostFiles(files) {
+  files.forEach(f => { if (postFiles.length < 10) postFiles.push(f); });
+  renderPostThumbs();
+}
+
+function renderPostThumbs() {
   uploadZone.style.display = 'none';
+  uploadPreview.style.display = 'none';
+  const videoPreview = document.getElementById('uploadVideoPreview');
+  if (videoPreview) videoPreview.style.display = 'none';
+
+  let thumbsEl = document.getElementById('postThumbsGrid');
+  if (!thumbsEl) {
+    thumbsEl = document.createElement('div');
+    thumbsEl.id = 'postThumbsGrid';
+    thumbsEl.className = 'upload-thumbs';
+    uploadZone.parentNode.insertBefore(thumbsEl, uploadZone.nextSibling);
+  }
+  thumbsEl.innerHTML = '';
+  postFiles.forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = 'upload-thumb';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(f);
+    const rm = document.createElement('button');
+    rm.className = 'upload-thumb-rm';
+    rm.innerHTML = '×';
+    rm.addEventListener('click', () => { postFiles.splice(i, 1); renderPostThumbs(); });
+    div.appendChild(img); div.appendChild(rm);
+    thumbsEl.appendChild(div);
+  });
+  if (postFiles.length < 10) {
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'upload-add-more';
+    add.innerHTML = '+';
+    add.addEventListener('click', () => postImageInput.click());
+    thumbsEl.appendChild(add);
+  }
+  thumbsEl.style.display = postFiles.length ? 'grid' : 'none';
+  if (!postFiles.length) { uploadZone.style.display = ''; thumbsEl.style.display = 'none'; }
 }
 
 document.getElementById('submitPostBtn').addEventListener('click', async () => {
   const err = document.getElementById('newPostError');
-  if (!postFile) { err.textContent = 'Please select a photo or video.'; return; }
+  if (!postFiles.length) { err.textContent = 'Please select a photo or video.'; return; }
   err.textContent = '';
   const fd = new FormData();
-  fd.append('image', postFile);
+  postFiles.forEach(f => fd.append('images', f));
   fd.append('caption',   document.getElementById('postCaption').value.trim());
   fd.append('road_name', document.getElementById('postRoadName').value.trim());
   fd.append('region',    document.getElementById('postRegion').value);
@@ -556,7 +620,10 @@ document.getElementById('submitPostBtn').addEventListener('click', async () => {
     if (!res.ok) { err.textContent = data.error; return; }
     newPostOverlay.classList.remove('open'); document.body.style.overflow = '';
     // Reset
-    postFile = null; uploadPreview.style.display = 'none'; uploadZone.style.display = '';
+    postFiles = [];
+    const thumbsGrid = document.getElementById('postThumbsGrid');
+    if (thumbsGrid) { thumbsGrid.innerHTML = ''; thumbsGrid.style.display = 'none'; }
+    uploadPreview.style.display = 'none'; uploadZone.style.display = '';
     document.getElementById('postCaption').value = '';
     document.getElementById('postRoadName').value = '';
     document.getElementById('postRegion').value = '';

@@ -217,7 +217,7 @@ const db = {
     const offset = (page - 1) * limit;
     if (USE_SUPABASE) {
       let query = sb.from('posts')
-        .select(`id, user_id, image_url, caption, road_name, region, likes, created_at, is_pinned,
+        .select(`id, user_id, image_url, image_urls, caption, road_name, region, likes, created_at, is_pinned,
                  users!posts_user_id_fkey(name, avatar)`, { count: 'exact' })
         .order('is_pinned', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
@@ -1525,13 +1525,15 @@ app.get('/api/posts', optionalAuth, async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
-app.post('/api/posts', requireAuth, upload.single('image'), async (req, res) => {
+app.post('/api/posts', requireAuth, upload.array('images', 10), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'An image is required.' });
+    const files = req.files?.length ? req.files : (req.file ? [req.file] : []);
+    if (!files.length) return res.status(400).json({ error: 'An image is required.' });
     const { caption = '', road_name = '', region = '', mod_title = '', mod_price = '', mod_url = '', mod_category = '' } = req.body;
-    const image_url = await storeImage(req.file);
+    const image_urls = await Promise.all(files.map(f => storeImage(f)));
+    const image_url = image_urls[0];
     const fields = {
-      user_id: req.user.id, image_url,
+      user_id: req.user.id, image_url, image_urls,
       caption: caption.trim(), road_name: road_name.trim(), region: region.trim(),
       mod_title: mod_title.trim(), mod_price: mod_price.trim(),
       mod_url: mod_url.trim(), mod_category: mod_category.trim(),
@@ -1797,14 +1799,16 @@ app.get('/api/marketplace', async (req, res) => {
   catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
-app.post('/api/marketplace', requireAuth, upload.single('image'), async (req, res) => {
+app.post('/api/marketplace', requireAuth, upload.array('images', 10), async (req, res) => {
   try {
     const { title, price, category = 'Other', description = '', contact = '' } = req.body;
     if (!title || !price) return res.status(400).json({ error: 'Title and price are required.' });
-    const image_url = req.file ? await storeImage(req.file) : null;
+    const files = req.files?.length ? req.files : (req.file ? [req.file] : []);
+    const image_urls = files.length ? await Promise.all(files.map(f => storeImage(f))) : [];
+    const image_url = image_urls[0] || null;
     const listing = await db.createListing({
       user_id: req.user.id, title: title.trim(), price: price.trim(),
-      category, description: description.trim(), contact: contact.trim(), image_url,
+      category, description: description.trim(), contact: contact.trim(), image_url, image_urls,
     });
     const user = await db.findUserById(req.user.id);
     res.status(201).json({ listing: { ...listing, seller_name: user?.name || '', seller_email: user?.email || '' } });

@@ -8,7 +8,7 @@ const API = (location.hostname === 'localhost' || location.hostname === '127.0.0
 let token = localStorage.getItem('culture-token');
 let currentUser = null;
 let activeCategory = 'All';
-let listingFile = null;
+let listingFiles = [];
 let allListings = [];
 
 // ── Theme ──────────────────────────────────────────────────
@@ -103,14 +103,24 @@ function buildListingCard(l) {
 // ── Listing Detail Modal ───────────────────────────────────
 const listingOverlay = document.getElementById('listingOverlay');
 
+function buildListingCarousel(l) {
+  const urls = (l.image_urls?.length ? l.image_urls : (l.image_url ? [l.image_url] : [])).map(u => u.startsWith('http') ? u : `${API}${u}`);
+  if (!urls.length) return `<div class="no-img-lg">${catIcon(l.category)}</div>`;
+  if (urls.length === 1) return `<img src="${urls[0]}" alt="${esc(l.title)}" />`;
+  const slides = urls.map(u => `<div class="carousel-slide"><img src="${u}" alt="${esc(l.title)}" /></div>`).join('');
+  const dots = urls.map((_, i) => `<div class="carousel-dot${i===0?' active':''}"></div>`).join('');
+  return `<div class="carousel-track" data-count="${urls.length}">${slides}</div>
+          <div class="carousel-dots">${dots}</div>
+          <div class="carousel-count">1 / ${urls.length}</div>`;
+}
+
 function openListingModal(l) {
-  const imgUrl = l.image_url ? (l.image_url.startsWith('http') ? l.image_url : `${API}${l.image_url}`) : null;
   const isOwner = currentUser && currentUser.id === l.user_id;
   const sellerInitials = (l.seller_name || 'S').split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
 
   document.getElementById('listingModalContent').innerHTML = `
-    <div class="listing-detail-img">
-      ${imgUrl ? `<img src="${imgUrl}" alt="${esc(l.title)}" />` : `<div class="no-img-lg">${catIcon(l.category)}</div>`}
+    <div class="listing-detail-img" id="listingDetailImg">
+      ${buildListingCarousel(l)}
     </div>
     <div class="listing-detail-body">
       <div class="listing-detail-price">${esc(l.price)}</div>
@@ -152,6 +162,21 @@ function openListingModal(l) {
 
   listingOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
+
+  const imgWrap = document.getElementById('listingDetailImg');
+  if (imgWrap) {
+    const track = imgWrap.querySelector('.carousel-track');
+    if (track) {
+      const dots = imgWrap.querySelectorAll('.carousel-dot');
+      const countEl = imgWrap.querySelector('.carousel-count');
+      const total = parseInt(track.dataset.count);
+      track.addEventListener('scroll', () => {
+        const idx = Math.round(track.scrollLeft / track.clientWidth);
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+        if (countEl) countEl.textContent = `${idx + 1} / ${total}`;
+      }, { passive: true });
+    }
+  }
 }
 
 document.getElementById('listingClose').addEventListener('click', () => { listingOverlay.classList.remove('open'); document.body.style.overflow = ''; });
@@ -184,15 +209,48 @@ document.getElementById('createListingBtn').addEventListener('click', () => {
 document.getElementById('createListingClose').addEventListener('click', () => { createListingOverlay.classList.remove('open'); document.body.style.overflow = ''; });
 createListingOverlay.addEventListener('click', e => { if (e.target === createListingOverlay) { createListingOverlay.classList.remove('open'); document.body.style.overflow = ''; } });
 
+listingImageInput.setAttribute('multiple', 'true');
 listingUploadZone.addEventListener('click', () => listingImageInput.click());
 listingImageInput.addEventListener('change', e => {
-  listingFile = e.target.files[0];
-  if (listingFile) {
-    listingPreview.src = URL.createObjectURL(listingFile);
-    listingPreview.style.display = 'block';
-    listingUploadZone.style.display = 'none';
-  }
+  Array.from(e.target.files).forEach(f => { if (listingFiles.length < 10) listingFiles.push(f); });
+  e.target.value = '';
+  renderListingThumbs();
 });
+
+function renderListingThumbs() {
+  listingUploadZone.style.display = 'none';
+  listingPreview.style.display = 'none';
+  let thumbsEl = document.getElementById('listingThumbsGrid');
+  if (!thumbsEl) {
+    thumbsEl = document.createElement('div');
+    thumbsEl.id = 'listingThumbsGrid';
+    thumbsEl.className = 'upload-thumbs';
+    listingUploadZone.parentNode.insertBefore(thumbsEl, listingUploadZone.nextSibling);
+  }
+  thumbsEl.innerHTML = '';
+  listingFiles.forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = 'upload-thumb';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(f);
+    const rm = document.createElement('button');
+    rm.className = 'upload-thumb-rm';
+    rm.innerHTML = '×';
+    rm.addEventListener('click', () => { listingFiles.splice(i, 1); renderListingThumbs(); });
+    div.appendChild(img); div.appendChild(rm);
+    thumbsEl.appendChild(div);
+  });
+  if (listingFiles.length < 10) {
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'upload-add-more';
+    add.innerHTML = '+';
+    add.addEventListener('click', () => listingImageInput.click());
+    thumbsEl.appendChild(add);
+  }
+  if (!listingFiles.length) { listingUploadZone.style.display = ''; thumbsEl.style.display = 'none'; }
+  else thumbsEl.style.display = 'grid';
+}
 
 document.getElementById('submitListingBtn').addEventListener('click', async () => {
   const title = document.getElementById('listingTitle').value.trim();
@@ -202,7 +260,7 @@ document.getElementById('submitListingBtn').addEventListener('click', async () =
   err.textContent = '';
 
   const fd = new FormData();
-  if (listingFile) fd.append('image', listingFile);
+  listingFiles.forEach(f => fd.append('images', f));
   fd.append('title', title);
   fd.append('price', price);
   fd.append('category', document.getElementById('listingCategory').value);
@@ -216,7 +274,10 @@ document.getElementById('submitListingBtn').addEventListener('click', async () =
     const data = await res.json();
     if (!res.ok) { err.textContent = data.error; return; }
     createListingOverlay.classList.remove('open'); document.body.style.overflow = '';
-    listingFile = null; listingPreview.style.display = 'none'; listingUploadZone.style.display = '';
+    listingFiles = [];
+    const thumbsGrid = document.getElementById('listingThumbsGrid');
+    if (thumbsGrid) { thumbsGrid.innerHTML = ''; thumbsGrid.style.display = 'none'; }
+    listingPreview.style.display = 'none'; listingUploadZone.style.display = '';
     ['listingTitle','listingPrice','listingDesc','listingContact'].forEach(id => document.getElementById(id).value = '');
     await loadListings(activeCategory);
   } catch { err.textContent = 'Failed to post listing.'; }

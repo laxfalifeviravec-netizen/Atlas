@@ -3,7 +3,7 @@
    Caches the app shell so it loads instantly and works offline.
    ============================================================ */
 
-const CACHE = 'culture-v28';
+const CACHE = 'culture-v29';
 
 const APP_SHELL = [
   '/',
@@ -53,6 +53,7 @@ const APP_SHELL = [
   '/lib/leaflet.js',
   '/lib/leaflet.css',
   '/create-sheet.js',
+  '/admin.html',
 ];
 
 // Install — cache the app shell

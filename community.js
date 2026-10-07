@@ -335,7 +335,7 @@ function buildPostCard(p) {
     }
   }
 
-  if (currentUser && p.user_id === currentUser.id) {
+  if (currentUser && (p.user_id === currentUser.id || currentUser.is_admin)) {
     const delBtn = document.createElement('button');
     delBtn.className = 'post-action-btn post-delete-btn';
     delBtn.title = 'Delete post';
@@ -349,6 +349,22 @@ function buildPostCard(p) {
     reportBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`;
     reportBtn.addEventListener('click', () => reportPost(p.id, reportBtn));
     card.querySelector('.post-card-actions').appendChild(reportBtn);
+  }
+  if (currentUser?.is_admin) {
+    const pinBtn = document.createElement('button');
+    pinBtn.className = 'post-action-btn post-pin-btn';
+    pinBtn.title = p.is_pinned ? 'Unpin post' : 'Pin post';
+    pinBtn.style.color = p.is_pinned ? 'var(--accent)' : '';
+    pinBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="${p.is_pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>`;
+    pinBtn.addEventListener('click', async () => {
+      const action = p.is_pinned ? 'unpin' : 'pin';
+      await fetch(`${API}/api/admin/posts/${p.id}/${action}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      p.is_pinned = !p.is_pinned;
+      pinBtn.title = p.is_pinned ? 'Unpin post' : 'Pin post';
+      pinBtn.style.color = p.is_pinned ? 'var(--accent)' : '';
+      pinBtn.querySelector('svg').setAttribute('fill', p.is_pinned ? 'currentColor' : 'none');
+    });
+    card.querySelector('.post-card-actions').appendChild(pinBtn);
   }
   return card;
 }

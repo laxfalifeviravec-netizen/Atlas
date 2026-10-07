@@ -166,7 +166,13 @@ function optionalAuth(req, res, next) {
 
 function safeUser(u) { const { password_hash: _, password: __, ...r } = u; return r; }
 function makeToken(u) {
-  return jwt.sign({ id: u.id, email: u.email, name: u.name, avatar: u.avatar, plan: u.plan }, JWT_SECRET, { expiresIn: '30d' });
+  return jwt.sign({ id: u.id, email: u.email, name: u.name, avatar: u.avatar, plan: u.plan, is_admin: u.is_admin || false }, JWT_SECRET, { expiresIn: '30d' });
+}
+function requireAdmin(req, res, next) {
+  requireAuth(req, res, () => {
+    if (!req.user.is_admin) return res.status(403).json({ error: 'Forbidden' });
+    next();
+  });
 }
 
 // ── Helpers: Supabase vs memory ───────────────────────────────
@@ -211,8 +217,9 @@ const db = {
     const offset = (page - 1) * limit;
     if (USE_SUPABASE) {
       let query = sb.from('posts')
-        .select(`id, user_id, image_url, caption, road_name, region, likes, created_at,
+        .select(`id, user_id, image_url, caption, road_name, region, likes, created_at, is_pinned,
                  users!posts_user_id_fkey(name, avatar)`, { count: 'exact' })
+        .order('is_pinned', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
       if (followingIds && followingIds.length > 0) {
         query = query.in('user_id', followingIds);
@@ -260,11 +267,11 @@ const db = {
     const p = { id: _pid++, ...fields, likes: 0, created_at: now() };
     _posts.push(p); return p;
   },
-  async deletePost(id, userId) {
+  async deletePost(id, userId, isAdmin = false) {
     if (USE_SUPABASE) {
       const { data: p } = await sb.from('posts').select('user_id, image_url').eq('id', id).single();
       if (!p) return { error: 'not_found' };
-      if (p.user_id !== userId) return { error: 'forbidden' };
+      if (!isAdmin && p.user_id !== userId) return { error: 'forbidden' };
       await sb.from('posts').delete().eq('id', id);
       // Delete from storage if it's a Supabase storage URL
       if (p.image_url?.includes('/storage/v1/')) {
@@ -333,11 +340,11 @@ const db = {
     const c = { id: _cid++, ...fields, created_at: now() };
     _comments.push(c); return c;
   },
-  async deleteComment(id, userId) {
+  async deleteComment(id, userId, isAdmin = false) {
     if (USE_SUPABASE) {
       const { data: c } = await sb.from('comments').select('user_id').eq('id', id).single();
       if (!c) return { error: 'not_found' };
-      if (c.user_id !== userId) return { error: 'forbidden' };
+      if (!isAdmin && c.user_id !== userId) return { error: 'forbidden' };
       await sb.from('comments').delete().eq('id', id);
       return { ok: true };
     }
@@ -1581,7 +1588,7 @@ app.get('/api/shop', optionalAuth, async (req, res) => {
 
 app.delete('/api/posts/:id', requireAuth, async (req, res) => {
   try {
-    const result = await db.deletePost(parseInt(req.params.id), req.user.id);
+    const result = await db.deletePost(parseInt(req.params.id), req.user.id, req.user.is_admin);
     if (result.error === 'not_found') return res.status(404).json({ error: 'Post not found.' });
     if (result.error === 'forbidden') return res.status(403).json({ error: 'Not your post.' });
     res.json({ ok: true });
@@ -1627,7 +1634,7 @@ app.post('/api/posts/:id/comments', requireAuth, async (req, res) => {
 
 app.delete('/api/comments/:id', requireAuth, async (req, res) => {
   try {
-    const result = await db.deleteComment(parseInt(req.params.id), req.user.id);
+    const result = await db.deleteComment(parseInt(req.params.id), req.user.id, req.user.is_admin);
     if (result.error === 'not_found') return res.status(404).json({ error: 'Comment not found.' });
     if (result.error === 'forbidden') return res.status(403).json({ error: 'Not your comment.' });
     res.json({ ok: true });
@@ -2151,6 +2158,86 @@ async function patchSeedImages() {
     await sb.from('posts').update({ image_url }).ilike('caption', `%${caption}%`).ilike('image_url', '%unsplash.com/photo-__%');
   }
 }
+
+// ── Admin routes ──────────────────────────────────────────────
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  try {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('users')
+        .select('id, name, email, avatar, plan, is_admin, is_banned, created_at')
+        .order('created_at', { ascending: false });
+      return res.json({ users: data || [] });
+    }
+    res.json({ users: _users.map(u => safeUser(u)) });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/admin/users/:id/ban', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (id === req.user.id) return res.status(400).json({ error: 'Cannot ban yourself.' });
+    if (USE_SUPABASE) {
+      await sb.from('users').update({ is_banned: true }).eq('id', id);
+    } else {
+      const u = _users.find(u => u.id === id);
+      if (u) u.is_banned = true;
+    }
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/admin/users/:id/unban', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (USE_SUPABASE) {
+      await sb.from('users').update({ is_banned: false }).eq('id', id);
+    } else {
+      const u = _users.find(u => u.id === id);
+      if (u) u.is_banned = false;
+    }
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/admin/posts/:id/pin', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (USE_SUPABASE) {
+      await sb.from('posts').update({ is_pinned: true }).eq('id', id);
+    } else {
+      const p = _posts.find(p => p.id === id);
+      if (p) p.is_pinned = true;
+    }
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/admin/posts/:id/unpin', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (USE_SUPABASE) {
+      await sb.from('posts').update({ is_pinned: false }).eq('id', id);
+    } else {
+      const p = _posts.find(p => p.id === id);
+      if (p) p.is_pinned = false;
+    }
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  try {
+    if (USE_SUPABASE) {
+      const [{ count: users }, { count: posts }, { count: banned }] = await Promise.all([
+        sb.from('users').select('*', { count: 'exact', head: true }),
+        sb.from('posts').select('*', { count: 'exact', head: true }),
+        sb.from('users').select('*', { count: 'exact', head: true }).eq('is_banned', true),
+      ]);
+      return res.json({ users, posts, banned });
+    }
+    res.json({ users: _users.length, posts: _posts.length, banned: _users.filter(u => u.is_banned).length });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
 
 if (require.main === module) {
   seed().then(patchSeedImages).then(() => app.listen(PORT, () => console.log(`One Culture API running on http://localhost:${PORT}`))).catch(console.error);

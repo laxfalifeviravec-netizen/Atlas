@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — One Culture</title>
+  <style>
+    :root {
+      --bg: #0a0a0a; --surface: #141414; --border: #222;
+      --text: #f0f0f0; --muted: #888; --accent: #E4A530;
+      --red: #e53e3e; --green: #38a169;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; min-height: 100vh; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 1.1rem; font-weight: 700; }
+    header span { font-size: 0.75rem; background: var(--accent); color: #000; padding: 2px 8px; border-radius: 4px; font-weight: 700; letter-spacing: 0.05em; }
+    .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; margin-right: auto; }
+    .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 32px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; text-align: center; }
+    .stat-card .num { font-size: 2rem; font-weight: 800; color: var(--accent); }
+    .stat-card .label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+    h2 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .user-list { display: flex; flex-direction: column; gap: 8px; }
+    .user-row { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+    .user-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--accent); color: #000; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem; flex-shrink: 0; }
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-email { font-size: 0.75rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-badges { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+    .badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; letter-spacing: 0.04em; }
+    .badge-admin { background: var(--accent); color: #000; }
+    .badge-banned { background: var(--red); color: #fff; }
+    .user-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .btn { border: none; border-radius: 8px; padding: 7px 14px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.8; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-ban { background: var(--red); color: #fff; }
+    .btn-unban { background: var(--green); color: #fff; }
+    .search { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); font-size: 0.9rem; margin-bottom: 16px; outline: none; }
+    .search:focus { border-color: var(--accent); }
+    #status { padding: 10px 14px; background: var(--surface); border-radius: 8px; font-size: 0.85rem; color: var(--muted); text-align: center; display: none; margin-bottom: 12px; }
+    #loading { text-align: center; padding: 40px; color: var(--muted); }
+    #error { text-align: center; padding: 40px; color: var(--red); }
+    @media (max-width: 480px) { .stats { grid-template-columns: repeat(3, 1fr); } .user-email { display: none; } }
+  </style>
+</head>
+<body>
+<header>
+  <a href="community.html" class="back">← Feed</a>
+  <h1>Admin</h1>
+  <span>ONE CULTURE</span>
+</header>
+<div class="container">
+  <div class="stats" id="stats">
+    <div class="stat-card"><div class="num" id="statUsers">—</div><div class="label">Users</div></div>
+    <div class="stat-card"><div class="num" id="statPosts">—</div><div class="label">Posts</div></div>
+    <div class="stat-card"><div class="num" id="statBanned">—</div><div class="label">Banned</div></div>
+  </div>
+
+  <h2>Users</h2>
+  <input class="search" id="search" placeholder="Search by name or email…" />
+  <div id="status"></div>
+  <div id="loading">Loading…</div>
+  <div id="error" style="display:none"></div>
+  <div class="user-list" id="userList"></div>
+</div>
+
+<script>
+const API = '';
+const token = localStorage.getItem('culture-token');
+
+if (!token) { location.replace('index.html'); }
+
+let allUsers = [];
+
+async function load() {
+  try {
+    const [usersRes, statsRes] = await Promise.all([
+      fetch(`${API}/api/admin/users`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`${API}/api/admin/stats`, { headers: { Authorization: `Bearer ${token}` } }),
+    ]);
+    if (usersRes.status === 403) { location.replace('community.html'); return; }
+    if (!usersRes.ok) throw new Error('Failed to load');
+
+    const { users } = await usersRes.json();
+    const stats = statsRes.ok ? await statsRes.json() : {};
+
+    document.getElementById('statUsers').textContent = stats.users ?? users.length;
+    document.getElementById('statPosts').textContent = stats.posts ?? '—';
+    document.getElementById('statBanned').textContent = stats.banned ?? users.filter(u => u.is_banned).length;
+
+    allUsers = users;
+    renderUsers(users);
+    document.getElementById('loading').style.display = 'none';
+  } catch (e) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = 'Failed to load admin data. Make sure you are logged in as admin.';
+  }
+}
+
+function renderUsers(users) {
+  const list = document.getElementById('userList');
+  list.innerHTML = '';
+  if (!users.length) { list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:24px">No users found</div>'; return; }
+  users.forEach(u => {
+    const initials = (u.name || '?').split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
+    const row = document.createElement('div');
+    row.className = 'user-row';
+    row.innerHTML = `
+      <div class="user-avatar">${initials}</div>
+      <div class="user-info">
+        <div class="user-name">${esc(u.name || 'Unknown')}</div>
+        <div class="user-email">${esc(u.email || '')}</div>
+        <div class="user-badges">
+          ${u.is_admin ? '<span class="badge badge-admin">ADMIN</span>' : ''}
+          ${u.is_banned ? '<span class="badge badge-banned">BANNED</span>' : ''}
+          ${u.plan ? `<span class="badge" style="background:var(--border);color:var(--muted)">${esc(u.plan)}</span>` : ''}
+        </div>
+      </div>
+      <div class="user-actions" id="actions-${u.id}"></div>
+    `;
+    const actions = row.querySelector(`#actions-${u.id}`);
+    if (!u.is_admin) {
+      const btn = document.createElement('button');
+      btn.className = u.is_banned ? 'btn btn-unban' : 'btn btn-ban';
+      btn.textContent = u.is_banned ? 'Unban' : 'Ban';
+      btn.addEventListener('click', () => toggleBan(u, btn, row));
+      actions.appendChild(btn);
+    }
+    list.appendChild(row);
+  });
+}
+
+async function toggleBan(user, btn, row) {
+  btn.disabled = true;
+  const action = user.is_banned ? 'unban' : 'ban';
+  try {
+    const res = await fetch(`${API}/api/admin/users/${user.id}/${action}`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error();
+    user.is_banned = !user.is_banned;
+    showStatus(`${user.name} ${user.is_banned ? 'banned' : 'unbanned'}.`);
+    renderUsers(filterUsers(document.getElementById('search').value));
+    document.getElementById('statBanned').textContent = allUsers.filter(u => u.is_banned).length;
+  } catch {
+    btn.disabled = false;
+    showStatus('Action failed.', true);
+  }
+}
+
+function filterUsers(q) {
+  if (!q.trim()) return allUsers;
+  const s = q.toLowerCase();
+  return allUsers.filter(u => (u.name || '').toLowerCase().includes(s) || (u.email || '').toLowerCase().includes(s));
+}
+
+function showStatus(msg, isErr = false) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.color = isErr ? 'var(--red)' : 'var(--green)';
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+document.getElementById('search').addEventListener('input', e => renderUsers(filterUsers(e.target.value)));
+
+load();
+</script>
+</body>
+</html>

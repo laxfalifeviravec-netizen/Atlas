@@ -1402,35 +1402,35 @@ app.post('/api/auth/apple', async (req, res) => {
 // iOS redirect-mode callback — Apple POSTs here after native Sign in with Apple
 app.get('/api/auth/apple/callback', async (req, res) => {
   console.log('Apple GET callback query:', JSON.stringify(req.query));
-  const sendPage = (token, error) => {
-    res.setHeader('Content-Type', 'text/html');
-    res.send(`<!doctype html><html><head><meta charset="utf-8"></head><body><script>
-      ${token ? `localStorage.setItem('culture-token',${JSON.stringify(token)});location.replace('/community.html');` : `location.replace('/?apple_error=${encodeURIComponent(error||'failed')}');`}
-    </script></body></html>`);
+  const redirect = (token, error) => {
+    const url = token
+      ? `/?apple_token=${encodeURIComponent(token)}`
+      : `/?apple_error=${encodeURIComponent(error || 'failed')}`;
+    res.redirect(302, url);
   };
   try {
     const id_token = req.query.id_token;
-    if (!id_token) return sendPage(null, 'no_token_get');
+    if (!id_token) return redirect(null, 'no_token_get');
     const result = await handleAppleAuth(id_token, null);
-    sendPage(result.token, null);
-  } catch (e) { console.error('Apple GET callback:', e.message); sendPage(null, 'failed'); }
+    redirect(result.token, null);
+  } catch (e) { console.error('Apple GET callback:', e.message); redirect(null, 'failed'); }
 });
 app.post('/api/auth/apple/callback', async (req, res) => {
   console.log('Apple POST callback body keys:', Object.keys(req.body || {}));
-  const sendPage = (token, error) => {
-    res.setHeader('Content-Type', 'text/html');
-    res.send(`<!doctype html><html><head><meta charset="utf-8"></head><body><script>
-      ${token ? `localStorage.setItem('culture-token', ${JSON.stringify(token)}); location.replace('/community.html');` : `location.replace('/?apple_error=${encodeURIComponent(error || 'failed')}');`}
-    </script></body></html>`);
+  const redirect = (token, error) => {
+    const url = token
+      ? `/?apple_token=${encodeURIComponent(token)}`
+      : `/?apple_error=${encodeURIComponent(error || 'failed')}`;
+    res.redirect(302, url);
   };
   try {
     const id_token = req.body.id_token;
-    if (!id_token) { console.log('Apple callback missing id_token, body:', JSON.stringify(req.body)); return sendPage(null, 'missing_token'); }
+    if (!id_token) { console.log('Apple callback missing id_token, body:', JSON.stringify(req.body)); return redirect(null, 'missing_token'); }
     const userJson = req.body.user ? JSON.parse(req.body.user) : null;
     const name = userJson?.name ? `${userJson.name.firstName || ''} ${userJson.name.lastName || ''}`.trim() : null;
     const result = await handleAppleAuth(id_token, name);
-    sendPage(result.token, null);
-  } catch (e) { console.error('Apple callback:', e.message); sendPage(null, 'failed'); }
+    redirect(result.token, null);
+  } catch (e) { console.error('Apple callback:', e.message); redirect(null, 'failed'); }
 });
 
 app.delete('/api/auth/me', requireAuth, async (req, res) => {

@@ -3,7 +3,7 @@
    Caches the app shell so it loads instantly and works offline.
    ============================================================ */
 
-const CACHE = 'culture-v27';
+const CACHE = 'culture-v28';
 
 const APP_SHELL = [
   '/',

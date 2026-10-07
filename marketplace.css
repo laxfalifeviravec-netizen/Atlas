@@ -31,7 +31,7 @@
 /* ── Category chips ───────────────────────────────────────── */
 .market-cats {
   display: flex; gap: 8px;
-  padding: 10px 12px 12px;
+  padding: 8px 12px 12px;
   overflow-x: auto; scrollbar-width: none;
   background: var(--c-surface);
   border-bottom: 1px solid var(--c-border);

@@ -2124,12 +2124,12 @@ async function seed() {
   }
 
   const demoListings = [
-    { title: 'Porsche 911 GT3 RS — Track Ready', price: '$289,000', category: 'Cars', description: '2023 GT3 RS, Weissach Package, 1,200 miles. Immaculate.', contact: 'team@one-culture.app', image_url: null },
-    { title: 'BMW M3 Competition — Frozen Isle Green', price: '$82,500', category: 'Cars', description: '2022 F80 M3 Competition, 6-speed manual. Carbon seats, track package.', contact: 'team@one-culture.app', image_url: null },
-    { title: 'Akrapovič Titanium Exhaust — 992 GT3', price: '$4,200', category: 'Mods', description: 'Full titanium slip-on system. Near new, under 500 miles.', contact: 'team@one-culture.app', image_url: null },
-    { title: 'Michelin Pilot Cup 2 R — 305/30/20 (set of 2)', price: '$1,100', category: 'Wheels', description: 'Rear tires for 992. 7/10 tread remaining.', contact: 'team@one-culture.app', image_url: null },
-    { title: 'Racepak IQ3 Street Dash Logger', price: '$650', category: 'Electronics', description: 'Full digital dash with GPS lap timing and 0-60 timer.', contact: 'team@one-culture.app', image_url: null },
-    { title: 'Brembo GT Brake Kit — M4 Front', price: '$3,800', category: 'Mods', description: 'Six-piston Brembo GT kit for F8x M3/M4. Barely used.', contact: 'team@one-culture.app', image_url: null },
+    { title: 'Porsche 911 GT3 RS — Track Ready', price: '$289,000', category: 'Cars', description: '2023 GT3 RS, Weissach Package, 1,200 miles. Immaculate.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1614200187524-dc4b892acf16?w=800&auto=format&fit=crop&q=80' },
+    { title: 'BMW M3 Competition — Frozen Isle Green', price: '$82,500', category: 'Cars', description: '2022 F80 M3 Competition, 6-speed manual. Carbon seats, track package.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&auto=format&fit=crop&q=80' },
+    { title: 'Akrapovič Titanium Exhaust — 992 GT3', price: '$4,200', category: 'Mods', description: 'Full titanium slip-on system. Near new, under 500 miles.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1609521263047-f8f205293f24?w=800&auto=format&fit=crop&q=80' },
+    { title: 'Michelin Pilot Cup 2 R — 305/30/20 (set of 2)', price: '$1,100', category: 'Wheels', description: 'Rear tires for 992. 7/10 tread remaining.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&auto=format&fit=crop&q=80' },
+    { title: 'Racepak IQ3 Street Dash Logger', price: '$650', category: 'Electronics', description: 'Full digital dash with GPS lap timing and 0-60 timer.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&auto=format&fit=crop&q=80' },
+    { title: 'Brembo GT Brake Kit — M4 Front', price: '$3,800', category: 'Mods', description: 'Six-piston Brembo GT kit for F8x M3/M4. Barely used.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800&auto=format&fit=crop&q=80' },
   ];
   for (const l of demoListings) {
     await db.createListing({ user_id: teamUser.id, ...l });

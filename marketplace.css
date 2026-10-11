@@ -4,7 +4,7 @@
 
 /* ── Search bar ───────────────────────────────────────────── */
 .market-search-wrap {
-  padding: 10px 12px 8px;
+  padding: 6px 12px 6px;
   background: var(--c-surface);
   border-bottom: 1px solid var(--c-border);
   position: sticky; top: var(--header-h); z-index: 50;
@@ -12,7 +12,7 @@
 .market-search {
   width: 100%; background: var(--c-bg);
   border: 1px solid var(--c-border); border-radius: 22px;
-  padding: 10px 16px 10px 40px;
+  padding: 7px 16px 7px 36px;
   font-size: 14px; color: var(--c-text); outline: none;
   font-family: var(--font-ui);
   transition: border-color 0.15s;

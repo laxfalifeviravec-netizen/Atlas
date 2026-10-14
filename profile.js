@@ -138,7 +138,7 @@ function renderActions(user) {
 }
 
 async function blockUser(userId, btn) {
-  if (!confirm('Block this user? They will no longer be able to interact with you.')) return;
+  if (!(await appConfirm('Block this user? They will no longer be able to interact with you.', 'Block'))) return;
   btn.disabled = true;
   try {
     await fetch(`${API}/api/block/${userId}`, {
@@ -274,7 +274,7 @@ function buildCarCard(car, canDelete) {
 
   if (canDelete) {
     card.querySelector('.garage-car-delete').addEventListener('click', async () => {
-      if (!confirm('Remove this car?')) return;
+      if (!(await appConfirm('Remove this car?', 'Remove'))) return;
       try {
         await fetch(`${API}/api/cars/${car.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
         card.remove();
@@ -436,7 +436,7 @@ document.getElementById('signOutBtn').addEventListener('click', () => {
 });
 
 document.getElementById('deleteAccountBtn').addEventListener('click', async () => {
-  if (!confirm('Permanently delete your account and all your data? This cannot be undone.')) return;
+  if (!(await appConfirm('Permanently delete your account and all your data? This cannot be undone.', 'Delete Account'))) return;
   const btn = document.getElementById('deleteAccountBtn');
   btn.disabled = true; btn.textContent = 'Deleting…';
   try {

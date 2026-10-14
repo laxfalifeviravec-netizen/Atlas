@@ -988,3 +988,12 @@ body {
   cursor: pointer; font-family: var(--font-ui);
   -webkit-tap-highlight-color: transparent;
 }
+
+.action-sheet-item {
+  width: 100%; padding: 14px; border: none; border-radius: 10px;
+  background: var(--c-bg); color: var(--c-text);
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  font-family: var(--font-ui); -webkit-tap-highlight-color: transparent;
+}
+.action-sheet-item.danger { color: #e74c3c; }
+.post-card-more { margin-right: -6px; }

@@ -157,17 +157,17 @@ async function openEventDetail(evt) {
 }
 
 async function deleteEvent(evt) {
-  if (!confirm(`Delete "${evt.title}"? This cannot be undone.`)) return;
+  if (!(await appConfirm(`Delete "${evt.title}"? This cannot be undone.`, 'Delete'))) return;
   try {
     const res = await fetch(`${API}/api/events/${evt.id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) { alert('Could not delete event.'); return; }
+    if (!res.ok) { showAppMsg('Could not delete event.'); return; }
     detailOverlay.classList.remove('open');
     document.body.style.overflow = '';
     await loadEvents();
-  } catch { alert('Network error.'); }
+  } catch { showAppMsg('Network error.'); }
 }
 
 async function toggleRsvp(evt) {

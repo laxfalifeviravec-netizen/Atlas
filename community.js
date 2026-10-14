@@ -308,6 +308,7 @@ function buildPostCard(p) {
 
   const card = document.createElement('article');
   card.className = 'post-card';
+  card._userId = String(p.user_id);
   card.innerHTML = `
     <div class="post-card-header">
       <a href="profile.html?id=${p.user_id}" class="post-avatar" style="text-decoration:none;color:inherit;">${initials}</a>
@@ -315,6 +316,9 @@ function buildPostCard(p) {
         <a href="profile.html?id=${p.user_id}" class="post-card-username" style="text-decoration:none;color:inherit;">${esc(p.user_name||'Driver')}</a>
         <div class="post-card-road">${esc(p.road_name||p.region||'')}</div>
       </div>
+      <button class="post-card-more" aria-label="More options">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+      </button>
     </div>
     <div class="post-card-img-wrap">
       ${multi
@@ -369,37 +373,7 @@ function buildPostCard(p) {
     }
   }
 
-  if (currentUser && (String(p.user_id) === String(currentUser.id) || currentUser.is_admin)) {
-    const delBtn = document.createElement('button');
-    delBtn.className = 'post-action-btn post-delete-btn';
-    delBtn.title = 'Delete post';
-    delBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
-    delBtn.addEventListener('click', () => deletePost(p.id, card));
-    card.querySelector('.post-card-actions').appendChild(delBtn);
-  } else if (currentUser) {
-    const reportBtn = document.createElement('button');
-    reportBtn.className = 'post-action-btn post-report-btn';
-    reportBtn.title = 'Report post';
-    reportBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`;
-    reportBtn.addEventListener('click', () => reportPost(p.id, reportBtn));
-    card.querySelector('.post-card-actions').appendChild(reportBtn);
-  }
-  if (currentUser?.is_admin) {
-    const pinBtn = document.createElement('button');
-    pinBtn.className = 'post-action-btn post-pin-btn';
-    pinBtn.title = p.is_pinned ? 'Unpin post' : 'Pin post';
-    pinBtn.style.color = p.is_pinned ? 'var(--accent)' : '';
-    pinBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="${p.is_pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>`;
-    pinBtn.addEventListener('click', async () => {
-      const action = p.is_pinned ? 'unpin' : 'pin';
-      await fetch(`${API}/api/admin/posts/${p.id}/${action}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-      p.is_pinned = !p.is_pinned;
-      pinBtn.title = p.is_pinned ? 'Unpin post' : 'Pin post';
-      pinBtn.style.color = p.is_pinned ? 'var(--accent)' : '';
-      pinBtn.querySelector('svg').setAttribute('fill', p.is_pinned ? 'currentColor' : 'none');
-    });
-    card.querySelector('.post-card-actions').appendChild(pinBtn);
-  }
+  card.querySelector('.post-card-more').addEventListener('click', () => openPostMenu(p, card));
   return card;
 }
 
@@ -853,14 +827,14 @@ function deletePost(postId, cardEl) {
   });
 }
 
-function showConfirm(title, body, onConfirm) {
+function showConfirm(title, body, onConfirm, label = 'Delete') {
   const sheet = document.createElement('div');
   sheet.className = 'confirm-sheet';
   sheet.innerHTML = `
     <div class="confirm-sheet-box">
       <p class="confirm-sheet-title">${title}</p>
       ${body ? `<p class="confirm-sheet-body">${body}</p>` : ''}
-      <button class="confirm-sheet-del">Delete</button>
+      <button class="confirm-sheet-del">${label}</button>
       <button class="confirm-sheet-cancel">Cancel</button>
     </div>`;
   document.body.appendChild(sheet);
@@ -872,20 +846,84 @@ function showConfirm(title, body, onConfirm) {
 }
 
 // ── Report post ────────────────────────────────────────────
-async function reportPost(postId, btn) {
-  if (!currentUser) return openAuth();
-  const reason = prompt('Why are you reporting this post? (optional)') ?? '';
-  if (reason === null) return;
-  btn.disabled = true;
+function showActionSheet(title, items) {
+  const sheet = document.createElement('div');
+  sheet.className = 'confirm-sheet';
+  sheet.innerHTML = `<div class="confirm-sheet-box">
+    ${title ? `<p class="confirm-sheet-title">${esc(title)}</p>` : ''}
+    ${items.map((it, i) => `<button class="action-sheet-item${it.danger ? ' danger' : ''}" data-i="${i}">${esc(it.label)}</button>`).join('')}
+    <button class="confirm-sheet-cancel">Cancel</button>
+  </div>`;
+  document.body.appendChild(sheet);
+  requestAnimationFrame(() => sheet.classList.add('confirm-sheet-open'));
+  const close = () => { sheet.classList.remove('confirm-sheet-open'); setTimeout(() => sheet.remove(), 250); };
+  sheet.querySelectorAll('.action-sheet-item').forEach(btn =>
+    btn.addEventListener('click', () => { close(); items[+btn.dataset.i].fn(); }));
+  sheet.querySelector('.confirm-sheet-cancel').addEventListener('click', close);
+  sheet.addEventListener('click', e => { if (e.target === sheet) close(); });
+}
+
+function openPostMenu(p, card) {
+  const isOwn = currentUser && String(p.user_id) === String(currentUser.id);
+  const items = [
+    { label: 'Share', fn: () => sharePost(p.id) },
+    { label: 'Copy link', fn: () => {
+      const url = `${location.origin}/community.html?post=${p.id}`;
+      navigator.clipboard?.writeText(url).then(() => showToast('Link copied!')).catch(() => showToast(url));
+    } },
+  ];
+  if (currentUser) {
+    items.push({ label: p.saved ? 'Unsave' : 'Save', fn: () => toggleSave(p, card.querySelector('.save-btn')) });
+    if (currentUser.is_admin) items.push({ label: p.is_pinned ? 'Unpin post' : 'Pin post', fn: () => togglePin(p) });
+    if (isOwn || currentUser.is_admin) items.push({ label: 'Delete post', danger: true, fn: () => deletePost(p.id, card) });
+    if (!isOwn) {
+      items.push({ label: 'Report post', danger: true, fn: () => reportPost(p.id) });
+      items.push({ label: `Block ${p.user_name || 'user'}`, danger: true, fn: () => blockPoster(p) });
+    }
+  } else {
+    items.push({ label: 'Report post', danger: true, fn: openAuth });
+  }
+  showActionSheet('', items);
+}
+
+async function togglePin(p) {
+  const action = p.is_pinned ? 'unpin' : 'pin';
   try {
-    await fetch(`${API}/api/report`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target_type: 'post', target_id: postId, reason })
-    });
-    btn.title = 'Reported';
-    btn.style.opacity = '0.4';
-  } catch {} finally { btn.disabled = false; }
+    const res = await fetch(`${API}/api/admin/posts/${p.id}/${action}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error();
+    p.is_pinned = !p.is_pinned;
+    showToast(p.is_pinned ? 'Post pinned' : 'Post unpinned');
+  } catch { showToast('Could not update pin.'); }
+}
+
+function reportPost(postId) {
+  if (!currentUser) return openAuth();
+  const reasons = ['Spam or scam', 'Inappropriate or offensive', 'Harassment or hate', 'Dangerous driving', 'Something else'];
+  showActionSheet('Why are you reporting this post?', reasons.map(r => ({
+    label: r, danger: false,
+    fn: async () => {
+      try {
+        const res = await fetch(`${API}/api/report`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target_type: 'post', target_id: postId, reason: r })
+        });
+        showToast(res.ok ? 'Thanks — we\'ll review this post.' : 'Could not send report.');
+      } catch { showToast('Could not send report.'); }
+    }
+  })));
+}
+
+function blockPoster(p) {
+  showConfirm(`Block ${p.user_name || 'this user'}?`, 'You won\'t see their posts and they can\'t message you.', async () => {
+    try {
+      const res = await fetch(`${API}/api/block/${p.user_id}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error();
+      document.querySelectorAll('.post-card').forEach(c => { if (c._userId === String(p.user_id)) c.remove(); });
+      posts = posts.filter(x => String(x.user_id) !== String(p.user_id));
+      showToast('User blocked');
+    } catch { showToast('Could not block user.'); }
+  }, 'Block');
 }
 
 // ── Share post ─────────────────────────────────────────────

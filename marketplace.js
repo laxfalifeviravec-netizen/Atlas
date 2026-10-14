@@ -153,7 +153,7 @@ function openListingModal(l) {
 
   if (isOwner) {
     document.getElementById('deleteListingBtn').addEventListener('click', async () => {
-      if (!confirm('Delete this listing?')) return;
+      if (!(await appConfirm('Delete this listing?', 'Delete'))) return;
       await fetch(`${API}/api/marketplace/${l.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
       listingOverlay.classList.remove('open'); document.body.style.overflow = '';
       await loadListings(activeCategory);

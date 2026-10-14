@@ -22,7 +22,9 @@
   --radius-card:   4px;
   --font-ui:       'DM Sans', system-ui, -apple-system, sans-serif;
   --font-head:     'Barlow Condensed', system-ui, sans-serif;
-  --header-h:      52px;
+  --safe-t:        env(safe-area-inset-top, 0px);
+  --header-bare:   52px;
+  --header-h:      calc(var(--header-bare) + var(--safe-t));
   --bottom-nav-h:  calc(56px + env(safe-area-inset-bottom, 0px));
   --safe-b:        env(safe-area-inset-bottom, 0px);
 }
@@ -68,7 +70,8 @@ body {
   background: var(--c-surface);
   border-bottom: 1px solid var(--c-border);
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 12px 0 16px;
+  padding: var(--safe-t) 12px 0 16px;
+  box-sizing: border-box;
 }
 .app-logo {
   font-family: var(--font-head); font-size: 22px; font-weight: 800;

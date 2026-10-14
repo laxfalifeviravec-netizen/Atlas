@@ -3,29 +3,28 @@
 .market-main { padding: 0; padding-bottom: 80px; }
 
 /* ── Search bar ───────────────────────────────────────────── */
-.market-search-wrap {
-  padding: 6px 12px 6px;
-  background: var(--c-surface);
-  border-bottom: 1px solid var(--c-border);
-  position: sticky; top: var(--header-h); z-index: 50;
-}
-.market-search {
-  width: 100%; background: var(--c-bg);
-  border: 1px solid var(--c-border); border-radius: 22px;
-  padding: 7px 16px 7px 36px;
-  font-size: 14px; color: var(--c-text); outline: none;
-  font-family: var(--font-ui);
-  transition: border-color 0.15s;
-}
-.market-search:focus { border-color: var(--c-accent); }
-.market-search-wrap .search-icon {
-  position: absolute; left: 24px; top: 50%; transform: translateY(-50%);
-  color: var(--c-text-2); pointer-events: none;
-}
-.market-search-wrap { position: relative; }
 .market-search-sticky {
   position: sticky; top: var(--header-h); z-index: 50;
   background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+}
+.market-search-wrap {
+  position: relative;
+  padding: 6px 12px 5px;
+}
+.market-search {
+  width: 100%; background: var(--c-bg);
+  border: 1px solid var(--c-border); border-radius: 10px;
+  padding: 8px 12px 8px 32px;
+  font-size: 14px; color: var(--c-text); outline: none;
+  font-family: var(--font-ui);
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.market-search:focus { border-color: var(--c-accent); }
+.market-search-wrap .search-icon {
+  position: absolute; left: 22px; top: 50%; transform: translateY(-50%);
+  color: var(--c-text-2); pointer-events: none;
 }
 
 /* ── Category chips ───────────────────────────────────────── */

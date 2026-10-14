@@ -948,7 +948,7 @@ function sharePost(postId) {
           </div>`;
         }).join('');
         results.querySelectorAll('.share-user-row').forEach(row => {
-          row.addEventListener('click', () => sendPostToUser(row.dataset.id, row.dataset.name, postUrl, close));
+          row.addEventListener('click', () => sendPostToUser(row.dataset.id, row.dataset.name, postId, close));
         });
       } catch {}
     }, 280);
@@ -963,7 +963,18 @@ function sharePost(postId) {
   setTimeout(() => input.focus(), 280);
 }
 
-async function sendPostToUser(userId, userName, postUrl, closeSheet) {
+async function sendPostToUser(userId, userName, postId, closeSheet) {
+  const post = posts.find(p => String(p.id) === String(postId));
+  const messageBody = post ? JSON.stringify({
+    __type:    'post_share',
+    post_id:   post.id,
+    image_url: (post.image_urls && post.image_urls[0]) || post.image_url || '',
+    caption:   post.caption || '',
+    user_id:   post.user_id,
+    user_name: post.user_name || 'Driver',
+    road_name: post.road_name || ''
+  }) : `${location.origin}/community.html?post=${postId}`;
+
   try {
     const convRes = await fetch(`${API}/api/conversations`, {
       method: 'POST',
@@ -974,7 +985,7 @@ async function sendPostToUser(userId, userName, postUrl, closeSheet) {
     await fetch(`${API}/api/conversations/${conversation_id}/messages`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body: `Check out this post: ${postUrl}` })
+      body: JSON.stringify({ body: messageBody })
     });
     closeSheet();
     showToast(`Sent to ${userName}!`);

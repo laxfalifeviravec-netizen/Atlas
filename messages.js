@@ -156,13 +156,40 @@ function renderMessages(messages) {
     wrap.className = `chat-bubble-wrap ${isMine ? 'mine' : 'theirs'}`;
     wrap.innerHTML = `
       <div class="chat-bubble-avatar">${sAvatar}</div>
-      <div class="chat-bubble">${esc(msg.body)}</div>`;
+      ${buildBubbleContent(msg.body)}`;
     container.appendChild(wrap);
   });
 
   if (wasAtBottom || lastMsgCount <= 1) {
     container.scrollTop = container.scrollHeight;
   }
+}
+
+function buildBubbleContent(body) {
+  try {
+    const d = JSON.parse(body);
+    if (d.__type === 'post_share') {
+      const img = d.image_url
+        ? `<img src="${esc(d.image_url)}" class="shared-post-img" alt="" loading="lazy" />`
+        : `<div class="shared-post-no-img">📷</div>`;
+      const caption = d.caption
+        ? `<p class="shared-post-caption">${esc(d.caption.length > 90 ? d.caption.slice(0, 90) + '…' : d.caption)}</p>`
+        : '';
+      const road = d.road_name
+        ? `<span class="shared-post-road">${esc(d.road_name)}</span>`
+        : '';
+      return `<a href="profile.html?id=${d.user_id}" class="shared-post-card">
+        ${img}
+        <div class="shared-post-info">
+          <span class="shared-post-user">${esc(d.user_name)}</span>
+          ${road}
+          ${caption}
+          <span class="shared-post-hint">Tap to view profile →</span>
+        </div>
+      </a>`;
+    }
+  } catch {}
+  return `<div class="chat-bubble">${esc(body)}</div>`;
 }
 
 document.getElementById('chatForm').addEventListener('submit', async e => {

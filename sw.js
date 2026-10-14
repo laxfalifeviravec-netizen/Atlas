@@ -3,7 +3,7 @@
    Caches the app shell so it loads instantly and works offline.
    ============================================================ */
 
-const CACHE = 'culture-v33';
+const CACHE = 'culture-v34';
 
 const APP_SHELL = [
   '/',
@@ -64,13 +64,17 @@ self.addEventListener('install', e => {
   );
 });
 
-// Activate — clear old caches
+// Activate — clear old caches, and reload open pages after an upgrade
 self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
+  e.waitUntil((async () => {
+    const stale = (await caches.keys()).filter(k => k !== CACHE);
+    await Promise.all(stale.map(k => caches.delete(k)));
+    await self.clients.claim();
+    if (stale.length) {
+      const wins = await self.clients.matchAll({ type: 'window' });
+      wins.forEach(c => c.navigate(c.url).catch(() => {}));
+    }
+  })());
 });
 
 // Push notifications

@@ -364,3 +364,11 @@
 .shared-post-hint {
   font-size: 11px; color: var(--c-accent); margin-top: 4px;
 }
+
+.shared-post-main { display: block; text-decoration: none; color: inherit; }
+.shared-post-user {
+  display: block; padding: 8px 12px 10px;
+  border-top: 1px solid var(--c-border);
+  font-size: 13px; font-weight: 700; color: var(--c-text); text-decoration: none;
+}
+.shared-post-info:empty { display: none; }

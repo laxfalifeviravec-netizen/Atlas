@@ -178,15 +178,17 @@ function buildBubbleContent(body) {
       const road = d.road_name
         ? `<span class="shared-post-road">${esc(d.road_name)}</span>`
         : '';
-      return `<a href="profile.html?id=${d.user_id}" class="shared-post-card">
-        ${img}
-        <div class="shared-post-info">
-          <span class="shared-post-user">${esc(d.user_name)}</span>
-          ${road}
-          ${caption}
-          <span class="shared-post-hint">Tap to view profile →</span>
-        </div>
-      </a>`;
+      return `<div class="shared-post-card">
+        <a href="community.html?post=${parseInt(d.post_id)}" class="shared-post-main">
+          ${img}
+          <div class="shared-post-info">
+            ${road}
+            ${caption}
+            <span class="shared-post-hint">Tap to view post →</span>
+          </div>
+        </a>
+        <a href="profile.html?id=${parseInt(d.user_id)}" class="shared-post-user">@${esc(d.user_name)}</a>
+      </div>`;
     } catch (e) { console.error('post_share parse error', e); }
   }
   return `<div class="chat-bubble">${esc(body)}</div>`;

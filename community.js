@@ -871,15 +871,6 @@ function showConfirm(title, body, onConfirm) {
   sheet.addEventListener('click', e => { if (e.target === sheet) close(); });
 }
 
-function showToast(msg) {
-  const t = document.createElement('div');
-  t.className = 'feed-toast';
-  t.textContent = msg;
-  document.body.appendChild(t);
-  requestAnimationFrame(() => t.classList.add('feed-toast-show'));
-  setTimeout(() => { t.classList.remove('feed-toast-show'); setTimeout(() => t.remove(), 300); }, 2500);
-}
-
 // ── Report post ────────────────────────────────────────────
 async function reportPost(postId, btn) {
   if (!currentUser) return openAuth();
@@ -899,14 +890,95 @@ async function reportPost(postId, btn) {
 
 // ── Share post ─────────────────────────────────────────────
 function sharePost(postId) {
-  const url = `${location.origin}/community.html?post=${postId}`;
-  if (navigator.share) {
-    navigator.share({ title: 'One Culture', url }).catch(() => {});
-  } else {
-    navigator.clipboard?.writeText(url).then(() => {
-      showToast('Link copied!');
-    }).catch(() => showToast('Copy: ' + url));
+  if (!currentUser) {
+    const url = `${location.origin}/community.html?post=${postId}`;
+    if (navigator.share) navigator.share({ title: 'One Culture', url }).catch(() => {});
+    else navigator.clipboard?.writeText(url).then(() => showToast('Link copied!')).catch(() => {});
+    return;
   }
+
+  const postUrl = `${location.origin}/community.html?post=${postId}`;
+  const sheet = document.createElement('div');
+  sheet.className = 'share-sheet';
+  sheet.innerHTML = `
+    <div class="share-sheet-box">
+      <div class="share-sheet-header">
+        <span class="share-sheet-title">Share Post</span>
+        <button class="share-sheet-close" aria-label="Close">✕</button>
+      </div>
+      <input class="share-sheet-input" placeholder="Search users…" autocomplete="off" />
+      <div class="share-sheet-results"></div>
+      <div class="share-sheet-sep"></div>
+      <button class="share-sheet-ext">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        Share externally…
+      </button>
+    </div>`;
+  document.body.appendChild(sheet);
+  requestAnimationFrame(() => sheet.classList.add('share-sheet-open'));
+
+  const close = () => {
+    sheet.classList.remove('share-sheet-open');
+    setTimeout(() => sheet.remove(), 260);
+  };
+  sheet.querySelector('.share-sheet-close').addEventListener('click', close);
+  sheet.addEventListener('click', e => { if (e.target === sheet) close(); });
+
+  const input = sheet.querySelector('.share-sheet-input');
+  const results = sheet.querySelector('.share-sheet-results');
+  let timer;
+
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (!q) { results.innerHTML = ''; return; }
+    timer = setTimeout(async () => {
+      try {
+        const r = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const { users = [] } = await r.json();
+        if (!users.length) { results.innerHTML = '<p class="share-no-results">No users found</p>'; return; }
+        results.innerHTML = users.slice(0, 8).map(u => {
+          const initials = u.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+          return `<div class="share-user-row" data-id="${u.id}" data-name="${esc(u.name)}">
+            <div class="share-user-av">${initials}</div>
+            <span class="share-user-name">${esc(u.name)}</span>
+            <span class="share-user-send">Send</span>
+          </div>`;
+        }).join('');
+        results.querySelectorAll('.share-user-row').forEach(row => {
+          row.addEventListener('click', () => sendPostToUser(row.dataset.id, row.dataset.name, postUrl, close));
+        });
+      } catch {}
+    }, 280);
+  });
+
+  sheet.querySelector('.share-sheet-ext').addEventListener('click', () => {
+    close();
+    if (navigator.share) navigator.share({ title: 'One Culture', url: postUrl }).catch(() => {});
+    else navigator.clipboard?.writeText(postUrl).then(() => showToast('Link copied!')).catch(() => {});
+  });
+
+  setTimeout(() => input.focus(), 280);
+}
+
+async function sendPostToUser(userId, userName, postUrl, closeSheet) {
+  try {
+    const convRes = await fetch(`${API}/api/conversations`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId })
+    });
+    const { conversation_id } = await convRes.json();
+    await fetch(`${API}/api/conversations/${conversation_id}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: `Check out this post: ${postUrl}` })
+    });
+    closeSheet();
+    showToast(`Sent to ${userName}!`);
+  } catch { showToast('Could not send.'); }
 }
 
 function showToast(msg) {

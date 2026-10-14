@@ -202,7 +202,7 @@ const listingImageInput   = document.getElementById('listingImageInput');
 const listingPreview      = document.getElementById('listingPreview');
 
 const LISTING_PLACEHOLDERS = {
-  Cars:        { title: 'e.g. 992 GT3 RS — Weissach Package',          price: 'e.g. $189,000 or OBO', desc: 'Mileage, condition, options, service history…' },
+  Cars:        { title: 'e.g. 992 GT3 RS — Weissach Package',          price: 'e.g. $400,000 or OBO', desc: 'Mileage, condition, options, service history…' },
   Mods:        { title: 'e.g. Vorsteiner Carbon Front Lip — 992 GT3 RS', price: 'e.g. $1,800 or OBO',   desc: 'Fitment, condition, install notes, reason for selling…' },
   Wheels:      { title: 'e.g. HRE P101 20" Center Lock — Silver',       price: 'e.g. $4,200 or OBO',   desc: 'Size, offset, PCD, finish, condition, tires included…' },
   Electronics: { title: 'e.g. COBB Accessport V3 — GT3 RS',            price: 'e.g. $650 or OBO',     desc: 'Maps loaded, firmware version, condition, accessories…' },

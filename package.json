@@ -18,9 +18,10 @@
     "leaflet": "^1.9.4",
     "multer": "^2.1.1",
     "pg": "^8.23.0",
-    "resend": "^6.28.1"
+    "resend": "^6.28.1",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
-    "sharp": "^0.35.4"
+    "sharp": "^0.35.5"
   }
 }

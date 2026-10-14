@@ -13,6 +13,7 @@ let myLocMarker = null;
 let allRoads = [];
 let roadPolylines = {};
 let addModeActive = false;
+let addModeType = 'road'; // 'road' or 'waypoint'
 let pendingPoints = [];
 let pendingMarkers = [];
 let pendingPolyline = null;
@@ -37,6 +38,13 @@ let navLastPanTime = 0;
 let destMarker = null;
 let searchDebounce = null;
 const roadRegistry = {};
+
+// Group drive mode state
+const driveGroupId = new URLSearchParams(location.search).get('drive');
+let driveGroup = null;
+let driveMembers = {};
+let drivePollInterval = null;
+let driveGpsInterval = null;
 
 const DIFF_COLORS = { Easy: '#22c55e', Moderate: '#f59e0b', Hard: '#f97316', Expert: '#dc2222' };
 
@@ -84,12 +92,13 @@ function isDarkTheme() {
   return t ? t !== 'light' : window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 function cartoTile(map, dark) {
-  const url = dark
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-  return L.tileLayer(url, {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd', maxZoom: 20,
+  const container = map.getContainer();
+  container.style.filter = dark
+    ? 'invert(1) hue-rotate(180deg) brightness(0.85) saturate(0.85)'
+    : '';
+  return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM contributors</a>',
+    maxZoom: 19,
   }).addTo(map);
 }
 function applyMapTheme(map, dark) {
@@ -158,21 +167,38 @@ document.getElementById('navRecenterBtn').addEventListener('click', () => {
 function onMapClick(e) {
   if (!addModeActive) return;
   const { lat, lng } = e.latlng;
+
+  // Waypoint mode: only one point allowed
+  if (addModeType === 'waypoint') {
+    pendingMarkers.forEach(m => m.remove()); pendingMarkers = [];
+    pendingPoints = [];
+  }
+
   pendingPoints.push([lat, lng]);
 
   const marker = L.circleMarker([lat, lng], {
-    radius: 6, color: '#dc2222', fillColor: '#dc2222', fillOpacity: 1, weight: 2
+    radius: addModeType === 'waypoint' ? 9 : 6,
+    color: '#dc2222', fillColor: '#dc2222', fillOpacity: 1, weight: 2
   }).addTo(roadsMap);
   pendingMarkers.push(marker);
 
-  if (pendingPolyline) pendingPolyline.remove();
-  if (pendingPoints.length >= 2) {
-    pendingPolyline = L.polyline(pendingPoints, { color: '#dc2222', weight: 3, dashArray: '6 4' }).addTo(roadsMap);
+  if (addModeType === 'road') {
+    if (pendingPolyline) pendingPolyline.remove();
+    if (pendingPoints.length >= 2) {
+      pendingPolyline = L.polyline(pendingPoints, { color: '#dc2222', weight: 3, dashArray: '6 4' }).addTo(roadsMap);
+    }
   }
 }
 
 // ── Load Roads ─────────────────────────────────────────────
 let curatedRoads = [];
+
+// Sample an array down to at most maxN evenly-spaced points (keeps first + last)
+function samplePoints(pts, maxN) {
+  if (pts.length <= maxN) return pts;
+  const step = (pts.length - 1) / (maxN - 1);
+  return Array.from({ length: maxN }, (_, i) => pts[Math.round(i * step)]);
+}
 
 // Snap waypoints to real roads via OSRM (browser-side, cached in localStorage)
 async function snapToRoad(id, waypoints) {
@@ -216,7 +242,7 @@ async function loadRoads() {
     const total = roads.length + curatedRoads.length;
     document.getElementById('roadCount').textContent = `${total} road${total===1?'':'s'} mapped`;
     renderRoadList(roads, curatedRoads);
-    renderRoadPolylines(roads);
+    await renderRoadPolylines(roads);
     await renderCuratedPolylines(curatedRoads);
   } catch {}
 }
@@ -317,97 +343,140 @@ function renderRoadList(communityRoads, curatedList) {
   }
 }
 
-function renderRoadPolylines(roads) {
-  // Clear old
-  Object.values(roadPolylines).forEach(p => p.remove());
+async function renderRoadPolylines(roads) {
+  Object.values(roadPolylines).forEach(p => { if (p.remove) p.remove(); });
   roadPolylines = {};
 
-  roads.forEach(r => {
-    if (!r.points || r.points.length < 2) return;
+  await Promise.all(roads.map(async r => {
+    if (!r.points || r.points.length < 1) return;
     const color = DIFF_COLORS[r.difficulty] || '#dc2222';
-    const line = L.polyline(r.points, { color, weight: 4, opacity: 0.85 }).addTo(roadsMap);
+
+    const isWaypoint = r.point_type === 'waypoint' || r.points.length === 1;
 
     const popupHtml = `
       <div class="road-popup">
         <h4>${esc(r.name)}</h4>
         ${r.description ? `<p>${esc(r.description)}</p>` : ''}
         <div class="popup-meta">
-          <span class="road-diff diff-${r.difficulty}">${r.difficulty}</span>
+          ${isWaypoint
+            ? `<span class="road-diff diff-${r.difficulty}" style="background:#6366f1">${esc(r.spot_category || 'Spot')}</span>`
+            : `<span class="road-diff diff-${r.difficulty}">${r.difficulty}</span>`}
           ${r.region ? `<span style="font-size:11px;color:#888">${esc(r.region)}</span>` : ''}
         </div>
         <p style="font-size:11px;color:#888;margin-top:4px">by ${esc(r.submitted_by||'Driver')} · ♥ ${r.likes||0}</p>
-        <button class="nav-popup-btn" onclick="window.openNavPanel('${r.id}')">
+        ${!isWaypoint ? `<button class="nav-popup-btn" onclick="window.openNavPanel('${r.id}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
           Navigate
-        </button>
+        </button>` : ''}
       </div>`;
-    line.bindPopup(popupHtml);
-    roadPolylines[r.id] = line;
 
-    // Start marker
-    L.circleMarker(r.points[0], {
+    if (isWaypoint) {
+      const pin = L.circleMarker(r.points[0], {
+        radius: 8, color: '#6366f1', fillColor: '#6366f1', fillOpacity: 1, weight: 2
+      }).addTo(roadsMap).bindPopup(popupHtml);
+      roadPolylines[r.id] = pin;
+      return;
+    }
+
+    // Snap community road to actual road path via OSRM
+    const waypoints = samplePoints(r.points, 25);
+    const snapped = await snapToRoad(`community-${r.id}`, waypoints);
+
+    const line = L.polyline(snapped, { color, weight: 4, opacity: 0.85 }).addTo(roadsMap);
+    line.bindPopup(popupHtml);
+
+    const startMarker = L.circleMarker(snapped[0], {
       radius: 5, color, fillColor: color, fillOpacity: 1, weight: 2
     }).addTo(roadsMap).bindPopup(popupHtml);
-  });
+
+    const group = L.layerGroup([line, startMarker]);
+    roadPolylines[r.id] = group;
+  }));
 }
 
 const CURATED_DIFF_COLORS = { 1: '#22c55e', 2: '#22c55e', 3: '#f59e0b', 4: '#f97316', 5: '#dc2222' };
 let curatedPolylines = {};
 
+// Build a Leaflet layer for one curated road
+function buildCuratedLayer(r, snappedPts) {
+  const pts = snappedPts || r.geometry;
+  if (!pts || pts.length < 2) return null;
+  const color = CURATED_DIFF_COLORS[r.difficulty] || '#dc2222';
+  const diffLabel = ['', 'Easy', 'Easy', 'Moderate', 'Hard', 'Expert'][r.difficulty] || 'Moderate';
+
+  const popupHtml = `
+    <div class="road-popup">
+      <h4>${esc(r.name)}</h4>
+      ${r.description ? `<p>${esc(r.description)}</p>` : ''}
+      <div class="popup-meta">
+        <span class="road-diff diff-${diffLabel}">${diffLabel}</span>
+        ${r.state ? `<span style="font-size:11px;color:#888">${esc(r.state)}</span>` : ''}
+      </div>
+      <p style="font-size:11px;color:#888;margin-top:4px">${r.length_mi} mi · ${r.type}</p>
+      <button class="nav-popup-btn" onclick="window.openNavPanel('curated-${r.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        Navigate
+      </button>
+    </div>`;
+
+  const group = L.layerGroup();
+  L.polyline(pts, { color, weight: 5, opacity: 0.9 }).bindPopup(popupHtml).addTo(group);
+  L.circleMarker(pts[0], { radius: 5, color, fillColor: color, fillOpacity: 1, weight: 2 })
+    .bindPopup(popupHtml).addTo(group);
+  return group;
+}
+
 async function renderCuratedPolylines(roads) {
   Object.values(curatedPolylines).forEach(p => p.remove());
   curatedPolylines = {};
 
-  // Snap all roads to real roads in batches of 4 to avoid rate-limiting
-  const BATCH = 4;
-  for (let i = 0; i < roads.length; i += BATCH) {
-    const batch = roads.slice(i, i + BATCH);
-    await Promise.all(batch.map(async r => {
-      if (!r.geometry || r.geometry.length < 2) return;
-      const snapped = await snapToRoad(r.id, r.geometry);
-      r._snappedGeometry = snapped;
-    }));
-    // Small pause between batches to be polite to OSRM
-    if (i + BATCH < roads.length) await new Promise(res => setTimeout(res, 300));
+  // Snap each road's geometry to actual road paths via OSRM, then build layers
+  await Promise.all(roads.map(async r => {
+    if (!r.geometry || r.geometry.length < 2) return;
+    const waypoints = samplePoints(r.geometry, 25);
+    const snapped = await snapToRoad(`curated-${r.id}`, waypoints);
+    const layer = buildCuratedLayer(r, snapped);
+    if (layer) curatedPolylines[`curated-${r.id}`] = layer;
+  }));
+
+  // Viewport-aware rendering: show only roads whose start point is in the current view
+  // (or all roads when zoomed out to national level)
+  function refreshVisible() {
+    const zoom = roadsMap.getZoom();
+    const bounds = roadsMap.getBounds().pad(0.3); // 30% padding
+    const showAll = zoom <= 5;
+
+    Object.entries(curatedPolylines).forEach(([key, layer]) => {
+      const road = roads.find(r => `curated-${r.id}` === key);
+      if (!road || !road.geometry || road.geometry.length < 2) return;
+
+      const [lat, lng] = road.geometry[0];
+      const inView = showAll || bounds.contains(L.latLng(lat, lng));
+
+      if (inView && !roadsMap.hasLayer(layer)) layer.addTo(roadsMap);
+      else if (!inView && roadsMap.hasLayer(layer)) layer.remove();
+    });
   }
 
-  roads.forEach(r => {
-    if (!r.geometry || r.geometry.length < 2) return;
-    const pts = r._snappedGeometry || r.geometry;
-    const color = CURATED_DIFF_COLORS[r.difficulty] || '#dc2222';
-    const diffLabel = ['', 'Easy', 'Easy', 'Moderate', 'Hard', 'Expert'][r.difficulty] || 'Moderate';
-    const line = L.polyline(pts, { color, weight: 5, opacity: 0.9 }).addTo(roadsMap);
-
-    const popupHtml = `
-      <div class="road-popup">
-        <h4>${esc(r.name)}</h4>
-        ${r.description ? `<p>${esc(r.description)}</p>` : ''}
-        <div class="popup-meta">
-          <span class="road-diff diff-${diffLabel}">${diffLabel}</span>
-          ${r.state ? `<span style="font-size:11px;color:#888">${esc(r.state)}</span>` : ''}
-        </div>
-        <p style="font-size:11px;color:#888;margin-top:4px">${r.length_mi} mi · ${r.type}</p>
-        <button class="nav-popup-btn" onclick="window.openNavPanel('curated-${r.id}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-          Navigate
-        </button>
-      </div>`;
-    line.bindPopup(popupHtml);
-    curatedPolylines[`curated-${r.id}`] = line;
-
-    L.circleMarker(pts[0], {
-      radius: 5, color, fillColor: color, fillOpacity: 1, weight: 2
-    }).addTo(roadsMap).bindPopup(popupHtml);
-  });
+  refreshVisible();
+  roadsMap.off('moveend', refreshVisible); // remove any prior listener
+  roadsMap.on('moveend', refreshVisible);
 }
 
 function flyToRoad(road) {
-  const pts = road._snappedGeometry || road.points || road.geometry;
+  const pts = road.points || road.geometry;
   if (!pts || pts.length === 0) return;
-  const bounds = L.latLngBounds(pts);
-  roadsMap.fitBounds(bounds, { padding: [60, 60] });
-  const poly = roadPolylines[road.id] || curatedPolylines[road.id];
-  if (poly) poly.openPopup();
+  if (pts.length === 1) {
+    roadsMap.setView(pts[0], 15);
+  } else {
+    roadsMap.fitBounds(L.latLngBounds(pts), { padding: [60, 60] });
+  }
+  // openPopup on the polyline inside the layer group if present
+  const layer = roadPolylines[road.id] || curatedPolylines[`curated-${road.id}`] || curatedPolylines[road.id];
+  if (layer) {
+    if (layer.openPopup) layer.openPopup();
+    else if (layer.eachLayer) layer.eachLayer(l => { if (l.openPopup) l.openPopup(); });
+  }
   document.getElementById('roadsSidebar').classList.remove('open');
 }
 
@@ -419,19 +488,53 @@ document.getElementById('addRoadBtn').addEventListener('click', () => {
 
 document.getElementById('cancelAddRoadBtn').addEventListener('click', cancelAddMode);
 document.getElementById('doneAddRoadBtn').addEventListener('click', () => {
-  if (pendingPoints.length < 2) { alert('Click at least 2 points on the map to define the road.'); return; }
+  const minPts = addModeType === 'waypoint' ? 1 : 2;
+  if (pendingPoints.length < minPts) {
+    alert(addModeType === 'waypoint' ? 'Click one spot on the map.' : 'Click at least 2 points on the map to define the road.');
+    return;
+  }
   cancelAddMode(false);
+  const isSpot = addModeType === 'waypoint';
+  document.getElementById('addRoadModalTitle').textContent = isSpot ? 'Name This Spot' : 'Name This Road';
+  document.getElementById('submitRoadBtn').textContent = isSpot ? 'Submit Spot' : 'Submit Road';
+  document.getElementById('roadName').placeholder = isSpot ? 'Spot name (e.g. Best Viewpoint on 33)' : 'Road name (e.g. Angeles Crest Highway)';
+  document.querySelectorAll('.road-only-field').forEach(el => el.style.display = isSpot ? 'none' : '');
+  document.querySelectorAll('.spot-only-field').forEach(el => el.style.display = isSpot ? '' : 'none');
   document.getElementById('addRoadOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 });
 
 function enterAddMode() {
   addModeActive = true;
+  addModeType = 'road';
   pendingPoints = []; pendingMarkers = []; pendingPolyline = null;
   document.getElementById('addModeHint').style.display = 'flex';
   document.getElementById('addRoadBtn').style.display = 'none';
+  document.getElementById('addTypeRoad').classList.add('active');
+  document.getElementById('addTypeSpot').classList.remove('active');
+  document.getElementById('addModeHintText').innerHTML = 'Click on the map to place waypoints for your road. Click <strong>Done</strong> when finished (min 2 points).';
   roadsMap.getContainer().style.cursor = 'crosshair';
 }
+
+document.getElementById('addTypeRoad').addEventListener('click', () => {
+  addModeType = 'road';
+  document.getElementById('addTypeRoad').classList.add('active');
+  document.getElementById('addTypeSpot').classList.remove('active');
+  document.getElementById('addModeHintText').innerHTML = 'Click on the map to place waypoints for your road. Click <strong>Done</strong> when finished (min 2 points).';
+  pendingMarkers.forEach(m => m.remove()); pendingMarkers = [];
+  if (pendingPolyline) { pendingPolyline.remove(); pendingPolyline = null; }
+  pendingPoints = [];
+});
+
+document.getElementById('addTypeSpot').addEventListener('click', () => {
+  addModeType = 'waypoint';
+  document.getElementById('addTypeSpot').classList.add('active');
+  document.getElementById('addTypeRoad').classList.remove('active');
+  document.getElementById('addModeHintText').innerHTML = 'Click one spot on the map to pin it. Click <strong>Done</strong> when finished.';
+  pendingMarkers.forEach(m => m.remove()); pendingMarkers = [];
+  if (pendingPolyline) { pendingPolyline.remove(); pendingPolyline = null; }
+  pendingPoints = [];
+});
 
 function cancelAddMode(clearPending = true) {
   addModeActive = false;
@@ -468,6 +571,8 @@ document.getElementById('submitRoadBtn').addEventListener('click', async () => {
         difficulty: document.getElementById('roadDifficulty').value,
         description: document.getElementById('roadDesc').value.trim(),
         points: pendingPoints,
+        point_type: addModeType,
+        spot_category: addModeType === 'waypoint' ? document.getElementById('spotCategory').value : '',
       }),
     });
     const data = await res.json();
@@ -592,7 +697,7 @@ function openNavPanel(roadId) {
   navRoad = road;
   navRoute = null;
 
-  const pts = road._snappedGeometry || road.points || road.geometry;
+  const pts = road.points || road.geometry;
   const diff = road.difficulty
     ? (typeof road.difficulty === 'number' ? (['','Easy','Easy','Moderate','Hard','Expert'][road.difficulty] || 'Moderate') : road.difficulty)
     : 'Moderate';
@@ -650,10 +755,12 @@ function startNavigation() {
   if (!navRoad) return;
   document.getElementById('navPanel').classList.remove('open');
 
-  const pts = navRoad._snappedGeometry || navRoad.points || navRoad.geometry;
+  const pts = navRoad.points || navRoad.geometry;
   document.body.classList.add('nav-active');
   document.getElementById('navHUD').classList.add('active');
   document.getElementById('navTopCard').classList.add('active');
+  const hudRoadEl = document.getElementById('navHUDRoadName');
+  if (hudRoadEl) hudRoadEl.textContent = navRoad.name || '';
   setNavFollowing(true);
   navLastPanTime = 0;
 
@@ -816,34 +923,35 @@ function formatNavManeuver(m, streetName) {
 }
 
 function getNavArrowSVG(type, modifier) {
+  const s = `viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="white" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"`;
   if (type === 'arrive') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><polyline points="9 12 11 14 15 10"/></svg>`;
+    return `<svg ${s}><circle cx="12" cy="12" r="8"/><polyline points="9 12 11 14 15 10"/></svg>`;
   }
   if (!modifier || modifier === 'straight') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
+    return `<svg ${s}><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
   }
   if (modifier === 'left') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M5 12l7-7M5 12l7 7"/></svg>`;
+    return `<svg ${s}><path d="M5 12h14M5 12l7-7M5 12l7 7"/></svg>`;
   }
   if (modifier === 'right') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M19 12l-7-7M19 12l-7 7"/></svg>`;
+    return `<svg ${s}><path d="M19 12H5M19 12l-7-7M19 12l-7 7"/></svg>`;
   }
   if (modifier === 'slight left') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V8M12 8l-6 6M12 8h6"/></svg>`;
+    return `<svg ${s}><path d="M12 19V8M12 8l-6 6M12 8h6"/></svg>`;
   }
   if (modifier === 'slight right') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V8M12 8l6 6M12 8H6"/></svg>`;
+    return `<svg ${s}><path d="M12 19V8M12 8l6 6M12 8H6"/></svg>`;
   }
   if (modifier === 'sharp left') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 5H7v10M7 15l-4-4 4-4"/></svg>`;
+    return `<svg ${s}><path d="M17 5H7v10M7 15l-4-4 4-4"/></svg>`;
   }
   if (modifier === 'sharp right') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5h10v10M17 15l4-4-4-4"/></svg>`;
+    return `<svg ${s}><path d="M7 5h10v10M17 15l4-4-4-4"/></svg>`;
   }
   if (modifier === 'uturn') {
-    return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 17V9a5 5 0 0 0-10 0v8M7 17l-4-4 4-4"/></svg>`;
+    return `<svg ${s}><path d="M17 17V9a5 5 0 0 0-10 0v8M7 17l-4-4 4-4"/></svg>`;
   }
-  return `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
+  return `<svg ${s}><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
 }
 
 function panToUserOffset(lat, lng) {
@@ -1038,8 +1146,144 @@ document.getElementById('navPanel').addEventListener('click', e => {
   }
 });
 
+// ── Group Drive Mode ───────────────────────────────────────
+async function initGroupDrive(groupId) {
+  if (!token) return; // need to be signed in to share location
+
+  // Auto-join the group so location sharing works
+  try {
+    await fetch(`${API}/api/groups/${groupId}/join`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` }
+    });
+  } catch {}
+
+  // Fetch group info for display name
+  try {
+    const res = await fetch(`${API}/api/groups/${groupId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const { group } = await res.json();
+      driveGroup = group;
+      const nameEl = document.getElementById('driveCrewName');
+      if (nameEl) nameEl.textContent = group.name;
+    }
+  } catch {}
+
+  // Show the crew bar
+  const bar = document.getElementById('driveCrewBar');
+  if (bar) bar.style.display = 'flex';
+
+  // Start sharing own GPS to the group
+  startDriveGPS(groupId);
+
+  // Start polling member locations
+  await pollDriveLocations(groupId);
+  drivePollInterval = setInterval(() => pollDriveLocations(groupId), 5000);
+}
+
+function startDriveGPS(groupId) {
+  if (!navigator.geolocation || !token) return;
+  const send = () => {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude: lat, longitude: lng, heading } = pos.coords;
+      fetch(`${API}/api/groups/${groupId}/location`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, lng, heading: heading || 0 }),
+      }).catch(() => {});
+    }, () => {});
+  };
+  send();
+  driveGpsInterval = setInterval(send, 5000);
+}
+
+async function pollDriveLocations(groupId) {
+  if (!token || !roadsMap) return;
+  try {
+    const res = await fetch(`${API}/api/groups/${groupId}/locations`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const { locations } = await res.json();
+    updateDriveMarkers(locations);
+    updateDriveCrewBar(locations);
+  } catch {}
+}
+
+function driveMemberIcon(initials, isMe) {
+  const color = isMe ? '#dc2626' : '#1A73E8';
+  return L.divIcon({
+    className: '',
+    html: `<div style="position:relative;width:40px;height:40px">
+      <div style="position:absolute;inset:0;border-radius:50%;background:${color};opacity:0.22;animation:nav-halo-pulse 2s ease-out infinite"></div>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:${color};color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;border:2px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.5)">${esc(initials)}</div>
+    </div>`,
+    iconSize: [40, 40], iconAnchor: [20, 20],
+  });
+}
+
+function updateDriveMarkers(locations) {
+  if (!roadsMap) return;
+  const activeIds = new Set(locations.map(l => String(l.user_id)));
+
+  // Remove stale markers
+  for (const uid of Object.keys(driveMembers)) {
+    if (!activeIds.has(uid)) { driveMembers[uid].remove(); delete driveMembers[uid]; }
+  }
+
+  locations.forEach(loc => {
+    if (currentUser && loc.user_id === currentUser.id) return; // skip self — nav already shows own dot
+    const uid = String(loc.user_id);
+    const initials = (loc.user_name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    const icon = driveMemberIcon(initials, false);
+    if (driveMembers[uid]) {
+      driveMembers[uid].setLatLng([loc.lat, loc.lng]);
+      driveMembers[uid].setIcon(icon);
+    } else {
+      driveMembers[uid] = L.marker([loc.lat, loc.lng], { icon })
+        .addTo(roadsMap)
+        .bindPopup(`<strong>${esc(loc.user_name || 'Driver')}</strong>`, { closeButton: false });
+    }
+  });
+}
+
+function updateDriveCrewBar(locations) {
+  const countEl = document.getElementById('driveCrewCount');
+  const avatarsEl = document.getElementById('driveCrewAvatars');
+  if (!countEl || !avatarsEl) return;
+
+  const total = locations.length;
+  countEl.textContent = total === 1 ? '1 live' : `${total} live`;
+
+  const shown = locations.slice(0, 4);
+  avatarsEl.innerHTML = shown.map(loc => {
+    const isMe = currentUser && loc.user_id === currentUser.id;
+    const initials = (loc.user_name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    return `<div class="drive-crew-avatar${isMe ? ' me' : ''}" title="${esc(loc.user_name || 'Driver')}">${esc(initials)}</div>`;
+  }).join('');
+}
+
+function stopGroupDrive() {
+  if (drivePollInterval) { clearInterval(drivePollInterval); drivePollInterval = null; }
+  if (driveGpsInterval) { clearInterval(driveGpsInterval); driveGpsInterval = null; }
+  Object.values(driveMembers).forEach(m => m.remove());
+  driveMembers = {};
+  const bar = document.getElementById('driveCrewBar');
+  if (bar) bar.style.display = 'none';
+}
+
+document.getElementById('driveCrewLeave')?.addEventListener('click', () => {
+  stopGroupDrive();
+  // Remove ?drive from URL without reload
+  const url = new URL(location.href);
+  url.searchParams.delete('drive');
+  history.replaceState(null, '', url);
+});
+
 (async () => {
   initMap();
   await loadMe();
   await loadRoads();
+  if (driveGroupId) await initGroupDrive(driveGroupId);
 })();

@@ -15,6 +15,8 @@ const fs         = require('fs');
 const crypto     = require('crypto');
 const rateLimit  = require('express-rate-limit');
 const { Resend } = require('resend');
+const sharp    = require('sharp');
+const webpush  = require('web-push');
 
 const app = express();
 const PORT       = process.env.PORT || 3001;
@@ -25,6 +27,13 @@ const RESEND_KEY = process.env.RESEND_API_KEY || '';
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Culture <noreply@one-culture.app>';
 
 const resendClient = RESEND_KEY ? new Resend(RESEND_KEY) : null;
+
+const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY  || '';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
+const VAPID_EMAIL       = process.env.VAPID_EMAIL       || 'mailto:admin@one-culture.app';
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+}
 
 // ── Rate limiters ─────────────────────────────────────────────
 const authLimiter = rateLimit({
@@ -84,12 +93,27 @@ const upload = multer({
   },
 });
 
-async function storeImage(file) {
+async function storeImage(file, opts = {}) {
   if (USE_SUPABASE) {
-    const ext = path.extname(file.originalname).toLowerCase() || (file.mimetype.startsWith('video/') ? '.mp4' : '.jpg');
+    const isVideo = file.mimetype.startsWith('video/');
+    let buffer = file.buffer;
+    let contentType = file.mimetype;
+    let ext = path.extname(file.originalname).toLowerCase() || (isVideo ? '.mp4' : '.jpg');
+
+    if (!isVideo) {
+      const maxW = opts.maxWidth  || 1200;
+      const maxH = opts.maxHeight || 1200;
+      buffer = await sharp(file.buffer)
+        .resize(maxW, maxH, { fit: opts.fit || 'inside', withoutEnlargement: true })
+        .jpeg({ quality: opts.quality || 85 })
+        .toBuffer();
+      contentType = 'image/jpeg';
+      ext = '.jpg';
+    }
+
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-    const { error } = await sb.storage.from('uploads').upload(filename, file.buffer, {
-      contentType: file.mimetype, upsert: false,
+    const { error } = await sb.storage.from('uploads').upload(filename, buffer, {
+      contentType, upsert: false,
     });
     if (error) throw error;
     const { data } = sb.storage.from('uploads').getPublicUrl(filename);
@@ -114,12 +138,15 @@ let _events = [];       // { id, creator_id, title, description, date, location,
 let _eventRsvps = [];   // { event_id, user_id }
 let _cars = [];         // { id, user_id, year, make, model, color, mods, created_at }
 let _convId = 1, _msgId = 1, _evId = 1, _carId = 1;
+let _blocks = [], _reports = [], _pushSubs = [];
+let _repId = 1, _psId = 1;
 function now() { return new Date().toISOString(); }
 
 // ── Middleware ────────────────────────────────────────────────
 app.set('trust proxy', 1); // Vercel / any reverse proxy
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(apiLimiter);
 if (!IS_VERCEL) app.use(express.static(path.join(__dirname)));
 if (!USE_SUPABASE) app.use('/uploads', express.static(UPLOADS_DIR));
@@ -139,7 +166,13 @@ function optionalAuth(req, res, next) {
 
 function safeUser(u) { const { password_hash: _, password: __, ...r } = u; return r; }
 function makeToken(u) {
-  return jwt.sign({ id: u.id, email: u.email, name: u.name, avatar: u.avatar, plan: u.plan }, JWT_SECRET, { expiresIn: '30d' });
+  return jwt.sign({ id: u.id, email: u.email, name: u.name, avatar: u.avatar, plan: u.plan, is_admin: u.is_admin || false }, JWT_SECRET, { expiresIn: '30d' });
+}
+function requireAdmin(req, res, next) {
+  requireAuth(req, res, () => {
+    if (!req.user.is_admin) return res.status(403).json({ error: 'Forbidden' });
+    next();
+  });
 }
 
 // ── Helpers: Supabase vs memory ───────────────────────────────
@@ -180,14 +213,21 @@ const db = {
   },
 
   // ── Posts ──
-  async getPosts(page, limit, userId) {
+  async getPosts(page, limit, userId, followingIds = null, blockedIds = []) {
     const offset = (page - 1) * limit;
     if (USE_SUPABASE) {
-      const { data, count } = await sb.from('posts')
-        .select(`id, user_id, image_url, caption, road_name, region, likes, created_at,
+      let query = sb.from('posts')
+        .select(`id, user_id, image_url, image_urls, caption, road_name, region, likes, created_at, is_pinned,
                  users!posts_user_id_fkey(name, avatar)`, { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
+        .order('is_pinned', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false });
+      if (followingIds && followingIds.length > 0) {
+        query = query.in('user_id', followingIds);
+      } else if (followingIds !== null) {
+        return { posts: [], total: 0 };
+      }
+      if (blockedIds.length > 0) query = query.not('user_id', 'in', `(${blockedIds.join(',')})`);
+      const { data, count } = await query.range(offset, offset + limit - 1);
       const likedIds = new Set();
       if (userId && data?.length) {
         const { data: lk } = await sb.from('post_likes')
@@ -203,14 +243,19 @@ const db = {
         total: count || 0,
       };
     }
-    const sorted = [..._posts].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    let source = [..._posts].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    if (followingIds !== null) {
+      if (followingIds.length === 0) return { posts: [], total: 0 };
+      source = source.filter(p => followingIds.includes(p.user_id));
+    }
+    if (blockedIds.length > 0) source = source.filter(p => !blockedIds.includes(p.user_id));
     return {
-      posts: sorted.slice(offset, offset + limit).map(p => {
+      posts: source.slice(offset, offset + limit).map(p => {
         const u = _users.find(u => u.id === p.user_id) || {};
         return { ...p, user_name: u.name || '', user_avatar: u.avatar || null,
           liked: userId ? _postLikes.has(`${userId}-${p.id}`) : false };
       }),
-      total: _posts.length,
+      total: source.length,
     };
   },
   async createPost(fields) {
@@ -222,11 +267,11 @@ const db = {
     const p = { id: _pid++, ...fields, likes: 0, created_at: now() };
     _posts.push(p); return p;
   },
-  async deletePost(id, userId) {
+  async deletePost(id, userId, isAdmin = false) {
     if (USE_SUPABASE) {
       const { data: p } = await sb.from('posts').select('user_id, image_url').eq('id', id).single();
       if (!p) return { error: 'not_found' };
-      if (p.user_id !== userId) return { error: 'forbidden' };
+      if (!isAdmin && p.user_id !== userId) return { error: 'forbidden' };
       await sb.from('posts').delete().eq('id', id);
       // Delete from storage if it's a Supabase storage URL
       if (p.image_url?.includes('/storage/v1/')) {
@@ -295,11 +340,11 @@ const db = {
     const c = { id: _cid++, ...fields, created_at: now() };
     _comments.push(c); return c;
   },
-  async deleteComment(id, userId) {
+  async deleteComment(id, userId, isAdmin = false) {
     if (USE_SUPABASE) {
       const { data: c } = await sb.from('comments').select('user_id').eq('id', id).single();
       if (!c) return { error: 'not_found' };
-      if (c.user_id !== userId) return { error: 'forbidden' };
+      if (!isAdmin && c.user_id !== userId) return { error: 'forbidden' };
       await sb.from('comments').delete().eq('id', id);
       return { ok: true };
     }
@@ -670,6 +715,19 @@ const db = {
     _follows.push({ follower_id: followerId, following_id: followingId });
     return { following: true };
   },
+  async getFollowing(userId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('follows')
+        .select('following_id, users!follows_following_id_fkey(id, name, avatar, bio)')
+        .eq('follower_id', userId);
+      return (data || []).map(f => f.users).filter(Boolean);
+    }
+    return _follows
+      .filter(f => f.follower_id === userId)
+      .map(f => _users.find(u => u.id === f.following_id))
+      .filter(Boolean)
+      .map(u => ({ id: u.id, name: u.name, avatar: u.avatar, bio: u.bio }));
+  },
   async unfollowUser(followerId, followingId) {
     if (USE_SUPABASE) {
       await sb.from('follows').delete().eq('follower_id', followerId).eq('following_id', followingId);
@@ -707,12 +765,11 @@ const db = {
     _notifications.filter(n => n.user_id === userId && !n.read).forEach(n => { n.read = true; });
   },
   async createNotification(fields) {
-    if (fields.user_id === fields.actor_id) return; // no self-notifications
-    if (USE_SUPABASE) {
-      await sb.from('notifications').insert(fields);
-      return;
-    }
-    _notifications.push({ id: _nid++, ...fields, read: false, created_at: now() });
+    if (fields.user_id === fields.actor_id) return;
+    if (USE_SUPABASE) await sb.from('notifications').insert(fields);
+    else _notifications.push({ id: _nid++, ...fields, read: false, created_at: now() });
+    const titles = { like: `${fields.actor_name} liked your post`, comment: `${fields.actor_name} commented on your post`, follow: `${fields.actor_name} started following you`, message: `New message from ${fields.actor_name}` };
+    sendPushToUser(fields.user_id, { title: titles[fields.type] || 'New notification', body: '', type: fields.type, post_id: fields.post_id }).catch(() => {});
   },
 
   // ── Search ──
@@ -828,6 +885,13 @@ const db = {
       return { id: convId, other_user_id: other?.user_id, other_name: otherUser.name || '?', other_avatar: otherUser.avatar || null, last_message: msgs[0] || null, unread };
     }).filter(c => c.other_user_id);
   },
+  async getConversationMembers(convId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('conversation_members').select('user_id').eq('conv_id', convId);
+      return (data || []).map(r => r.user_id);
+    }
+    return _convMembers.filter(m => m.conv_id === convId).map(m => m.user_id);
+  },
   async getMessages(convId, userId) {
     if (USE_SUPABASE) {
       const { data: member } = await sb.from('conversation_members').select('user_id').eq('conv_id', convId).eq('user_id', userId).single();
@@ -889,6 +953,22 @@ const db = {
     }
     const e = { id: _evId++, ...fields, created_at: now() };
     _events.push(e); return e;
+  },
+  async deleteEvent(eventId, userId) {
+    if (USE_SUPABASE) {
+      const { data: e } = await sb.from('events').select('creator_id').eq('id', eventId).single();
+      if (!e) return { error: 'not_found' };
+      if (e.creator_id !== userId) return { error: 'forbidden' };
+      await sb.from('event_rsvps').delete().eq('event_id', eventId);
+      await sb.from('events').delete().eq('id', eventId);
+      return { ok: true };
+    }
+    const idx = _events.findIndex(e => e.id === eventId);
+    if (idx === -1) return { error: 'not_found' };
+    if (_events[idx].creator_id !== userId) return { error: 'forbidden' };
+    _events.splice(idx, 1);
+    _eventRsvps = _eventRsvps.filter(r => r.event_id !== eventId);
+    return { ok: true };
   },
   async toggleEventRsvp(eventId, userId) {
     if (USE_SUPABASE) {
@@ -985,7 +1065,152 @@ const db = {
     this._resetTokens.delete(token);
     return entry.email;
   },
+
+  // ── Blocks ──
+  async blockUser(blockerId, blockedId) {
+    if (USE_SUPABASE) {
+      await sb.from('blocks').upsert({ blocker_id: blockerId, blocked_id: blockedId }, { onConflict: 'blocker_id,blocked_id' });
+      return { ok: true };
+    }
+    if (!_blocks.find(b => b.blocker_id === blockerId && b.blocked_id === blockedId))
+      _blocks.push({ blocker_id: blockerId, blocked_id: blockedId });
+    return { ok: true };
+  },
+  async unblockUser(blockerId, blockedId) {
+    if (USE_SUPABASE) {
+      await sb.from('blocks').delete().eq('blocker_id', blockerId).eq('blocked_id', blockedId);
+      return { ok: true };
+    }
+    _blocks = _blocks.filter(b => !(b.blocker_id === blockerId && b.blocked_id === blockedId));
+    return { ok: true };
+  },
+  async isBlocked(blockerId, blockedId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('blocks').select('blocker_id').eq('blocker_id', blockerId).eq('blocked_id', blockedId).maybeSingle();
+      return !!data;
+    }
+    return !!_blocks.find(b => b.blocker_id === blockerId && b.blocked_id === blockedId);
+  },
+  async getBlockedIds(userId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('blocks').select('blocked_id').eq('blocker_id', userId);
+      return (data || []).map(b => b.blocked_id);
+    }
+    return _blocks.filter(b => b.blocker_id === userId).map(b => b.blocked_id);
+  },
+
+  // ── Reports ──
+  async reportContent(fields) {
+    if (USE_SUPABASE) { await sb.from('reports').insert(fields); return { ok: true }; }
+    _reports.push({ id: _repId++, ...fields, created_at: now() });
+    return { ok: true };
+  },
+
+  // ── Push subscriptions ──
+  async savePushSubscription(userId, sub) {
+    if (USE_SUPABASE) {
+      await sb.from('push_subscriptions').upsert(
+        { user_id: userId, endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth },
+        { onConflict: 'endpoint' }
+      );
+      return { ok: true };
+    }
+    const idx = _pushSubs.findIndex(s => s.endpoint === sub.endpoint);
+    if (idx !== -1) _pushSubs[idx].user_id = userId;
+    else _pushSubs.push({ id: _psId++, user_id: userId, endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth });
+    return { ok: true };
+  },
+  async deletePushSubscription(endpoint) {
+    if (USE_SUPABASE) { await sb.from('push_subscriptions').delete().eq('endpoint', endpoint); return { ok: true }; }
+    _pushSubs = _pushSubs.filter(s => s.endpoint !== endpoint);
+    return { ok: true };
+  },
+  async getUserPushSubscriptions(userId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('push_subscriptions').select('*').eq('user_id', userId);
+      return data || [];
+    }
+    return _pushSubs.filter(s => s.user_id === userId);
+  },
+
+  // ── Suggested users (most followed, not already followed) ──
+  async getSuggestedUsers(forUserId, limit = 8) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('follows')
+        .select('following_id, users!follows_following_id_fkey(id, name, avatar, bio, plan)')
+        .not('following_id', 'eq', forUserId)
+        .limit(100);
+      if (!data) return [];
+      const counts = {};
+      data.forEach(r => { counts[r.following_id] = (counts[r.following_id] || 0) + 1; });
+      const followingMe = forUserId ? (await sb.from('follows').select('following_id').eq('follower_id', forUserId)).data?.map(f => f.following_id) || [] : [];
+      const ranked = Object.entries(counts)
+        .filter(([id]) => !followingMe.includes(parseInt(id)) && parseInt(id) !== forUserId)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([id]) => data.find(r => r.following_id === parseInt(id))?.users)
+        .filter(Boolean);
+      return ranked;
+    }
+    const counts = {};
+    _follows.forEach(f => { counts[f.following_id] = (counts[f.following_id] || 0) + 1; });
+    const myFollows = new Set(_follows.filter(f => f.follower_id === forUserId).map(f => f.following_id));
+    return Object.entries(counts)
+      .filter(([id]) => !myFollows.has(parseInt(id)) && parseInt(id) !== forUserId)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([id]) => _users.find(u => u.id === parseInt(id)))
+      .filter(Boolean)
+      .map(u => ({ id: u.id, name: u.name, avatar: u.avatar, bio: u.bio, plan: u.plan }));
+  },
+
+  async deleteUser(id) {
+    if (USE_SUPABASE) {
+      await sb.from('users').delete().eq('id', id);
+      return { ok: true };
+    }
+    const idx = _users.findIndex(u => u.id === id);
+    if (idx !== -1) _users.splice(idx, 1);
+    return { ok: true };
+  },
 };
+
+// ── Push helper ───────────────────────────────────────────────
+async function sendPushToUser(userId, payload) {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
+  try {
+    const subs = await db.getUserPushSubscriptions(userId);
+    const body = JSON.stringify(payload);
+    await Promise.all(subs.map(async sub => {
+      try {
+        await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, body);
+      } catch (e) {
+        if (e.statusCode === 410 || e.statusCode === 404) db.deletePushSubscription(sub.endpoint).catch(() => {});
+      }
+    }));
+  } catch {}
+}
+
+// ── Apple Sign In helpers ────────────────────────────────────
+const APPLE_SERVICE_ID = process.env.APPLE_SERVICE_ID || '';
+let _appleKeysCache = null, _appleKeysCacheTs = 0;
+async function getAppleKeys() {
+  const now = Date.now();
+  if (_appleKeysCache && now - _appleKeysCacheTs < 3_600_000) return _appleKeysCache;
+  const res = await fetch('https://appleid.apple.com/auth/keys');
+  _appleKeysCache = (await res.json()).keys;
+  _appleKeysCacheTs = now;
+  return _appleKeysCache;
+}
+async function verifyAppleToken(idToken) {
+  const keys = await getAppleKeys();
+  const decoded = jwt.decode(idToken, { complete: true });
+  if (!decoded?.header) throw new Error('bad token');
+  const jwk = keys.find(k => k.kid === decoded.header.kid);
+  if (!jwk) throw new Error('key not found');
+  const pub = crypto.createPublicKey({ key: jwk, format: 'jwk' });
+  return jwt.verify(idToken, pub, { algorithms: ['RS256'] });
+}
 
 // ── Auth routes ───────────────────────────────────────────────
 app.post('/api/auth/register', authLimiter, async (req, res) => {
@@ -1048,7 +1273,7 @@ app.patch('/api/auth/me', requireAuth, upload.single('avatar'), async (req, res)
     const fields = {};
     if (name?.trim()) fields.name = name.trim();
     if (bio !== undefined) fields.bio = bio.trim();
-    if (req.file) fields.avatar = await storeImage(req.file);
+    if (req.file) fields.avatar = await storeImage(req.file, { maxWidth: 400, maxHeight: 400, fit: 'cover', quality: 80 });
     const user = await db.updateUser(req.user.id, fields);
     if (!user) return res.status(404).json({ error: 'User not found.' });
     res.json({ user: safeUser(user), token: makeToken(user) });
@@ -1110,27 +1335,219 @@ app.post('/api/auth/reset-password', async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
+// ── Google Sign-In ────────────────────────────────────────────
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+
+app.get('/api/auth/google-client-id', (req, res) => {
+  res.json({ clientId: GOOGLE_CLIENT_ID || null });
+});
+
+app.get('/api/auth/apple-client-id', (req, res) => {
+  res.json({ clientId: APPLE_SERVICE_ID || null });
+});
+
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ error: 'Missing credential.' });
+
+    // Verify credential with Google's tokeninfo endpoint
+    const infoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+    if (!infoRes.ok) return res.status(401).json({ error: 'Invalid Google credential.' });
+    const info = await infoRes.json();
+
+    if (GOOGLE_CLIENT_ID && info.aud !== GOOGLE_CLIENT_ID) {
+      return res.status(401).json({ error: 'Credential audience mismatch.' });
+    }
+    if (!info.email_verified || info.email_verified === 'false') {
+      return res.status(401).json({ error: 'Google email not verified.' });
+    }
+
+    const email = info.email.toLowerCase();
+    let user = await db.findUserByEmail(email);
+    if (!user) {
+      // Auto-register via Google
+      user = await db.createUser({
+        name: info.name || email.split('@')[0],
+        email,
+        password_hash: '$social$google$' + require('crypto').randomBytes(16).toString('hex'),
+        avatar: info.picture || null,
+        bio: '',
+        plan: 'Explorer',
+      });
+    }
+    res.json({ token: makeToken(user), user: safeUser(user) });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+async function handleAppleAuth(id_token, user_name) {
+  const payload = await verifyAppleToken(id_token);
+  const email = (payload.email || `${payload.sub}@privaterelay.appleid.com`).toLowerCase();
+  let user = await db.findUserByEmail(email);
+  if (!user) {
+    user = await db.createUser({
+      name: user_name || email.split('@')[0],
+      email,
+      password_hash: '$social$apple$' + require('crypto').randomBytes(16).toString('hex'),
+      avatar: null,
+      bio: '',
+      plan: 'Explorer',
+    });
+  }
+  return { token: makeToken(user), user: safeUser(user) };
+}
+
+app.post('/api/auth/apple', async (req, res) => {
+  try {
+    const { id_token, user_name } = req.body;
+    if (!id_token) return res.status(400).json({ error: 'Missing id_token.' });
+    const result = await handleAppleAuth(id_token, user_name);
+    res.json(result);
+  } catch (e) { console.error('Apple auth:', e.message); res.status(401).json({ error: 'Apple sign-in failed.' }); }
+});
+
+// iOS redirect-mode callback — Apple POSTs here after native Sign in with Apple
+app.get('/api/auth/apple/callback', async (req, res) => {
+  console.log('Apple GET callback query:', JSON.stringify(req.query));
+  const redirect = (token, error) => {
+    const url = token
+      ? `/?apple_token=${encodeURIComponent(token)}`
+      : `/?apple_error=${encodeURIComponent(error || 'failed')}`;
+    res.redirect(302, url);
+  };
+  try {
+    const id_token = req.query.id_token;
+    if (!id_token) return redirect(null, 'no_token_get');
+    const result = await handleAppleAuth(id_token, null);
+    redirect(result.token, null);
+  } catch (e) { console.error('Apple GET callback:', e.message); redirect(null, 'failed'); }
+});
+app.post('/api/auth/apple/callback', async (req, res) => {
+  console.log('Apple POST callback body keys:', Object.keys(req.body || {}));
+  const redirect = (token, error) => {
+    const url = token
+      ? `/?apple_token=${encodeURIComponent(token)}`
+      : `/?apple_error=${encodeURIComponent(error || 'failed')}`;
+    res.redirect(302, url);
+  };
+  try {
+    const id_token = req.body.id_token;
+    if (!id_token) { console.log('Apple callback missing id_token, body:', JSON.stringify(req.body)); return redirect(null, 'missing_token'); }
+    const userJson = req.body.user ? JSON.parse(req.body.user) : null;
+    const name = userJson?.name ? `${userJson.name.firstName || ''} ${userJson.name.lastName || ''}`.trim() : null;
+    const result = await handleAppleAuth(id_token, name);
+    redirect(result.token, null);
+  } catch (e) { console.error('Apple callback:', e.message); redirect(null, 'failed'); }
+});
+
+app.delete('/api/auth/me', requireAuth, async (req, res) => {
+  try {
+    await db.deleteUser(req.user.id);
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Could not delete account.' }); }
+});
+
+// ── Block routes ─────────────────────────────────────────────
+app.post('/api/block/:userId', requireAuth, async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.userId);
+    if (targetId === req.user.id) return res.status(400).json({ error: 'Cannot block yourself.' });
+    await db.blockUser(req.user.id, targetId);
+    // Also unfollow both directions
+    await db.unfollow(req.user.id, targetId).catch(() => {});
+    await db.unfollow(targetId, req.user.id).catch(() => {});
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.delete('/api/block/:userId', requireAuth, async (req, res) => {
+  try {
+    await db.unblockUser(req.user.id, parseInt(req.params.userId));
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// ── Report route ──────────────────────────────────────────────
+app.post('/api/report', requireAuth, async (req, res) => {
+  try {
+    const { target_type, target_id, reason = '' } = req.body;
+    if (!target_type || !target_id) return res.status(400).json({ error: 'Missing target.' });
+    if (!['post', 'user'].includes(target_type)) return res.status(400).json({ error: 'Invalid target_type.' });
+    await db.reportContent({ reporter_id: req.user.id, target_type, target_id: parseInt(target_id), reason });
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// ── Push subscription routes ──────────────────────────────────
+app.get('/api/push/vapid-key', (req, res) => {
+  res.json({ publicKey: VAPID_PUBLIC_KEY || null });
+});
+
+app.post('/api/push/subscribe', requireAuth, async (req, res) => {
+  try {
+    const sub = req.body;
+    if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth)
+      return res.status(400).json({ error: 'Invalid subscription object.' });
+    await db.savePushSubscription(req.user.id, sub);
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.delete('/api/push/subscribe', requireAuth, async (req, res) => {
+  try {
+    const { endpoint } = req.body;
+    if (endpoint) await db.deletePushSubscription(endpoint);
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// ── Suggested users ───────────────────────────────────────────
+app.get('/api/users/suggested', optionalAuth, async (req, res) => {
+  try {
+    const users = await db.getSuggestedUsers(req.user?.id || 0, 8);
+    res.json({ users });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
 // ── Post routes ───────────────────────────────────────────────
 app.get('/api/posts', optionalAuth, async (req, res) => {
   try {
     const page  = Math.max(1, parseInt(req.query.page)  || 1);
     const limit = Math.min(24, parseInt(req.query.limit) || 12);
-    const { posts, total } = await db.getPosts(page, limit, req.user?.id);
+    let followingIds = null;
+    if (req.query.feed === 'following' && req.user) {
+      const followed = await db.getFollowing(req.user.id);
+      followingIds = followed.map(u => u.id);
+    }
+    const blockedIds = req.user ? await db.getBlockedIds(req.user.id) : [];
+    const { posts, total } = await db.getPosts(page, limit, req.user?.id, followingIds, blockedIds);
     res.json({ posts, total, page, pages: Math.ceil(total / limit) });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
-app.post('/api/posts', requireAuth, upload.single('image'), async (req, res) => {
+app.post('/api/posts', requireAuth, upload.array('images', 10), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'An image is required.' });
+    const files = req.files?.length ? req.files : (req.file ? [req.file] : []);
+    if (!files.length) return res.status(400).json({ error: 'An image is required.' });
     const { caption = '', road_name = '', region = '', mod_title = '', mod_price = '', mod_url = '', mod_category = '' } = req.body;
-    const image_url = await storeImage(req.file);
-    const post = await db.createPost({
-      user_id: req.user.id, image_url,
+    const image_urls = await Promise.all(files.map(f => storeImage(f)));
+    const image_url = image_urls[0];
+    const fields = {
+      user_id: req.user.id, image_url, image_urls,
       caption: caption.trim(), road_name: road_name.trim(), region: region.trim(),
       mod_title: mod_title.trim(), mod_price: mod_price.trim(),
       mod_url: mod_url.trim(), mod_category: mod_category.trim(),
-    });
+    };
+    let post;
+    try {
+      post = await db.createPost(fields);
+    } catch (innerErr) {
+      // Retry without mod columns if they don't exist in the schema yet
+      if (innerErr.message?.includes('mod_') || innerErr.code === '42703') {
+        const { mod_title: _mt, mod_price: _mp, mod_url: _mu, mod_category: _mc, ...baseFields } = fields;
+        post = await db.createPost(baseFields);
+      } else throw innerErr;
+    }
     const user = await db.findUserById(req.user.id);
     res.status(201).json({ post: { ...post, user_name: user?.name || '', user_avatar: user?.avatar || null, liked: false } });
   } catch (e) {
@@ -1173,7 +1590,7 @@ app.get('/api/shop', optionalAuth, async (req, res) => {
 
 app.delete('/api/posts/:id', requireAuth, async (req, res) => {
   try {
-    const result = await db.deletePost(parseInt(req.params.id), req.user.id);
+    const result = await db.deletePost(parseInt(req.params.id), req.user.id, req.user.is_admin);
     if (result.error === 'not_found') return res.status(404).json({ error: 'Post not found.' });
     if (result.error === 'forbidden') return res.status(403).json({ error: 'Not your post.' });
     res.json({ ok: true });
@@ -1219,7 +1636,7 @@ app.post('/api/posts/:id/comments', requireAuth, async (req, res) => {
 
 app.delete('/api/comments/:id', requireAuth, async (req, res) => {
   try {
-    const result = await db.deleteComment(parseInt(req.params.id), req.user.id);
+    const result = await db.deleteComment(parseInt(req.params.id), req.user.id, req.user.is_admin);
     if (result.error === 'not_found') return res.status(404).json({ error: 'Comment not found.' });
     if (result.error === 'forbidden') return res.status(403).json({ error: 'Not your comment.' });
     res.json({ ok: true });
@@ -1382,14 +1799,16 @@ app.get('/api/marketplace', async (req, res) => {
   catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
-app.post('/api/marketplace', requireAuth, upload.single('image'), async (req, res) => {
+app.post('/api/marketplace', requireAuth, upload.array('images', 10), async (req, res) => {
   try {
     const { title, price, category = 'Other', description = '', contact = '' } = req.body;
     if (!title || !price) return res.status(400).json({ error: 'Title and price are required.' });
-    const image_url = req.file ? await storeImage(req.file) : null;
+    const files = req.files?.length ? req.files : (req.file ? [req.file] : []);
+    const image_urls = files.length ? await Promise.all(files.map(f => storeImage(f))) : [];
+    const image_url = image_urls[0] || null;
     const listing = await db.createListing({
       user_id: req.user.id, title: title.trim(), price: price.trim(),
-      category, description: description.trim(), contact: contact.trim(), image_url,
+      category, description: description.trim(), contact: contact.trim(), image_url, image_urls,
     });
     const user = await db.findUserById(req.user.id);
     res.status(201).json({ listing: { ...listing, seller_name: user?.name || '', seller_email: user?.email || '' } });
@@ -1425,12 +1844,13 @@ app.get('/api/roads', async (req, res) => {
 
 app.post('/api/roads', requireAuth, async (req, res) => {
   try {
-    const { name, region = '', description = '', difficulty = 'Moderate', points } = req.body;
-    if (!name || !Array.isArray(points) || points.length < 2)
-      return res.status(400).json({ error: 'Road name and at least 2 coordinates are required.' });
+    const { name, region = '', description = '', difficulty = 'Moderate', points, point_type = 'road', spot_category = '' } = req.body;
+    const isWaypoint = point_type === 'waypoint';
+    if (!name || !Array.isArray(points) || points.length < (isWaypoint ? 1 : 2))
+      return res.status(400).json({ error: isWaypoint ? 'Road name and a map point are required.' : 'Road name and at least 2 coordinates are required.' });
     const road = await db.createRoad({
       user_id: req.user.id, name: name.trim(), region: region.trim(),
-      description: description.trim(), difficulty, points,
+      description: description.trim(), difficulty, points, point_type, spot_category,
     });
     const user = await db.findUserById(req.user.id);
     res.status(201).json({ road: { ...road, submitted_by: user?.name || '' } });
@@ -1480,8 +1900,10 @@ app.get('/api/posts/:id', optionalAuth, async (req, res) => {
 // ── Follow routes ─────────────────────────────────────────────
 app.post('/api/follow/:id', requireAuth, async (req, res) => {
   try {
-    const result = await db.followUser(req.user.id, parseInt(req.params.id));
+    const targetId = parseInt(req.params.id);
+    const result = await db.followUser(req.user.id, targetId);
     if (result.error === 'self') return res.status(400).json({ error: 'Cannot follow yourself.' });
+    if (result.following) db.createNotification({ user_id: targetId, actor_id: req.user.id, actor_name: req.user.name || '', type: 'follow', post_id: null }).catch(() => {});
     res.json(result);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
@@ -1490,6 +1912,11 @@ app.delete('/api/follow/:id', requireAuth, async (req, res) => {
   try {
     res.json(await db.unfollowUser(req.user.id, parseInt(req.params.id)));
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.get('/api/me/following', requireAuth, async (req, res) => {
+  try { res.json({ users: await db.getFollowing(req.user.id) }); }
+  catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
 // ── Notification routes ───────────────────────────────────────
@@ -1559,6 +1986,11 @@ app.post('/api/conversations/:id/messages', requireAuth, async (req, res) => {
     const msgs = await db.getMessages(convId, req.user.id);
     if (!msgs) return res.status(403).json({ error: 'Access denied.' });
     const msg = await db.sendMessage(convId, req.user.id, body.trim());
+    // Notify the other participant
+    const convMembers = await db.getConversationMembers(convId).catch(() => []);
+    convMembers.filter(id => id !== req.user.id).forEach(recipientId => {
+      db.createNotification({ user_id: recipientId, actor_id: req.user.id, actor_name: req.user.name || '', type: 'message', post_id: null }).catch(() => {});
+    });
     res.status(201).json({ message: msg });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
@@ -1599,6 +2031,15 @@ app.post('/api/events/:id/rsvp', requireAuth, async (req, res) => {
 app.get('/api/events/:id/attendees', async (req, res) => {
   try { res.json({ attendees: await db.getEventAttendees(parseInt(req.params.id)) }); }
   catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.delete('/api/events/:id', requireAuth, async (req, res) => {
+  try {
+    const result = await db.deleteEvent(parseInt(req.params.id), req.user.id);
+    if (result.error === 'not_found') return res.status(404).json({ error: 'Event not found.' });
+    if (result.error === 'forbidden') return res.status(403).json({ error: 'Only the organiser can delete this event.' });
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
 // ── Car Garage ────────────────────────────────────────────────
@@ -1666,12 +2107,12 @@ async function seed() {
   });
 
   const demoPosts = [
-    { image_url: 'https://images.unsplash.com/photo-sCj3PwIdRvM?w=800&auto=format&fit=crop', caption: 'Tail of the Dragon — 318 curves in 11 miles. Nothing else comes close.', road_name: 'Tail of the Dragon (US-129)', region: 'Southeast' },
-    { image_url: 'https://images.unsplash.com/photo-NeH9w4CdmnA?w=800&auto=format&fit=crop', caption: 'Beartooth Highway at sunrise. Worth every switchback.', road_name: 'Beartooth Highway (US-212)', region: 'Mountain West' },
-    { image_url: 'https://images.unsplash.com/photo-F8NXa0WH5wk?w=800&auto=format&fit=crop', caption: 'Pacific Coast Highway. Windows down, ocean to the left. Nothing beats it.', road_name: 'Pacific Coast Highway (CA-1)', region: 'West Coast' },
-    { image_url: 'https://images.unsplash.com/photo-ZUwJ_aP1ED8?w=800&auto=format&fit=crop', caption: 'Million Dollar Highway descending to Ouray. Colorado\'s finest tarmac.', road_name: 'Million Dollar Highway (US-550)', region: 'Mountain West' },
-    { image_url: 'https://images.unsplash.com/photo-tT829CAphnM?w=800&auto=format&fit=crop', caption: 'Skyline Drive in the fall. The M3 felt right at home.', road_name: 'Skyline Drive', region: 'Northeast' },
-    { image_url: 'https://images.unsplash.com/photo-AMgve6dPt-k?w=800&auto=format&fit=crop', caption: 'Going-to-the-Sun Road through Glacier NP. One of the greats.', road_name: 'Going-to-the-Sun Road', region: 'Mountain West' },
+    { image_url: 'https://images.unsplash.com/photo-1544636331-9d95400dcc31?w=800&auto=format&fit=crop&q=80', caption: 'Tail of the Dragon — 318 curves in 11 miles. Nothing else comes close.', road_name: 'Tail of the Dragon (US-129)', region: 'Southeast' },
+    { image_url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80', caption: 'Beartooth Highway at sunrise. Worth every switchback.', road_name: 'Beartooth Highway (US-212)', region: 'Mountain West' },
+    { image_url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=80', caption: 'Pacific Coast Highway. Windows down, ocean to the left. Nothing beats it.', road_name: 'Pacific Coast Highway (CA-1)', region: 'West Coast' },
+    { image_url: 'https://images.unsplash.com/photo-1580274455191-1d9d5f78f3d7?w=800&auto=format&fit=crop&q=80', caption: 'Million Dollar Highway descending to Ouray. Colorado\'s finest tarmac.', road_name: 'Million Dollar Highway (US-550)', region: 'Mountain West' },
+    { image_url: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&auto=format&fit=crop&q=80', caption: 'Skyline Drive in the fall. The M3 felt right at home.', road_name: 'Skyline Drive', region: 'Northeast' },
+    { image_url: 'https://images.unsplash.com/photo-1617531653332-bd46c16f7d10?w=800&auto=format&fit=crop&q=80', caption: 'Going-to-the-Sun Road through Glacier NP. One of the greats.', road_name: 'Going-to-the-Sun Road', region: 'Mountain West' },
   ];
   for (const p of demoPosts) {
     await db.createPost({ user_id: teamUser.id, ...p });
@@ -1687,12 +2128,12 @@ async function seed() {
   }
 
   const demoListings = [
-    { title: 'Porsche 911 GT3 RS — Track Ready', price: '$289,000', category: 'Cars', description: '2023 GT3 RS, Weissach Package, 1,200 miles. Immaculate.', contact: 'team@one-culture.app', image_url: null },
-    { title: 'BMW M3 Competition — Frozen Isle Green', price: '$82,500', category: 'Cars', description: '2022 F80 M3 Competition, 6-speed manual. Carbon seats, track package.', contact: 'team@one-culture.app', image_url: null },
-    { title: 'Akrapovič Titanium Exhaust — 992 GT3', price: '$4,200', category: 'Mods', description: 'Full titanium slip-on system. Near new, under 500 miles.', contact: 'team@one-culture.app', image_url: null },
-    { title: 'Michelin Pilot Cup 2 R — 305/30/20 (set of 2)', price: '$1,100', category: 'Wheels', description: 'Rear tires for 992. 7/10 tread remaining.', contact: 'team@one-culture.app', image_url: null },
-    { title: 'Racepak IQ3 Street Dash Logger', price: '$650', category: 'Electronics', description: 'Full digital dash with GPS lap timing and 0-60 timer.', contact: 'team@one-culture.app', image_url: null },
-    { title: 'Brembo GT Brake Kit — M4 Front', price: '$3,800', category: 'Mods', description: 'Six-piston Brembo GT kit for F8x M3/M4. Barely used.', contact: 'team@one-culture.app', image_url: null },
+    { title: 'Porsche 911 GT3 RS — Track Ready', price: '$289,000', category: 'Cars', description: '2023 GT3 RS, Weissach Package, 1,200 miles. Immaculate.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1614200187524-dc4b892acf16?w=800&auto=format&fit=crop&q=80' },
+    { title: 'BMW M3 Competition — Frozen Isle Green', price: '$82,500', category: 'Cars', description: '2022 F80 M3 Competition, 6-speed manual. Carbon seats, track package.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&auto=format&fit=crop&q=80' },
+    { title: 'Akrapovič Titanium Exhaust — 992 GT3', price: '$4,200', category: 'Mods', description: 'Full titanium slip-on system. Near new, under 500 miles.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1609521263047-f8f205293f24?w=800&auto=format&fit=crop&q=80' },
+    { title: 'Michelin Pilot Cup 2 R — 305/30/20 (set of 2)', price: '$1,100', category: 'Wheels', description: 'Rear tires for 992. 7/10 tread remaining.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&auto=format&fit=crop&q=80' },
+    { title: 'Racepak IQ3 Street Dash Logger', price: '$650', category: 'Electronics', description: 'Full digital dash with GPS lap timing and 0-60 timer.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&auto=format&fit=crop&q=80' },
+    { title: 'Brembo GT Brake Kit — M4 Front', price: '$3,800', category: 'Mods', description: 'Six-piston Brembo GT kit for F8x M3/M4. Barely used.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800&auto=format&fit=crop&q=80' },
   ];
   for (const l of demoListings) {
     await db.createListing({ user_id: teamUser.id, ...l });
@@ -1706,9 +2147,105 @@ async function seed() {
   for (const e of demoEvents) { await db.createEvent(e); }
 }
 
+// ── Patch broken seed post images (one-time migration) ───────
+async function patchSeedImages() {
+  if (!USE_SUPABASE) return;
+  const patches = [
+    { caption: 'Tail of the Dragon', image_url: 'https://images.unsplash.com/photo-1544636331-9d95400dcc31?w=800&auto=format&fit=crop&q=80' },
+    { caption: 'Beartooth Highway',  image_url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80' },
+    { caption: 'Pacific Coast Highway', image_url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=80' },
+    { caption: 'Million Dollar Highway', image_url: 'https://images.unsplash.com/photo-1580274455191-1d9d5f78f3d7?w=800&auto=format&fit=crop&q=80' },
+    { caption: 'Skyline Drive',      image_url: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&auto=format&fit=crop&q=80' },
+    { caption: 'Going-to-the-Sun',   image_url: 'https://images.unsplash.com/photo-1617531653332-bd46c16f7d10?w=800&auto=format&fit=crop&q=80' },
+  ];
+  for (const { caption, image_url } of patches) {
+    await sb.from('posts').update({ image_url }).ilike('caption', `%${caption}%`).ilike('image_url', '%unsplash.com/photo-__%');
+  }
+}
+
+// ── Admin routes ──────────────────────────────────────────────
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  try {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('users')
+        .select('id, name, email, avatar, plan, is_admin, is_banned, created_at')
+        .order('created_at', { ascending: false });
+      return res.json({ users: data || [] });
+    }
+    res.json({ users: _users.map(u => safeUser(u)) });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/admin/users/:id/ban', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (id === req.user.id) return res.status(400).json({ error: 'Cannot ban yourself.' });
+    if (USE_SUPABASE) {
+      await sb.from('users').update({ is_banned: true }).eq('id', id);
+    } else {
+      const u = _users.find(u => u.id === id);
+      if (u) u.is_banned = true;
+    }
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/admin/users/:id/unban', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (USE_SUPABASE) {
+      await sb.from('users').update({ is_banned: false }).eq('id', id);
+    } else {
+      const u = _users.find(u => u.id === id);
+      if (u) u.is_banned = false;
+    }
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/admin/posts/:id/pin', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (USE_SUPABASE) {
+      await sb.from('posts').update({ is_pinned: true }).eq('id', id);
+    } else {
+      const p = _posts.find(p => p.id === id);
+      if (p) p.is_pinned = true;
+    }
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/admin/posts/:id/unpin', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (USE_SUPABASE) {
+      await sb.from('posts').update({ is_pinned: false }).eq('id', id);
+    } else {
+      const p = _posts.find(p => p.id === id);
+      if (p) p.is_pinned = false;
+    }
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  try {
+    if (USE_SUPABASE) {
+      const [{ count: users }, { count: posts }, { count: banned }] = await Promise.all([
+        sb.from('users').select('*', { count: 'exact', head: true }),
+        sb.from('posts').select('*', { count: 'exact', head: true }),
+        sb.from('users').select('*', { count: 'exact', head: true }).eq('is_banned', true),
+      ]);
+      return res.json({ users, posts, banned });
+    }
+    res.json({ users: _users.length, posts: _posts.length, banned: _users.filter(u => u.is_banned).length });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
 if (require.main === module) {
-  seed().then(() => app.listen(PORT, () => console.log(`One Culture API running on http://localhost:${PORT}`))).catch(console.error);
+  seed().then(patchSeedImages).then(() => app.listen(PORT, () => console.log(`One Culture API running on http://localhost:${PORT}`))).catch(console.error);
 } else {
-  seed().catch(console.error);
+  seed().then(patchSeedImages).catch(console.error);
   module.exports = app;
 }

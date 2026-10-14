@@ -17,14 +17,18 @@ create table if not exists users (
 
 -- Posts
 create table if not exists posts (
-  id         bigserial primary key,
-  user_id    bigint references users(id) on delete cascade,
-  image_url  text not null,
-  caption    text default '',
-  road_name  text default '',
-  region     text default '',
-  likes      int default 0,
-  created_at timestamptz default now()
+  id           bigserial primary key,
+  user_id      bigint references users(id) on delete cascade,
+  image_url    text not null,
+  caption      text default '',
+  road_name    text default '',
+  region       text default '',
+  likes        int default 0,
+  mod_title    text default '',
+  mod_price    text default '',
+  mod_url      text default '',
+  mod_category text default '',
+  created_at   timestamptz default now()
 );
 
 create index if not exists posts_created_at_idx on posts(created_at desc);

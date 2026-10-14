@@ -51,26 +51,29 @@ async function loadConversations() {
     }
 
     conversations.forEach(conv => {
-      const other = conv.other_user;
-      if (!other) return;
-      const init = other.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-      const avatar = other.avatar
-        ? `<img src="${esc(other.avatar)}" alt="" />`
+      const otherName   = conv.other_name || '?';
+      const otherAvatar = conv.other_avatar || null;
+      const init = otherName.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+      const avatar = otherAvatar
+        ? `<img src="${esc(otherAvatar)}" alt="" />`
         : init;
-      const hasUnread = conv.unread_count > 0;
+      const hasUnread = (conv.unread || 0) > 0;
+      const lastMsg   = conv.last_message?.body || 'Start the conversation…';
+      const lastTime  = conv.last_message?.created_at || null;
 
       const row = document.createElement('div');
       row.className = 'conv-row';
       row.innerHTML = `
         <div class="conv-avatar">${avatar}</div>
         <div class="conv-info">
-          <div class="conv-name">${esc(other.name)}</div>
-          <div class="conv-preview ${hasUnread ? 'unread' : ''}">${esc(conv.last_message || 'Start the conversation…')}</div>
+          <div class="conv-name">${esc(otherName)}</div>
+          <div class="conv-preview ${hasUnread ? 'unread' : ''}">${esc(lastMsg)}</div>
         </div>
         <div class="conv-meta">
-          <div class="conv-time">${fmtTime(conv.updated_at)}</div>
+          <div class="conv-time">${lastTime ? fmtTime(lastTime) : ''}</div>
           ${hasUnread ? '<div class="conv-unread-dot"></div>' : ''}
         </div>`;
+      const other = { id: conv.other_user_id, name: otherName, avatar: otherAvatar };
       row.addEventListener('click', () => openChat(conv.id, other));
       list.appendChild(row);
     });
@@ -153,13 +156,42 @@ function renderMessages(messages) {
     wrap.className = `chat-bubble-wrap ${isMine ? 'mine' : 'theirs'}`;
     wrap.innerHTML = `
       <div class="chat-bubble-avatar">${sAvatar}</div>
-      <div class="chat-bubble">${esc(msg.body)}</div>`;
+      ${buildBubbleContent(msg.body)}`;
     container.appendChild(wrap);
   });
 
   if (wasAtBottom || lastMsgCount <= 1) {
     container.scrollTop = container.scrollHeight;
   }
+}
+
+function buildBubbleContent(body) {
+  if (body && body.startsWith('{"__type":"post_share"')) {
+    try {
+      const d = JSON.parse(body);
+      const img = d.image_url
+        ? `<img src="${d.image_url.replace(/"/g, '')}" class="shared-post-img" alt="" loading="lazy" />`
+        : `<div class="shared-post-no-img">📷</div>`;
+      const caption = d.caption
+        ? `<p class="shared-post-caption">${esc(d.caption.length > 90 ? d.caption.slice(0, 90) + '…' : d.caption)}</p>`
+        : '';
+      const road = d.road_name
+        ? `<span class="shared-post-road">${esc(d.road_name)}</span>`
+        : '';
+      return `<div class="shared-post-card">
+        <a href="community.html?post=${parseInt(d.post_id)}" class="shared-post-main">
+          ${img}
+          <div class="shared-post-info">
+            ${road}
+            ${caption}
+            <span class="shared-post-hint">Tap to view post →</span>
+          </div>
+        </a>
+        <a href="profile.html?id=${parseInt(d.user_id)}" class="shared-post-user">@${esc(d.user_name)}</a>
+      </div>`;
+    } catch (e) { console.error('post_share parse error', e); }
+  }
+  return `<div class="chat-bubble">${esc(body)}</div>`;
 }
 
 document.getElementById('chatForm').addEventListener('submit', async e => {
@@ -181,59 +213,93 @@ document.getElementById('chatForm').addEventListener('submit', async e => {
 
 // ── New DM modal ───────────────────────────────────────────────
 const newDmOverlay = document.getElementById('newDmOverlay');
+let suggestedContacts = []; // people the user follows
 
-document.getElementById('newDmBtn').addEventListener('click', () => {
+function closeDmModal() {
+  newDmOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+  document.getElementById('dmSearchInput').value = '';
+}
+
+document.getElementById('newDmBtn').addEventListener('click', async () => {
   if (!token) { showAuthWall(); return; }
   document.getElementById('dmSearchInput').value = '';
-  document.getElementById('dmSearchResults').innerHTML = '';
+  document.getElementById('dmSectionLabel').textContent = 'Suggested';
   newDmOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
+  await loadSuggested();
   setTimeout(() => document.getElementById('dmSearchInput').focus(), 100);
 });
 
-document.getElementById('newDmClose').addEventListener('click', () => {
-  newDmOverlay.classList.remove('open');
-  document.body.style.overflow = '';
-});
-newDmOverlay.addEventListener('click', e => {
-  if (e.target === newDmOverlay) { newDmOverlay.classList.remove('open'); document.body.style.overflow = ''; }
-});
+document.getElementById('newDmClose').addEventListener('click', closeDmModal);
+newDmOverlay.addEventListener('click', e => { if (e.target === newDmOverlay) closeDmModal(); });
+
+async function loadSuggested() {
+  const list = document.getElementById('dmContactList');
+  const empty = document.getElementById('dmContactEmpty');
+  list.innerHTML = '<div class="dm-loading"><div class="spinner"></div></div>';
+  empty.style.display = 'none';
+  try {
+    const res = await fetch(`${API}/api/me/following`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) { renderContactList([]); return; }
+    const { users = [] } = await res.json();
+    suggestedContacts = users;
+    renderContactList(users, 'No one to suggest yet. Follow people to message them easily.');
+  } catch { renderContactList([]); }
+}
 
 let dmSearchTimer = null;
 document.getElementById('dmSearchInput').addEventListener('input', () => {
   const q = document.getElementById('dmSearchInput').value.trim();
   clearTimeout(dmSearchTimer);
-  if (!q) { document.getElementById('dmSearchResults').innerHTML = ''; return; }
-  dmSearchTimer = setTimeout(() => searchDmUsers(q), 300);
+  document.getElementById('dmSectionLabel').textContent = q ? 'Results' : 'Suggested';
+  if (!q) { renderContactList(suggestedContacts, 'No one to suggest yet.'); return; }
+  dmSearchTimer = setTimeout(() => searchDmUsers(q), 280);
 });
 
 async function searchDmUsers(q) {
-  const container = document.getElementById('dmSearchResults');
+  const list = document.getElementById('dmContactList');
+  list.innerHTML = '<div class="dm-loading"><div class="spinner"></div></div>';
   try {
-    const res = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}`);
-    const { users = [] } = await res.json();
-    if (!users.length) { container.innerHTML = '<p style="padding:12px;color:var(--c-text-2);font-size:13px">No people found.</p>'; return; }
-    container.innerHTML = users.filter(u => u.id !== currentUser?.id).map(u => {
-      const init = u.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-      const avatar = u.avatar ? `<img src="${esc(u.avatar)}" alt="" />` : init;
-      return `<div class="conv-row" data-uid="${u.id}" data-name="${esc(u.name)}" data-avatar="${esc(u.avatar||'')}">
-        <div class="conv-avatar">${avatar}</div>
-        <div class="conv-info">
-          <div class="conv-name">${esc(u.name)}</div>
-          <div class="conv-preview">${esc(u.plan||'Explorer')}</div>
-        </div>
-      </div>`;
-    }).join('');
-
-    container.querySelectorAll('.conv-row').forEach(row => {
-      row.addEventListener('click', async () => {
-        const uid = parseInt(row.dataset.uid);
-        newDmOverlay.classList.remove('open');
-        document.body.style.overflow = '';
-        await startConversation(uid, { id: uid, name: row.dataset.name, avatar: row.dataset.avatar || null });
-      });
+    const res = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
-  } catch {}
+    const { users = [] } = await res.json();
+    const filtered = users.filter(u => u.id !== currentUser?.id);
+    renderContactList(filtered, `No results for "${q}"`);
+  } catch { renderContactList([], 'Search failed — try again.'); }
+}
+
+function renderContactList(users, emptyMsg = '') {
+  const list = document.getElementById('dmContactList');
+  const empty = document.getElementById('dmContactEmpty');
+  list.innerHTML = '';
+  if (!users.length) {
+    empty.textContent = emptyMsg;
+    empty.style.display = emptyMsg ? '' : 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  users.forEach(u => {
+    const init = (u.name || '?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    const avatarHtml = u.avatar ? `<img src="${esc(u.avatar)}" alt="" />` : init;
+    const row = document.createElement('div');
+    row.className = 'dm-contact-row';
+    row.innerHTML = `
+      <div class="conv-avatar dm-contact-avatar">${avatarHtml}</div>
+      <div class="conv-info">
+        <div class="conv-name">${esc(u.name)}</div>
+        <div class="conv-preview">${esc(u.bio || 'Driver')}</div>
+      </div>
+      <button class="dm-contact-btn">Message</button>`;
+    row.addEventListener('click', async () => {
+      closeDmModal();
+      await startConversation(u.id, { id: u.id, name: u.name, avatar: u.avatar || null });
+    });
+    list.appendChild(row);
+  });
 }
 
 async function startConversation(userId, other) {
@@ -243,8 +309,9 @@ async function startConversation(userId, other) {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: userId })
     });
-    const { conversation } = await res.json();
-    openChat(conversation.id, other);
+    const data = await res.json();
+    const convId = data.conversation_id || data.id;
+    if (convId) openChat(convId, other);
   } catch {}
 }
 

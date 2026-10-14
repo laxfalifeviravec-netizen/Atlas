@@ -521,3 +521,44 @@
   animation: spin .7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+/* ── Shared post card ────────────────────────────────────── */
+.shared-post-card {
+  display: flex; flex-direction: column;
+  background: var(--c-bg); border: 1px solid var(--c-border);
+  border-radius: 12px; overflow: hidden;
+  max-width: 240px; text-decoration: none; color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.shared-post-img {
+  width: 100%; aspect-ratio: 1/1;
+  object-fit: cover; display: block;
+}
+.shared-post-no-img {
+  width: 100%; aspect-ratio: 1/1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; background: var(--c-surface);
+}
+.shared-post-info {
+  padding: 10px 12px 10px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.shared-post-user {
+  font-size: 13px; font-weight: 700; color: var(--c-text);
+}
+.shared-post-road {
+  font-size: 11px; color: var(--c-accent); font-weight: 600;
+}
+.shared-post-caption {
+  font-size: 12px; color: var(--c-text-2); line-height: 1.4; margin: 0;
+}
+.shared-post-hint {
+  font-size: 11px; color: var(--c-accent); margin-top: 4px;
+}
+
+.shared-post-main { display: block; text-decoration: none; color: inherit; }
+.shared-post-user {
+  display: block; padding: 8px 12px 10px;
+  border-top: 1px solid var(--c-border);
+  font-size: 13px; font-weight: 700; color: var(--c-text); text-decoration: none;
+}
+.shared-post-info:empty { display: none; }

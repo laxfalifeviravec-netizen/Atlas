@@ -8,7 +8,8 @@ const API = (location.hostname === 'localhost' || location.hostname === '127.0.0
 let token = localStorage.getItem('culture-token');
 let currentUser = null;
 let activeCategory = 'All';
-let listingFile = null;
+let listingFiles = [];
+let allListings = [];
 
 // ── Theme ──────────────────────────────────────────────────
 const savedTheme = localStorage.getItem('culture-theme');
@@ -55,13 +56,26 @@ async function loadListings(category) {
     const url = category && category !== 'All' ? `${API}/api/marketplace?category=${encodeURIComponent(category)}` : `${API}/api/marketplace`;
     const res = await fetch(url);
     const { listings } = await res.json();
-    grid.innerHTML = '';
-    if (listings.length === 0) {
-      grid.innerHTML = `<div class="market-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="56" height="56"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg><p>No listings yet.</p></div>`;
-      return;
-    }
-    listings.forEach(l => grid.appendChild(buildListingCard(l)));
+    allListings = listings;
+    renderGrid(listings);
   } catch { grid.innerHTML = '<p style="padding:24px;color:var(--c-text-2)">Failed to load listings.</p>'; }
+}
+
+function renderGrid(listings) {
+  const grid = document.getElementById('marketGrid');
+  grid.innerHTML = '';
+  if (!listings.length) {
+    grid.innerHTML = `<div class="market-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="56" height="56"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg><p>No listings yet.</p><small>Be the first to list something</small></div>`;
+    return;
+  }
+  listings.forEach(l => grid.appendChild(buildListingCard(l)));
+}
+
+function filterAndRender() {
+  const q = (document.getElementById('marketSearch')?.value || '').toLowerCase().trim();
+  let results = activeCategory === 'All' ? allListings : allListings.filter(l => l.category === activeCategory);
+  if (q) results = results.filter(l => (l.title + ' ' + l.category + ' ' + (l.description || '')).toLowerCase().includes(q));
+  renderGrid(results);
 }
 
 function catIcon(cat) {
@@ -76,12 +90,11 @@ function buildListingCard(l) {
   card.innerHTML = `
     <div class="listing-card-img">
       ${imgUrl ? `<img src="${imgUrl}" alt="${esc(l.title)}" loading="lazy" />` : `<div class="no-img">${catIcon(l.category)}</div>`}
-      <span class="listing-card-cat">${esc(l.category)}</span>
     </div>
     <div class="listing-card-body">
-      <div class="listing-card-title">${esc(l.title)}</div>
       <div class="listing-card-price">${esc(l.price)}</div>
-      <div class="listing-card-meta">by ${esc(l.seller_name||'Seller')}</div>
+      <div class="listing-card-title">${esc(l.title)}</div>
+      <div class="listing-card-location">${esc(l.seller_name||'Seller')}</div>
     </div>`;
   card.addEventListener('click', () => openListingModal(l));
   return card;
@@ -90,22 +103,53 @@ function buildListingCard(l) {
 // ── Listing Detail Modal ───────────────────────────────────
 const listingOverlay = document.getElementById('listingOverlay');
 
+function buildListingCarousel(l) {
+  const urls = (l.image_urls?.length ? l.image_urls : (l.image_url ? [l.image_url] : [])).map(u => u.startsWith('http') ? u : `${API}${u}`);
+  if (!urls.length) return `<div class="no-img-lg">${catIcon(l.category)}</div>`;
+  if (urls.length === 1) return `<img src="${urls[0]}" alt="${esc(l.title)}" />`;
+  const slides = urls.map(u => `<div class="carousel-slide"><img src="${u}" alt="${esc(l.title)}" /></div>`).join('');
+  const dots = urls.map((_, i) => `<div class="carousel-dot${i===0?' active':''}"></div>`).join('');
+  return `<div class="carousel-track" data-count="${urls.length}">${slides}</div>
+          <div class="carousel-dots">${dots}</div>
+          <div class="carousel-count">1 / ${urls.length}</div>`;
+}
+
 function openListingModal(l) {
-  const imgUrl = l.image_url ? (l.image_url.startsWith('http') ? l.image_url : `${API}${l.image_url}`) : null;
   const isOwner = currentUser && currentUser.id === l.user_id;
+  const sellerInitials = (l.seller_name || 'S').split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
 
   document.getElementById('listingModalContent').innerHTML = `
-    <div class="listing-detail-img">
-      ${imgUrl ? `<img src="${imgUrl}" alt="${esc(l.title)}" />` : `<div class="no-img-lg">${catIcon(l.category)}</div>`}
+    <div class="listing-detail-img" id="listingDetailImg">
+      ${buildListingCarousel(l)}
     </div>
     <div class="listing-detail-body">
-      <div class="listing-detail-title">${esc(l.title)}</div>
       <div class="listing-detail-price">${esc(l.price)}</div>
-      <div class="listing-detail-seller">Listed by ${esc(l.seller_name||'Seller')} · ${esc(l.category)}</div>
-      ${l.description ? `<div class="listing-detail-desc">${esc(l.description)}</div>` : ''}
-      ${l.contact ? `<div class="listing-detail-contact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.71 19a19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>${esc(l.contact)}</div>` : ''}
+      <div class="listing-detail-title">${esc(l.title)}</div>
+      <span class="listing-detail-cat">${esc(l.category)}</span>
+
+      <div class="listing-seller-row">
+        <div class="listing-seller-avatar">${sellerInitials}</div>
+        <div class="listing-seller-info">
+          <div class="listing-seller-name">${esc(l.seller_name || 'Seller')}</div>
+          <div class="listing-seller-joined">One Culture member</div>
+        </div>
+      </div>
+
+      ${!isOwner && currentUser ? `<button class="listing-msg-btn" id="msgSellerBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Message Seller</button>` : ''}
+      ${!isOwner && !currentUser ? `<button class="listing-msg-btn" id="msgSellerBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Sign in to Message</button>` : ''}
+
+      ${l.description ? `<div class="listing-detail-desc"><div class="listing-detail-desc-label">Description</div>${esc(l.description)}</div>` : ''}
+
       ${isOwner ? `<button class="listing-delete-btn" id="deleteListingBtn">Delete listing</button>` : ''}
     </div>`;
+
+  const msgBtn = document.getElementById('msgSellerBtn');
+  if (msgBtn) {
+    msgBtn.addEventListener('click', () => {
+      if (!currentUser) { listingOverlay.classList.remove('open'); document.body.style.overflow = ''; openAuth(); return; }
+      location.href = `messages.html`;
+    });
+  }
 
   if (isOwner) {
     document.getElementById('deleteListingBtn').addEventListener('click', async () => {
@@ -118,10 +162,28 @@ function openListingModal(l) {
 
   listingOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
+
+  const imgWrap = document.getElementById('listingDetailImg');
+  if (imgWrap) {
+    const track = imgWrap.querySelector('.carousel-track');
+    if (track) {
+      const dots = imgWrap.querySelectorAll('.carousel-dot');
+      const countEl = imgWrap.querySelector('.carousel-count');
+      const total = parseInt(track.dataset.count);
+      track.addEventListener('scroll', () => {
+        const idx = Math.round(track.scrollLeft / track.clientWidth);
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+        if (countEl) countEl.textContent = `${idx + 1} / ${total}`;
+      }, { passive: true });
+    }
+  }
 }
 
 document.getElementById('listingClose').addEventListener('click', () => { listingOverlay.classList.remove('open'); document.body.style.overflow = ''; });
 listingOverlay.addEventListener('click', e => { if (e.target === listingOverlay) { listingOverlay.classList.remove('open'); document.body.style.overflow = ''; } });
+
+// ── Search ─────────────────────────────────────────────────
+document.getElementById('marketSearch').addEventListener('input', filterAndRender);
 
 // ── Category tabs ──────────────────────────────────────────
 document.getElementById('marketCats').addEventListener('click', e => {
@@ -130,7 +192,7 @@ document.getElementById('marketCats').addEventListener('click', e => {
   document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
   activeCategory = tab.dataset.cat;
-  loadListings(activeCategory);
+  filterAndRender();
 });
 
 // ── Create Listing ─────────────────────────────────────────
@@ -139,23 +201,74 @@ const listingUploadZone   = document.getElementById('listingUploadZone');
 const listingImageInput   = document.getElementById('listingImageInput');
 const listingPreview      = document.getElementById('listingPreview');
 
+const LISTING_PLACEHOLDERS = {
+  Cars:        { title: 'e.g. 992 GT3 RS — Weissach Package',          price: 'e.g. $400,000 or OBO', desc: 'Mileage, condition, options, service history…' },
+  Mods:        { title: 'e.g. Vorsteiner Carbon Front Lip — 992 GT3 RS', price: 'e.g. $1,800 or OBO',   desc: 'Fitment, condition, install notes, reason for selling…' },
+  Wheels:      { title: 'e.g. HRE P101 20" Center Lock — Silver',       price: 'e.g. $4,200 or OBO',   desc: 'Size, offset, PCD, finish, condition, tires included…' },
+  Electronics: { title: 'e.g. COBB Accessport V3 — GT3 RS',            price: 'e.g. $650 or OBO',     desc: 'Maps loaded, firmware version, condition, accessories…' },
+  Other:       { title: 'e.g. Alpinestars Race Suit — Size 52',         price: 'e.g. $300 or OBO',     desc: 'Size, brand, condition, what\'s included…' },
+};
+
+function updateListingPlaceholders(cat) {
+  const p = LISTING_PLACEHOLDERS[cat] || LISTING_PLACEHOLDERS.Other;
+  document.getElementById('listingTitle').placeholder = p.title;
+  document.getElementById('listingPrice').placeholder = p.price;
+  document.getElementById('listingDesc').placeholder  = p.desc;
+}
+
+document.getElementById('listingCategory').addEventListener('change', e => updateListingPlaceholders(e.target.value));
+
 document.getElementById('createListingBtn').addEventListener('click', () => {
   if (!currentUser) return openAuth();
+  updateListingPlaceholders(document.getElementById('listingCategory').value);
   createListingOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 });
 document.getElementById('createListingClose').addEventListener('click', () => { createListingOverlay.classList.remove('open'); document.body.style.overflow = ''; });
 createListingOverlay.addEventListener('click', e => { if (e.target === createListingOverlay) { createListingOverlay.classList.remove('open'); document.body.style.overflow = ''; } });
 
+listingImageInput.setAttribute('multiple', 'true');
 listingUploadZone.addEventListener('click', () => listingImageInput.click());
 listingImageInput.addEventListener('change', e => {
-  listingFile = e.target.files[0];
-  if (listingFile) {
-    listingPreview.src = URL.createObjectURL(listingFile);
-    listingPreview.style.display = 'block';
-    listingUploadZone.style.display = 'none';
-  }
+  Array.from(e.target.files).forEach(f => { if (listingFiles.length < 10) listingFiles.push(f); });
+  e.target.value = '';
+  renderListingThumbs();
 });
+
+function renderListingThumbs() {
+  listingUploadZone.style.display = 'none';
+  listingPreview.style.display = 'none';
+  let thumbsEl = document.getElementById('listingThumbsGrid');
+  if (!thumbsEl) {
+    thumbsEl = document.createElement('div');
+    thumbsEl.id = 'listingThumbsGrid';
+    thumbsEl.className = 'upload-thumbs';
+    listingUploadZone.parentNode.insertBefore(thumbsEl, listingUploadZone.nextSibling);
+  }
+  thumbsEl.innerHTML = '';
+  listingFiles.forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = 'upload-thumb';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(f);
+    const rm = document.createElement('button');
+    rm.className = 'upload-thumb-rm';
+    rm.innerHTML = '×';
+    rm.addEventListener('click', () => { listingFiles.splice(i, 1); renderListingThumbs(); });
+    div.appendChild(img); div.appendChild(rm);
+    thumbsEl.appendChild(div);
+  });
+  if (listingFiles.length < 10) {
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'upload-add-more';
+    add.innerHTML = '+';
+    add.addEventListener('click', () => listingImageInput.click());
+    thumbsEl.appendChild(add);
+  }
+  if (!listingFiles.length) { listingUploadZone.style.display = ''; thumbsEl.style.display = 'none'; }
+  else thumbsEl.style.display = 'grid';
+}
 
 document.getElementById('submitListingBtn').addEventListener('click', async () => {
   const title = document.getElementById('listingTitle').value.trim();
@@ -165,7 +278,7 @@ document.getElementById('submitListingBtn').addEventListener('click', async () =
   err.textContent = '';
 
   const fd = new FormData();
-  if (listingFile) fd.append('image', listingFile);
+  listingFiles.forEach(f => fd.append('images', f));
   fd.append('title', title);
   fd.append('price', price);
   fd.append('category', document.getElementById('listingCategory').value);
@@ -179,7 +292,10 @@ document.getElementById('submitListingBtn').addEventListener('click', async () =
     const data = await res.json();
     if (!res.ok) { err.textContent = data.error; return; }
     createListingOverlay.classList.remove('open'); document.body.style.overflow = '';
-    listingFile = null; listingPreview.style.display = 'none'; listingUploadZone.style.display = '';
+    listingFiles = [];
+    const thumbsGrid = document.getElementById('listingThumbsGrid');
+    if (thumbsGrid) { thumbsGrid.innerHTML = ''; thumbsGrid.style.display = 'none'; }
+    listingPreview.style.display = 'none'; listingUploadZone.style.display = '';
     ['listingTitle','listingPrice','listingDesc','listingContact'].forEach(id => document.getElementById(id).value = '');
     await loadListings(activeCategory);
   } catch { err.textContent = 'Failed to post listing.'; }

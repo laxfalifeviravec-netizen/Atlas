@@ -57,17 +57,17 @@ async function loadConversations() {
     list.style.display  = '';
     list.innerHTML = convs.map(c => buildConvRow(c)).join('');
     list.querySelectorAll('.chat-list-item').forEach((el, i) => {
-      el.addEventListener('click', () => openConv(convs[i].id, convs[i].other_user_name || convs[i].name || 'Chat'));
+      el.addEventListener('click', () => openConv(convs[i].id, convs[i].other_name || convs[i].other_user_name || convs[i].name || 'Chat'));
     });
   } catch { loading.style.display = 'none'; empty.style.display = 'flex'; }
 }
 
 function buildConvRow(c) {
-  const name    = esc(c.other_user_name || c.name || 'Unknown');
+  const name    = esc(c.other_name || c.other_user_name || c.name || 'Unknown');
   const init    = (name[0] || '?').toUpperCase();
-  const preview = esc(c.last_message || '');
-  const time    = c.last_message_at ? relTime(c.last_message_at) : '';
-  const unread  = c.unread_count > 0;
+  const preview = esc(c.last_message?.body || c.last_message || '');
+  const time    = (c.last_message?.created_at || c.last_message_at) ? relTime(c.last_message?.created_at || c.last_message_at) : '';
+  const unread  = (c.unread || c.unread_count || 0) > 0;
   return `
     <div class="chat-list-item">
       <div class="chat-avatar">${init}</div>
@@ -98,9 +98,6 @@ async function loadGroups() {
     empty.style.display = 'none';
     list.style.display  = '';
     list.innerHTML = groups.map(g => buildGroupRow(g)).join('');
-    list.querySelectorAll('.chat-list-item').forEach(() => {
-      // clicking navigates to the full groups page
-    });
     list.querySelectorAll('.chat-list-item').forEach(el => {
       el.addEventListener('click', () => { location.href = 'groups.html'; });
     });
@@ -169,13 +166,31 @@ async function loadMessages() {
 
 function buildMsgBubble(m) {
   const mine   = m.sender_id === me?.id;
-  const bubble = esc(m.content || m.body || '');
+  const raw    = m.content || m.body || '';
+  let bubbleHtml = `<div class="conv-msg-bubble">${esc(raw)}</div>`;
+  if (raw.startsWith('{"__type":"post_share"')) {
+    try {
+      const d = JSON.parse(raw);
+      const img = d.image_url
+        ? `<img src="${d.image_url.replace(/"/g, '')}" class="shared-post-img" alt="" loading="lazy" />`
+        : `<div class="shared-post-no-img">📷</div>`;
+      const caption = d.caption ? `<p class="shared-post-caption">${esc(d.caption.length > 90 ? d.caption.slice(0, 90) + '…' : d.caption)}</p>` : '';
+      const road = d.road_name ? `<span class="shared-post-road">${esc(d.road_name)}</span>` : '';
+      bubbleHtml = `<div class="shared-post-card">
+        <a href="community.html?post=${parseInt(d.post_id)}" class="shared-post-main">
+          ${img}
+          <div class="shared-post-info">${road}${caption}<span class="shared-post-hint">Tap to view post →</span></div>
+        </a>
+        <a href="profile.html?id=${parseInt(d.user_id)}" class="shared-post-user">@${esc(d.user_name)}</a>
+      </div>`;
+    } catch {}
+  }
   const sender = (!mine && m.sender_name) ? `<div class="conv-msg-sender">${esc(m.sender_name)}</div>` : '';
   const time   = m.created_at ? `<div class="conv-msg-time">${relTime(m.created_at)}</div>` : '';
   return `
     <div class="conv-msg ${mine ? 'mine' : 'theirs'}">
       ${sender}
-      <div class="conv-msg-bubble">${bubble}</div>
+      ${bubbleHtml}
       ${time}
     </div>`;
 }
@@ -188,7 +203,7 @@ async function sendMessage() {
     await fetch(`${API}/api/conversations/${activeConvId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ content: text })
+      body: JSON.stringify({ body: text })
     });
     await loadMessages();
   } catch {}
@@ -230,10 +245,10 @@ newMsgSearch.addEventListener('input', () => {
       const r = await fetch(`${API}/api/conversations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ participant_id: u.id })
+        body: JSON.stringify({ user_id: u.id })
       });
       const data = await r.json();
-      openConv(data.id || data.conversation?.id, u.name || u.username);
+      openConv(data.conversation_id || data.id, u.name || u.username);
     } catch {}
   }), 300);
 });
@@ -339,7 +354,7 @@ async function searchUsers(q, container, onSelect) {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     const data = await r.json();
-    const people = data.people || (Array.isArray(data) ? data : []);
+    const people = data.users || data.people || (Array.isArray(data) ? data : []);
     container.innerHTML = people.slice(0, 8).map(u => `
       <div class="chat-user-row" data-id="${u.id}">
         <div class="chat-avatar" style="width:38px;height:38px;font-size:16px;flex-shrink:0">${(u.name || u.username || '?')[0].toUpperCase()}</div>

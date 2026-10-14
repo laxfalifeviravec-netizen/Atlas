@@ -22,7 +22,9 @@
   --radius-card:   4px;
   --font-ui:       'DM Sans', system-ui, -apple-system, sans-serif;
   --font-head:     'Barlow Condensed', system-ui, sans-serif;
-  --header-h:      52px;
+  --safe-t:        env(safe-area-inset-top, 0px);
+  --header-bare:   52px;
+  --header-h:      calc(var(--header-bare) + var(--safe-t));
   --bottom-nav-h:  calc(56px + env(safe-area-inset-bottom, 0px));
   --safe-b:        env(safe-area-inset-bottom, 0px);
 }
@@ -68,7 +70,8 @@ body {
   background: var(--c-surface);
   border-bottom: 1px solid var(--c-border);
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 12px 0 16px;
+  padding: var(--safe-t) 12px 0 16px;
+  box-sizing: border-box;
 }
 .app-logo {
   font-family: var(--font-head); font-size: 22px; font-weight: 800;
@@ -165,6 +168,56 @@ body {
 }
 
 /* ── Feed tabs ─────────────────────────────────────────────── */
+/* ── Feature shortcuts row ─────────────────────────────────── */
+.feature-shortcuts {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 12px 16px;
+  background: var(--c-bg);
+  border-bottom: 1px solid var(--c-border);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.feature-shortcuts::-webkit-scrollbar { display: none; }
+
+.fshort-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  flex-shrink: 0;
+  width: 64px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fshort-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-text);
+  transition: background 0.15s, transform 0.1s;
+}
+.fshort-item:active .fshort-icon {
+  background: var(--c-surface-2, #1e1e24);
+  transform: scale(0.94);
+}
+
+.fshort-item span {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-text-2);
+  text-align: center;
+  line-height: 1.2;
+  font-family: var(--font-ui);
+}
+
 .feed-tabs {
   display: flex;
   background: var(--c-surface);
@@ -235,10 +288,65 @@ body {
   display: flex; align-items: center; justify-content: center;
 }
 /* Post image — square 1:1 like Instagram default */
-.post-card-img-wrap { position: relative; background: #000; width: 100%; aspect-ratio: 1 / 1; }
+.post-card-img-wrap { position: relative; background: #000; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; }
 .post-card-img-wrap img,
 .post-card-img-wrap video { width: 100%; height: 100%; display: block; object-fit: cover; }
 .post-card-video { cursor: pointer; }
+
+/* ── Multi-image carousel ────────────────────────────────── */
+.carousel-track {
+  display: flex; width: 100%; height: 100%;
+  overflow-x: auto; scroll-snap-type: x mandatory;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.carousel-track::-webkit-scrollbar { display: none; }
+.carousel-slide {
+  flex: 0 0 100%; scroll-snap-align: start;
+  width: 100%; height: 100%;
+}
+.carousel-slide img, .carousel-slide video {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.carousel-dots {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 5px; pointer-events: none;
+}
+.carousel-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,0.45); transition: background 0.2s;
+}
+.carousel-dot.active { background: #fff; }
+.carousel-count {
+  position: absolute; top: 10px; right: 10px;
+  background: rgba(0,0,0,0.55); color: #fff;
+  font-size: 12px; font-weight: 600; padding: 3px 8px;
+  border-radius: 12px; pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+/* ── Multi-file upload thumbs ────────────────────────────── */
+.upload-thumbs {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  margin-top: 10px;
+}
+.upload-thumb {
+  position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden;
+  background: var(--c-bg);
+}
+.upload-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.upload-thumb-rm {
+  position: absolute; top: 4px; right: 4px;
+  background: rgba(0,0,0,0.65); color: #fff; border: none; border-radius: 50%;
+  width: 22px; height: 22px; font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+}
+.upload-add-more {
+  border: 1.5px dashed var(--c-border); border-radius: 8px;
+  background: none; cursor: pointer; color: var(--c-text-2);
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 26px; transition: border-color 0.15s;
+}
+.upload-add-more:hover { border-color: var(--c-accent); }
 
 /* Actions row */
 .post-card-actions {
@@ -785,4 +893,98 @@ body {
 /* ── Dark map tiles (CSS invert on OSM — no API key needed) ── */
 .leaflet-container.dark-tiles .leaflet-tile-pane {
   filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(88%);
+}
+
+/* ── Delete confirm sheet ────────────────────────────────── */
+.confirm-sheet {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  z-index: 9999; display: flex; align-items: flex-end;
+  opacity: 0; transition: opacity 0.2s;
+}
+.confirm-sheet.confirm-sheet-open { opacity: 1; }
+.confirm-sheet-box {
+  width: 100%; background: var(--c-surface);
+  border-radius: 18px 18px 0 0; padding: 20px 16px 32px;
+  transform: translateY(100%); transition: transform 0.25s ease;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.confirm-sheet.confirm-sheet-open .confirm-sheet-box { transform: translateY(0); }
+.confirm-sheet-title {
+  font-size: 16px; font-weight: 700; text-align: center; color: var(--c-text);
+}
+.confirm-sheet-body {
+  font-size: 13px; color: var(--c-text-2); text-align: center; margin-top: -4px;
+}
+.confirm-sheet-del {
+  width: 100%; padding: 14px; border: none; border-radius: 10px;
+  background: #e74c3c; color: #fff;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  font-family: var(--font-ui); -webkit-tap-highlight-color: transparent;
+}
+.confirm-sheet-cancel {
+  width: 100%; padding: 13px; border: none; border-radius: 10px;
+  background: var(--c-bg); color: var(--c-text-2);
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  font-family: var(--font-ui); -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Share sheet ─────────────────────────────────────────── */
+.share-sheet {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  z-index: 9999; display: flex; align-items: flex-end;
+  opacity: 0; transition: opacity 0.22s;
+}
+.share-sheet.share-sheet-open { opacity: 1; }
+.share-sheet-box {
+  width: 100%; background: var(--c-surface);
+  border-radius: 18px 18px 0 0; padding: 16px 16px 32px;
+  transform: translateY(100%); transition: transform 0.26s ease;
+  display: flex; flex-direction: column; gap: 0;
+  max-height: 70vh;
+}
+.share-sheet.share-sheet-open .share-sheet-box { transform: translateY(0); }
+.share-sheet-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.share-sheet-title { font-size: 16px; font-weight: 700; color: var(--c-text); }
+.share-sheet-close {
+  background: none; border: none; font-size: 18px; color: var(--c-text-2);
+  cursor: pointer; padding: 4px; -webkit-tap-highlight-color: transparent;
+}
+.share-sheet-input {
+  width: 100%; background: var(--c-bg); border: 1px solid var(--c-border);
+  border-radius: 10px; padding: 10px 14px; font-size: 14px;
+  color: var(--c-text); outline: none; font-family: var(--font-ui);
+  box-sizing: border-box; margin-bottom: 8px;
+}
+.share-sheet-input:focus { border-color: var(--c-accent); }
+.share-sheet-results { overflow-y: auto; flex: 1; }
+.share-user-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 4px; cursor: pointer; border-radius: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.share-user-row:active { background: var(--c-bg); }
+.share-user-av {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--c-accent); color: #0C0C0F;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 13px; flex-shrink: 0;
+}
+.share-user-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--c-text); }
+.share-user-send {
+  font-size: 12px; font-weight: 700; color: var(--c-accent);
+}
+.share-no-results { font-size: 13px; color: var(--c-text-2); text-align: center; padding: 16px 0; }
+.share-sheet-sep {
+  height: 1px; background: var(--c-border); margin: 12px 0;
+}
+.share-sheet-ext {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--c-bg); border: 1px solid var(--c-border);
+  border-radius: 10px; padding: 12px 16px;
+  font-size: 14px; font-weight: 600; color: var(--c-text);
+  cursor: pointer; font-family: var(--font-ui);
+  -webkit-tap-highlight-color: transparent;
 }

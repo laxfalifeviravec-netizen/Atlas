@@ -3,7 +3,7 @@
    Caches the app shell so it loads instantly and works offline.
    ============================================================ */
 
-const CACHE = 'culture-v15';
+const CACHE = 'culture-v35';
 
 const APP_SHELL = [
   '/',
@@ -34,10 +34,18 @@ const APP_SHELL = [
   '/search.js',
   '/messages.html',
   '/messages.css',
-  '/messages.js',
+  '/messages.js?v=3',
   '/events.html',
   '/events.css',
   '/events.js',
+  '/following.html',
+  '/following.js',
+  '/marketplace.html',
+  '/marketplace.css',
+  '/marketplace.js',
+  '/pricing.html',
+  '/privacy.html',
+  '/terms.html',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -45,6 +53,8 @@ const APP_SHELL = [
   '/lib/leaflet.js',
   '/lib/leaflet.css',
   '/create-sheet.js',
+  '/photo-viewer.js',
+  '/admin.html',
 ];
 
 // Install — cache the app shell
@@ -54,13 +64,33 @@ self.addEventListener('install', e => {
   );
 });
 
-// Activate — clear old caches
+// Activate — clear old caches, and reload open pages after an upgrade
 self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
+  e.waitUntil((async () => {
+    const stale = (await caches.keys()).filter(k => k !== CACHE);
+    await Promise.all(stale.map(k => caches.delete(k)));
+    await self.clients.claim();
+    if (stale.length) {
+      const wins = await self.clients.matchAll({ type: 'window' });
+      wins.forEach(c => c.navigate(c.url).catch(() => {}));
+    }
+  })());
+});
+
+// Push notifications
+self.addEventListener('push', e => {
+  const data = e.data?.json() || {};
+  e.waitUntil(self.registration.showNotification(data.title || 'One Culture', {
+    body: data.body || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    data: { type: data.type, post_id: data.post_id },
+  }));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(clients.openWindow('/community.html'));
 });
 
 // Fetch — serve from cache first, then network; always update cache for app shell
@@ -73,16 +103,12 @@ self.addEventListener('fetch', e => {
   if (url.origin !== location.origin) return;
 
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      const network = fetch(e.request).then(res => {
-        if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return res;
-      });
-      // Return cached immediately if available, update in background
-      return cached || network;
-    })
+    fetch(e.request).then(res => {
+      if (res.ok) {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+      }
+      return res;
+    }).catch(() => caches.match(e.request))
   );
 });

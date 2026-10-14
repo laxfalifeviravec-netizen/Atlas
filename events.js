@@ -28,6 +28,8 @@ async function loadMe() {
 }
 
 // ── Load events ────────────────────────────────────────────────
+let allEvents = [];
+
 async function loadEvents() {
   const loading = document.getElementById('eventsLoading');
   const empty   = document.getElementById('eventsEmpty');
@@ -40,14 +42,15 @@ async function loadEvents() {
   try {
     const res = await fetch(`${API}/api/events`);
     const { events } = await res.json();
+    allEvents = events || [];
     loading.style.display = 'none';
 
-    if (!events || events.length === 0) {
+    if (allEvents.length === 0) {
       empty.style.display = '';
       return;
     }
 
-    events.forEach(evt => {
+    allEvents.forEach(evt => {
       list.appendChild(buildEventCard(evt));
     });
   } catch {
@@ -78,8 +81,8 @@ function buildEventCard(evt) {
         ${esc(evt.location)}
       </div>` : ''}
       <div class="evt-meta">
-        <span class="evt-going-count">${evt.rsvp_count || 0} going</span>
-        ${evt.is_going ? '<span class="evt-badge">Going</span>' : ''}
+        <span class="evt-going-count">${evt.attendee_count || 0} going</span>
+        ${evt.going ? '<span class="evt-badge">Going</span>' : ''}
         ${isPast ? '<span class="evt-badge past">Past</span>' : ''}
       </div>
     </div>`;
@@ -122,7 +125,8 @@ async function openEventDetail(evt) {
   } catch {}
 
   const canRsvp = !isPast && token;
-  const isGoing = evt.is_going;
+  const isGoing = evt.going;
+  const isCreator = currentUser && currentUser.id === evt.creator_id;
 
   document.getElementById('evtDetailBody').innerHTML = `
     <div class="evt-detail-date">${esc(dateStr)} at ${esc(timeStr)}</div>
@@ -133,19 +137,37 @@ async function openEventDetail(evt) {
     ${evt.description ? `<div class="evt-detail-desc">${esc(evt.description)}</div>` : ''}
     <div class="evt-detail-creator">Organised by <a href="profile.html?id=${evt.creator_id}" style="color:var(--c-accent);text-decoration:none">${esc(evt.creator_name||'Driver')}</a></div>
     ${canRsvp ? `<div class="evt-rsvp-row">
-      <span class="evt-going-label">${evt.rsvp_count || 0} going</span>
+      <span class="evt-going-label">${evt.attendee_count || 0} going</span>
       <button class="btn ${isGoing ? 'btn-outline' : 'btn-primary'} evt-rsvp-btn" id="rsvpBtn" data-id="${evt.id}" data-going="${isGoing ? '1' : '0'}">
         ${isGoing ? 'Can\'t go' : 'I\'m going!'}
       </button>
-    </div>` : `<div class="evt-rsvp-row"><span class="evt-going-label">${evt.rsvp_count || 0} going${isPast ? ' — past event' : ''}</span></div>`}
+    </div>` : `<div class="evt-rsvp-row"><span class="evt-going-label">${evt.attendee_count || 0} going${isPast ? ' — past event' : ''}</span></div>`}
+    ${isCreator ? `<button class="btn btn-full" id="deleteEvtBtn" style="margin-top:12px;border:1px solid #dc2626;color:#dc2626;background:transparent">Delete Event</button>` : ''}
     ${attendeesHtml}`;
 
   if (canRsvp) {
     document.getElementById('rsvpBtn').addEventListener('click', () => toggleRsvp(evt));
   }
+  if (isCreator) {
+    document.getElementById('deleteEvtBtn').addEventListener('click', () => deleteEvent(evt));
+  }
 
   detailOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+
+async function deleteEvent(evt) {
+  if (!confirm(`Delete "${evt.title}"? This cannot be undone.`)) return;
+  try {
+    const res = await fetch(`${API}/api/events/${evt.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) { alert('Could not delete event.'); return; }
+    detailOverlay.classList.remove('open');
+    document.body.style.overflow = '';
+    await loadEvents();
+  } catch { alert('Network error.'); }
 }
 
 async function toggleRsvp(evt) {
@@ -158,8 +180,8 @@ async function toggleRsvp(evt) {
       headers: { Authorization: `Bearer ${token}` }
     });
     const data = await res.json();
-    evt.is_going   = data.going;
-    evt.rsvp_count = (evt.rsvp_count || 0) + (data.going ? 1 : -1);
+    evt.going         = data.going;
+    evt.attendee_count = Math.max(0, (evt.attendee_count || 0) + (data.going ? 1 : -1));
     detailOverlay.classList.remove('open');
     document.body.style.overflow = '';
     await loadEvents();

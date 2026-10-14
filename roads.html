@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -23,6 +23,9 @@
   <header class="app-header" id="appHeader">
     <a href="index.html" class="app-logo">One Culture</a>
     <div class="app-header-actions">
+      <a href="groups.html" class="app-icon-btn" aria-label="Groups" style="color:inherit;text-decoration:none" title="Groups &amp; Live Location">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </a>
       <button class="app-icon-btn" id="themeToggle" aria-label="Toggle theme">
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
         <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -48,8 +51,11 @@
 
       <!-- Add mode instructions -->
       <div class="add-mode-hint" id="addModeHint" style="display:none">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-        <p>Click on the map to place waypoints for your road. Click <strong>Done</strong> when finished (min 2 points).</p>
+        <div class="add-mode-type-toggle">
+          <button class="add-type-btn active" id="addTypeRoad" data-type="road">Trace Road</button>
+          <button class="add-type-btn" id="addTypeSpot" data-type="waypoint">Mark a Spot</button>
+        </div>
+        <p id="addModeHintText">Click on the map to place waypoints for your road. Click <strong>Done</strong> when finished (min 2 points).</p>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button class="btn btn-primary btn-sm" id="doneAddRoadBtn">Done</button>
           <button class="btn btn-outline btn-sm" id="cancelAddRoadBtn">Cancel</button>
@@ -81,6 +87,12 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         Roads
       </button>
+
+      <!-- Back button -->
+      <button class="map-back-btn" id="mapBackBtn" onclick="history.back()" aria-label="Go back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
     </div>
   </div>
 
@@ -111,7 +123,7 @@
   <div class="modal-overlay" id="addRoadOverlay" role="dialog" aria-modal="true">
     <div class="modal">
       <div class="modal-header">
-        <h3>Name This Road</h3>
+        <h3 id="addRoadModalTitle">Name This Road</h3>
         <button class="modal-close" id="addRoadClose">&times;</button>
       </div>
       <div class="modal-body">
@@ -124,12 +136,23 @@
             <option>Southeast</option><option>Northeast</option>
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group road-only-field">
           <select id="roadDifficulty">
             <option value="Easy">Easy — wide, smooth, gentle curves</option>
             <option value="Moderate" selected>Moderate — some technical sections</option>
             <option value="Hard">Hard — narrow, tight switchbacks</option>
             <option value="Expert">Expert — extreme corners, no margin</option>
+          </select>
+        </div>
+        <div class="form-group spot-only-field" style="display:none">
+          <select id="spotCategory">
+            <option value="viewpoint">Viewpoint</option>
+            <option value="corner">Good Corner</option>
+            <option value="fuel">Fuel Stop</option>
+            <option value="food">Food / Coffee</option>
+            <option value="photo">Photo Spot</option>
+            <option value="meetup">Meetup Point</option>
+            <option value="other">Other</option>
           </select>
         </div>
         <div class="form-group"><textarea id="roadDesc" placeholder="Describe what makes this road special…" rows="2" maxlength="400"></textarea></div>
@@ -205,12 +228,25 @@
   <!-- ═══ NAV TOP CARD (next turn — Google Maps style) ════════ -->
   <div class="nav-top-card" id="navTopCard">
     <div class="nav-top-arrow" id="navHUDArrow">
-      <svg viewBox="0 0 24 24" width="32" height="32"><path d="M12 19V5M5 12l7-7 7 7" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      <svg viewBox="0 0 24 24" width="48" height="48"><path d="M12 19V5M5 12l7-7 7 7" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
     </div>
     <div class="nav-top-text">
       <div class="nav-top-dist" id="navHUDDist"></div>
       <div class="nav-top-instruction" id="navHUDInstruction">Head to start</div>
     </div>
+  </div>
+
+  <!-- ═══ DRIVE CREW BAR (group drive mode) ════════════════════ -->
+  <div class="drive-crew-bar" id="driveCrewBar" style="display:none">
+    <div class="drive-crew-inner" id="driveCrewInner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="flex-shrink:0;opacity:.7"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="drive-crew-name" id="driveCrewName">Group Drive</span>
+      <span class="drive-crew-count" id="driveCrewCount"></span>
+    </div>
+    <div class="drive-crew-avatars" id="driveCrewAvatars"></div>
+    <button class="drive-crew-leave" id="driveCrewLeave" aria-label="Leave drive">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
   </div>
 
   <!-- ═══ RE-CENTER BUTTON (appears when user pans away during nav) ══ -->
@@ -226,6 +262,8 @@
         <span id="navArriveTime">—</span>
         <span class="nav-hud-dot">·</span>
         <span id="navRemainDist">—</span>
+        <span class="nav-hud-dot">·</span>
+        <span id="navHUDRoadName" class="nav-hud-road"></span>
       </div>
     </div>
     <div class="nav-speed-block">
@@ -233,7 +271,7 @@
       <div class="nav-speed-unit">mph</div>
     </div>
     <button class="nav-stop-btn" id="navStopBtn" aria-label="Stop navigation">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   </div>
 

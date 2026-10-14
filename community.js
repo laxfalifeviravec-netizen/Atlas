@@ -5,6 +5,12 @@
 const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
   ? 'http://localhost:3001' : '';
 
+// Handle Apple Sign In redirect token
+(function() {
+  const p = new URLSearchParams(location.search);
+  const t = p.get('apple_token');
+  if (t) { localStorage.setItem('culture-token', t); history.replaceState(null, '', 'community.html'); }
+})();
 let token = localStorage.getItem('culture-token');
 if (!token) location.replace('index.html');
 let currentUser = null;
@@ -264,10 +270,40 @@ function isVideoUrl(url) {
   return /\.(mp4|webm|mov|m4v|avi)(\?|$)/i.test(url);
 }
 
+function buildCarousel(urls) {
+  if (!urls || urls.length <= 1) return '';
+  const slides = urls.map(u => {
+    const src = u.startsWith('http') ? u : `${API}${u}`;
+    const isV = isVideoUrl(src);
+    return `<div class="carousel-slide">${isV
+      ? `<video src="${src}" muted loop playsinline preload="metadata"></video>`
+      : `<img src="${src}" loading="lazy" />`}</div>`;
+  }).join('');
+  const dots = urls.map((_, i) => `<div class="carousel-dot${i===0?' active':''}"></div>`).join('');
+  return `<div class="carousel-track" data-count="${urls.length}">${slides}</div>
+          <div class="carousel-dots">${dots}</div>
+          <div class="carousel-count">1 / ${urls.length}</div>`;
+}
+
+function initCarousel(wrap) {
+  const track = wrap.querySelector('.carousel-track');
+  if (!track) return;
+  const dots = wrap.querySelectorAll('.carousel-dot');
+  const countEl = wrap.querySelector('.carousel-count');
+  const total = parseInt(track.dataset.count);
+  track.addEventListener('scroll', () => {
+    const idx = Math.round(track.scrollLeft / track.clientWidth);
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    if (countEl) countEl.textContent = `${idx + 1} / ${total}`;
+  }, { passive: true });
+}
+
 function buildPostCard(p) {
   const initials = (p.user_name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-  const mediaSrc = p.image_url.startsWith('http') ? p.image_url : `${API}${p.image_url}`;
+  const urls = (p.image_urls?.length ? p.image_urls : (p.image_url ? [p.image_url] : [])).map(u => u.startsWith('http') ? u : `${API}${u}`);
+  const mediaSrc = urls[0] || '';
   const isVideo  = isVideoUrl(mediaSrc);
+  const multi    = urls.length > 1;
   const timeStr  = formatTime(p.created_at);
 
   const card = document.createElement('article');
@@ -281,9 +317,11 @@ function buildPostCard(p) {
       </div>
     </div>
     <div class="post-card-img-wrap">
-      ${isVideo
-        ? `<video src="${mediaSrc}" muted loop playsinline preload="metadata" class="post-card-video"></video>`
-        : `<img src="${mediaSrc}" alt="${esc(p.road_name||'Road photo')}" loading="lazy" />`}
+      ${multi
+        ? buildCarousel(urls)
+        : isVideo
+          ? `<video src="${mediaSrc}" muted loop playsinline preload="metadata" class="post-card-video"></video>`
+          : `<img src="${mediaSrc}" alt="${esc(p.road_name||'Road photo')}" loading="lazy" />`}
     </div>
     <div class="post-card-actions">
       <button class="post-action-btn like-btn${p.liked?' liked':''}" data-id="${p.id}" data-liked="${p.liked}" aria-label="Like">
@@ -317,6 +355,8 @@ function buildPostCard(p) {
   card.querySelector('.share-btn').addEventListener('click', () => sharePost(p.id));
   card.querySelector('.save-btn').addEventListener('click', e => toggleSave(p, e.currentTarget));
 
+  initCarousel(card.querySelector('.post-card-img-wrap'));
+
   const mediaEl = card.querySelector('.post-card-img-wrap img, .post-card-img-wrap video');
   if (mediaEl) {
     mediaEl.addEventListener('dblclick', () => {
@@ -329,13 +369,36 @@ function buildPostCard(p) {
     }
   }
 
-  if (currentUser && p.user_id === currentUser.id) {
+  if (currentUser && (String(p.user_id) === String(currentUser.id) || currentUser.is_admin)) {
     const delBtn = document.createElement('button');
     delBtn.className = 'post-action-btn post-delete-btn';
     delBtn.title = 'Delete post';
     delBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
     delBtn.addEventListener('click', () => deletePost(p.id, card));
     card.querySelector('.post-card-actions').appendChild(delBtn);
+  } else if (currentUser) {
+    const reportBtn = document.createElement('button');
+    reportBtn.className = 'post-action-btn post-report-btn';
+    reportBtn.title = 'Report post';
+    reportBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`;
+    reportBtn.addEventListener('click', () => reportPost(p.id, reportBtn));
+    card.querySelector('.post-card-actions').appendChild(reportBtn);
+  }
+  if (currentUser?.is_admin) {
+    const pinBtn = document.createElement('button');
+    pinBtn.className = 'post-action-btn post-pin-btn';
+    pinBtn.title = p.is_pinned ? 'Unpin post' : 'Pin post';
+    pinBtn.style.color = p.is_pinned ? 'var(--accent)' : '';
+    pinBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="${p.is_pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>`;
+    pinBtn.addEventListener('click', async () => {
+      const action = p.is_pinned ? 'unpin' : 'pin';
+      await fetch(`${API}/api/admin/posts/${p.id}/${action}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      p.is_pinned = !p.is_pinned;
+      pinBtn.title = p.is_pinned ? 'Unpin post' : 'Pin post';
+      pinBtn.style.color = p.is_pinned ? 'var(--accent)' : '';
+      pinBtn.querySelector('svg').setAttribute('fill', p.is_pinned ? 'currentColor' : 'none');
+    });
+    card.querySelector('.post-card-actions').appendChild(pinBtn);
   }
   return card;
 }
@@ -457,7 +520,7 @@ const newPostOverlay = document.getElementById('newPostOverlay');
 const uploadZone = document.getElementById('uploadZone');
 const postImageInput = document.getElementById('postImageInput');
 const uploadPreview  = document.getElementById('uploadPreview');
-let postFile = null;
+let postFiles = [];
 
 function openNewPost() {
   if (!currentUser) return openAuth();
@@ -473,44 +536,75 @@ newPostOverlay.addEventListener('click', e => {
   if (e.target === newPostOverlay) { newPostOverlay.classList.remove('open'); document.body.style.overflow = ''; }
 });
 // create-sheet.js intercepts .bnav-post in capture phase; this is the fallback
-document.getElementById('newPostBtnNav').addEventListener('click', () => {
+const _newPostBtnNav = document.getElementById('newPostBtnNav');
+if (_newPostBtnNav) _newPostBtnNav.addEventListener('click', () => {
   if (typeof window.openCreateSheet === 'function') window.openCreateSheet();
   else openNewPost();
 });
+
+postImageInput.setAttribute('multiple', 'true');
 
 uploadZone.addEventListener('click', () => postImageInput.click());
 uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor = 'var(--c-accent)'; });
 uploadZone.addEventListener('dragleave', () => { uploadZone.style.borderColor = ''; });
 uploadZone.addEventListener('drop', e => {
   e.preventDefault(); uploadZone.style.borderColor = '';
-  const file = e.dataTransfer.files[0];
-  if (file) setPostFile(file);
+  addPostFiles(Array.from(e.dataTransfer.files));
 });
-postImageInput.addEventListener('change', e => { if (e.target.files[0]) setPostFile(e.target.files[0]); });
+postImageInput.addEventListener('change', e => {
+  addPostFiles(Array.from(e.target.files));
+  e.target.value = '';
+});
 
-function setPostFile(file) {
-  postFile = file;
-  const isVideo = file.type.startsWith('video/');
-  const videoPreview = document.getElementById('uploadVideoPreview');
-  const url = URL.createObjectURL(file);
-  if (isVideo) {
-    videoPreview.src = url;
-    videoPreview.style.display = 'block';
-    uploadPreview.style.display = 'none';
-  } else {
-    uploadPreview.src = url;
-    uploadPreview.style.display = 'block';
-    videoPreview.style.display = 'none';
-  }
+function addPostFiles(files) {
+  files.forEach(f => { if (postFiles.length < 10) postFiles.push(f); });
+  renderPostThumbs();
+}
+
+function renderPostThumbs() {
   uploadZone.style.display = 'none';
+  uploadPreview.style.display = 'none';
+  const videoPreview = document.getElementById('uploadVideoPreview');
+  if (videoPreview) videoPreview.style.display = 'none';
+
+  let thumbsEl = document.getElementById('postThumbsGrid');
+  if (!thumbsEl) {
+    thumbsEl = document.createElement('div');
+    thumbsEl.id = 'postThumbsGrid';
+    thumbsEl.className = 'upload-thumbs';
+    uploadZone.parentNode.insertBefore(thumbsEl, uploadZone.nextSibling);
+  }
+  thumbsEl.innerHTML = '';
+  postFiles.forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = 'upload-thumb';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(f);
+    const rm = document.createElement('button');
+    rm.className = 'upload-thumb-rm';
+    rm.innerHTML = '×';
+    rm.addEventListener('click', () => { postFiles.splice(i, 1); renderPostThumbs(); });
+    div.appendChild(img); div.appendChild(rm);
+    thumbsEl.appendChild(div);
+  });
+  if (postFiles.length < 10) {
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'upload-add-more';
+    add.innerHTML = '+';
+    add.addEventListener('click', () => postImageInput.click());
+    thumbsEl.appendChild(add);
+  }
+  thumbsEl.style.display = postFiles.length ? 'grid' : 'none';
+  if (!postFiles.length) { uploadZone.style.display = ''; thumbsEl.style.display = 'none'; }
 }
 
 document.getElementById('submitPostBtn').addEventListener('click', async () => {
   const err = document.getElementById('newPostError');
-  if (!postFile) { err.textContent = 'Please select a photo or video.'; return; }
+  if (!postFiles.length) { err.textContent = 'Please select a photo or video.'; return; }
   err.textContent = '';
   const fd = new FormData();
-  fd.append('image', postFile);
+  postFiles.forEach(f => fd.append('images', f));
   fd.append('caption',   document.getElementById('postCaption').value.trim());
   fd.append('road_name', document.getElementById('postRoadName').value.trim());
   fd.append('region',    document.getElementById('postRegion').value);
@@ -526,7 +620,10 @@ document.getElementById('submitPostBtn').addEventListener('click', async () => {
     if (!res.ok) { err.textContent = data.error; return; }
     newPostOverlay.classList.remove('open'); document.body.style.overflow = '';
     // Reset
-    postFile = null; uploadPreview.style.display = 'none'; uploadZone.style.display = '';
+    postFiles = [];
+    const thumbsGrid = document.getElementById('postThumbsGrid');
+    if (thumbsGrid) { thumbsGrid.innerHTML = ''; thumbsGrid.style.display = 'none'; }
+    uploadPreview.style.display = 'none'; uploadZone.style.display = '';
     document.getElementById('postCaption').value = '';
     document.getElementById('postRoadName').value = '';
     document.getElementById('postRegion').value = '';
@@ -741,24 +838,158 @@ async function openPostById(postId) {
 })();
 
 // ── Delete own post ────────────────────────────────────────
-async function deletePost(postId, cardEl) {
-  if (!confirm('Delete this post? This cannot be undone.')) return;
+function deletePost(postId, cardEl) {
+  showConfirm('Delete this post?', 'This cannot be undone.', async () => {
+    try {
+      const res = await fetch(`${API}/api/posts/${postId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        cardEl.remove();
+        posts = posts.filter(p => p.id !== postId);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.error || 'Could not delete post.');
+      }
+    } catch { showToast('Could not delete post.'); }
+  });
+}
+
+function showConfirm(title, body, onConfirm) {
+  const sheet = document.createElement('div');
+  sheet.className = 'confirm-sheet';
+  sheet.innerHTML = `
+    <div class="confirm-sheet-box">
+      <p class="confirm-sheet-title">${title}</p>
+      ${body ? `<p class="confirm-sheet-body">${body}</p>` : ''}
+      <button class="confirm-sheet-del">Delete</button>
+      <button class="confirm-sheet-cancel">Cancel</button>
+    </div>`;
+  document.body.appendChild(sheet);
+  requestAnimationFrame(() => sheet.classList.add('confirm-sheet-open'));
+  const close = () => { sheet.classList.remove('confirm-sheet-open'); setTimeout(() => sheet.remove(), 250); };
+  sheet.querySelector('.confirm-sheet-del').addEventListener('click', () => { close(); onConfirm(); });
+  sheet.querySelector('.confirm-sheet-cancel').addEventListener('click', close);
+  sheet.addEventListener('click', e => { if (e.target === sheet) close(); });
+}
+
+// ── Report post ────────────────────────────────────────────
+async function reportPost(postId, btn) {
+  if (!currentUser) return openAuth();
+  const reason = prompt('Why are you reporting this post? (optional)') ?? '';
+  if (reason === null) return;
+  btn.disabled = true;
   try {
-    const res = await fetch(`${API}/api/posts/${postId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-    if (res.ok) { cardEl.remove(); posts = posts.filter(p => p.id !== postId); }
-  } catch {}
+    await fetch(`${API}/api/report`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_type: 'post', target_id: postId, reason })
+    });
+    btn.title = 'Reported';
+    btn.style.opacity = '0.4';
+  } catch {} finally { btn.disabled = false; }
 }
 
 // ── Share post ─────────────────────────────────────────────
 function sharePost(postId) {
-  const url = `${location.origin}/community.html?post=${postId}`;
-  if (navigator.share) {
-    navigator.share({ title: 'One Culture', url }).catch(() => {});
-  } else {
-    navigator.clipboard?.writeText(url).then(() => {
-      showToast('Link copied!');
-    }).catch(() => showToast('Copy: ' + url));
+  if (!currentUser) {
+    const url = `${location.origin}/community.html?post=${postId}`;
+    if (navigator.share) navigator.share({ title: 'One Culture', url }).catch(() => {});
+    else navigator.clipboard?.writeText(url).then(() => showToast('Link copied!')).catch(() => {});
+    return;
   }
+
+  const postUrl = `${location.origin}/community.html?post=${postId}`;
+  const sheet = document.createElement('div');
+  sheet.className = 'share-sheet';
+  sheet.innerHTML = `
+    <div class="share-sheet-box">
+      <div class="share-sheet-header">
+        <span class="share-sheet-title">Share Post</span>
+        <button class="share-sheet-close" aria-label="Close">✕</button>
+      </div>
+      <input class="share-sheet-input" placeholder="Search users…" autocomplete="off" />
+      <div class="share-sheet-results"></div>
+      <div class="share-sheet-sep"></div>
+      <button class="share-sheet-ext">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        Share externally…
+      </button>
+    </div>`;
+  document.body.appendChild(sheet);
+  requestAnimationFrame(() => sheet.classList.add('share-sheet-open'));
+
+  const close = () => {
+    sheet.classList.remove('share-sheet-open');
+    setTimeout(() => sheet.remove(), 260);
+  };
+  sheet.querySelector('.share-sheet-close').addEventListener('click', close);
+  sheet.addEventListener('click', e => { if (e.target === sheet) close(); });
+
+  const input = sheet.querySelector('.share-sheet-input');
+  const results = sheet.querySelector('.share-sheet-results');
+  let timer;
+
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (!q) { results.innerHTML = ''; return; }
+    timer = setTimeout(async () => {
+      try {
+        const r = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const { users = [] } = await r.json();
+        if (!users.length) { results.innerHTML = '<p class="share-no-results">No users found</p>'; return; }
+        results.innerHTML = users.slice(0, 8).map(u => {
+          const initials = u.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+          return `<div class="share-user-row" data-id="${u.id}" data-name="${esc(u.name)}">
+            <div class="share-user-av">${initials}</div>
+            <span class="share-user-name">${esc(u.name)}</span>
+            <span class="share-user-send">Send</span>
+          </div>`;
+        }).join('');
+        results.querySelectorAll('.share-user-row').forEach(row => {
+          row.addEventListener('click', () => sendPostToUser(row.dataset.id, row.dataset.name, postId, close));
+        });
+      } catch {}
+    }, 280);
+  });
+
+  sheet.querySelector('.share-sheet-ext').addEventListener('click', () => {
+    close();
+    if (navigator.share) navigator.share({ title: 'One Culture', url: postUrl }).catch(() => {});
+    else navigator.clipboard?.writeText(postUrl).then(() => showToast('Link copied!')).catch(() => {});
+  });
+
+  setTimeout(() => input.focus(), 280);
+}
+
+async function sendPostToUser(userId, userName, postId, closeSheet) {
+  const post = posts.find(p => String(p.id) === String(postId));
+  const messageBody = post ? JSON.stringify({
+    __type:    'post_share',
+    post_id:   post.id,
+    image_url: (post.image_urls && post.image_urls[0]) || post.image_url || '',
+    caption:   post.caption || '',
+    user_id:   post.user_id,
+    user_name: post.user_name || 'Driver',
+    road_name: post.road_name || ''
+  }) : `${location.origin}/community.html?post=${postId}`;
+
+  try {
+    const convRes = await fetch(`${API}/api/conversations`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId })
+    });
+    const { conversation_id } = await convRes.json();
+    await fetch(`${API}/api/conversations/${conversation_id}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: messageBody })
+    });
+    closeSheet();
+    showToast(`Sent to ${userName}!`);
+  } catch { showToast('Could not send.'); }
 }
 
 function showToast(msg) {
@@ -783,7 +1014,8 @@ document.getElementById('onboardingDone')?.addEventListener('click', () => {
 // ── Init ───────────────────────────────────────────────────
 (async () => {
   await loadMe();
-  const _cp = new URLSearchParams(location.search).get('create');
+  const _sp = new URLSearchParams(location.search);
+  const _cp = _sp.get('create');
   if (_cp === 'post') openNewPost();
   else if (_cp === 'story') openNewStory();
   await Promise.all([loadFeed(true), loadStories()]);
@@ -791,5 +1023,47 @@ document.getElementById('onboardingDone')?.addEventListener('click', () => {
     document.getElementById('notifBtn').style.display = '';
     loadNotifications();
     notifPollTimer = setInterval(loadNotifications, 30000);
+    // Show onboarding for brand-new users
+    if (_sp.get('new') === '1' && !localStorage.getItem('culture-onboarded')) {
+      showOnboarding();
+    }
+    // Request push permission after a short delay
+    setTimeout(requestPushPermission, 4000);
   }
 })();
+
+async function requestPushPermission() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  // Only prompt once; but always re-send subscription if already granted
+  const alreadyAsked = localStorage.getItem('culture-push-asked');
+  if (!alreadyAsked) localStorage.setItem('culture-push-asked', '1');
+  try {
+    const r = await fetch(`${API}/api/push/vapid-key`);
+    const { publicKey } = await r.json();
+    if (!publicKey) return;
+    if (alreadyAsked) {
+      // Already asked before — don't prompt again, but re-send existing subscription
+      if (Notification.permission !== 'granted') return;
+    } else {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+    await fetch(`${API}/api/push/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(sub),
+    });
+  } catch {}
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}

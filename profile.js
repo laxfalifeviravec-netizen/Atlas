@@ -93,6 +93,16 @@ function renderProfile(user) {
   document.getElementById('statFollowerCount').textContent = fmtNum(user.follower_count);
   document.getElementById('statFollowingCount').textContent = fmtNum(user.following_count);
 
+  document.getElementById('statFollowers').onclick = () => {
+    location.href = `following.html?tab=followers&id=${user.id}`;
+  };
+  document.getElementById('statFollowing').onclick = () => {
+    location.href = `following.html?tab=following&id=${user.id}`;
+  };
+  document.getElementById('statPosts').onclick = () => {
+    document.getElementById('tabPosts')?.click();
+  };
+
   renderActions(user);
 }
 
@@ -111,16 +121,36 @@ function renderActions(user) {
       <button class="btn ${isFollowing ? 'btn-unfollow' : 'btn-follow'}" id="followBtn">
         ${isFollowing ? 'Following' : 'Follow'}
       </button>
-      <button class="btn btn-outline" id="msgBtn" style="display:none">Message</button>`;
+      <button class="btn btn-outline" id="msgBtn" style="display:none">Message</button>
+      <button class="btn btn-outline" id="blockBtn" style="display:none;color:#dc2626;border-color:#dc2626">Block</button>`;
     document.getElementById('followBtn').addEventListener('click', toggleFollow);
     if (currentUser) {
       const msgBtn = document.getElementById('msgBtn');
       msgBtn.style.display = '';
       msgBtn.addEventListener('click', () => {
-        location.href = `messages.html?user=${user.id}&name=${encodeURIComponent(user.name)}`;
+        location.href = `chat.html?user=${user.id}&name=${encodeURIComponent(user.name)}`;
       });
+      const blockBtn = document.getElementById('blockBtn');
+      blockBtn.style.display = '';
+      blockBtn.addEventListener('click', () => blockUser(user.id, blockBtn));
     }
   }
+}
+
+async function blockUser(userId, btn) {
+  if (!confirm('Block this user? They will no longer be able to interact with you.')) return;
+  btn.disabled = true;
+  try {
+    await fetch(`${API}/api/block/${userId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    btn.textContent = 'Blocked';
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    document.getElementById('followBtn').style.display = 'none';
+    document.getElementById('msgBtn').style.display = 'none';
+  } catch { btn.disabled = false; }
 }
 
 async function toggleFollow() {
@@ -398,6 +428,34 @@ document.getElementById('saveProfileBtn').addEventListener('click', async () => 
     editAvatarFile = null;
   } catch { err.textContent = 'Failed to save.'; }
   finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
+});
+
+document.getElementById('signOutBtn').addEventListener('click', () => {
+  localStorage.removeItem('culture-token');
+  location.replace('index.html');
+});
+
+document.getElementById('deleteAccountBtn').addEventListener('click', async () => {
+  if (!confirm('Permanently delete your account and all your data? This cannot be undone.')) return;
+  const btn = document.getElementById('deleteAccountBtn');
+  btn.disabled = true; btn.textContent = 'Deleting…';
+  try {
+    const res = await fetch(`${API}/api/auth/me`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      localStorage.removeItem('culture-token');
+      location.replace('index.html');
+    } else {
+      const d = await res.json();
+      document.getElementById('editError').textContent = d.error || 'Could not delete account.';
+      btn.disabled = false; btn.textContent = 'Delete Account';
+    }
+  } catch {
+    document.getElementById('editError').textContent = 'Network error. Try again.';
+    btn.disabled = false; btn.textContent = 'Delete Account';
+  }
 });
 
 // ── Auth modal ─────────────────────────────────────────────

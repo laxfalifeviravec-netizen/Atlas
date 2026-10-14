@@ -238,10 +238,18 @@ function renderGroupActions(group) {
       });
       closeGroupModal(); await loadGroups();
     });
-    // Full-screen run button
+    // Start a Drive button (group nav with live crew map)
+    const driveBtn = document.createElement('button');
+    driveBtn.className = 'btn btn-primary';
+    driveBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg> Start a Drive`;
+    driveBtn.addEventListener('click', () => openStartDriveSheet(group));
+    box.appendChild(driveBtn);
+
+    // Full-screen run button (kept as secondary option)
     const runBtn = document.createElement('button');
-    runBtn.className = 'btn btn-primary';
-    runBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" style="margin-right:4px"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Start Run`;
+    runBtn.className = 'btn btn-outline';
+    runBtn.style.fontSize = '12px';
+    runBtn.textContent = 'Run Mode';
     runBtn.addEventListener('click', () => openRunView(group));
     box.appendChild(runBtn);
     box.appendChild(gpsWrap);
@@ -653,6 +661,71 @@ function updateRunDestination(dest) {
 }
 
 document.getElementById('runExitBtn')?.addEventListener('click', closeRunView);
+
+// ── Start a Drive ──────────────────────────────────────────
+let currentDriveGroup = null;
+
+function openStartDriveSheet(group) {
+  currentDriveGroup = group;
+  document.getElementById('driveSheetGroupName').textContent = group.name;
+
+  // Build crew list from member chips already rendered
+  const chips = document.getElementById('driveCrewChips');
+  const existing = document.querySelectorAll('#groupModalMembers .member-chip');
+  if (existing.length) {
+    chips.innerHTML = Array.from(existing).map(c => {
+      const name = c.textContent.trim();
+      const isMe = currentUser && name.toLowerCase().startsWith(currentUser.name.split(' ')[0].toLowerCase());
+      return `<div class="drive-member-chip${isMe ? ' mine' : ''}">
+        <div class="drive-member-dot${isMe ? ' active' : ''}"></div>
+        ${esc(name)}${isMe ? ' (You)' : ''}
+      </div>`;
+    }).join('');
+  } else {
+    chips.innerHTML = '<div style="color:var(--c-text-2);font-size:13px">Loading crew…</div>';
+  }
+
+  // Set invite link
+  const url = `${location.origin}/roads.html?drive=${group.id}`;
+  document.getElementById('driveInviteUrl').textContent = url;
+
+  document.getElementById('startDriveSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+document.getElementById('driveCopyBtn')?.addEventListener('click', () => {
+  const url = document.getElementById('driveInviteUrl').textContent;
+  const btn = document.getElementById('driveCopyBtn');
+  navigator.clipboard.writeText(url).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  }).catch(() => {
+    // Fallback for older browsers
+    const ta = document.createElement('textarea');
+    ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    btn.textContent = 'Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+});
+
+document.getElementById('driveLaunchBtn')?.addEventListener('click', () => {
+  if (currentDriveGroup) location.href = `roads.html?drive=${currentDriveGroup.id}`;
+});
+
+document.getElementById('driveSheetCancel')?.addEventListener('click', () => {
+  document.getElementById('startDriveSheet').classList.remove('open');
+  document.body.style.overflow = '';
+});
+
+document.getElementById('startDriveSheet')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('startDriveSheet')) {
+    document.getElementById('startDriveSheet').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+});
 
 function closeGroupModal() {
   groupOverlay.classList.remove('open');

@@ -34,7 +34,7 @@ const APP_SHELL = [
   '/search.js',
   '/messages.html',
   '/messages.css',
-  '/messages.js',
+  '/messages.js?v=2',
   '/events.html',
   '/events.css',
   '/events.js',

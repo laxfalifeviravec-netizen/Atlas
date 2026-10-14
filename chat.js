@@ -166,13 +166,31 @@ async function loadMessages() {
 
 function buildMsgBubble(m) {
   const mine   = m.sender_id === me?.id;
-  const bubble = esc(m.content || m.body || '');
+  const raw    = m.content || m.body || '';
+  let bubbleHtml = `<div class="conv-msg-bubble">${esc(raw)}</div>`;
+  if (raw.startsWith('{"__type":"post_share"')) {
+    try {
+      const d = JSON.parse(raw);
+      const img = d.image_url
+        ? `<img src="${d.image_url.replace(/"/g, '')}" class="shared-post-img" alt="" loading="lazy" />`
+        : `<div class="shared-post-no-img">📷</div>`;
+      const caption = d.caption ? `<p class="shared-post-caption">${esc(d.caption.length > 90 ? d.caption.slice(0, 90) + '…' : d.caption)}</p>` : '';
+      const road = d.road_name ? `<span class="shared-post-road">${esc(d.road_name)}</span>` : '';
+      bubbleHtml = `<div class="shared-post-card">
+        <a href="community.html?post=${parseInt(d.post_id)}" class="shared-post-main">
+          ${img}
+          <div class="shared-post-info">${road}${caption}<span class="shared-post-hint">Tap to view post →</span></div>
+        </a>
+        <a href="profile.html?id=${parseInt(d.user_id)}" class="shared-post-user">@${esc(d.user_name)}</a>
+      </div>`;
+    } catch {}
+  }
   const sender = (!mine && m.sender_name) ? `<div class="conv-msg-sender">${esc(m.sender_name)}</div>` : '';
   const time   = m.created_at ? `<div class="conv-msg-time">${relTime(m.created_at)}</div>` : '';
   return `
     <div class="conv-msg ${mine ? 'mine' : 'theirs'}">
       ${sender}
-      <div class="conv-msg-bubble">${bubble}</div>
+      ${bubbleHtml}
       ${time}
     </div>`;
 }

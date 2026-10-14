@@ -369,7 +369,7 @@ function buildPostCard(p) {
     }
   }
 
-  if (currentUser && (p.user_id === currentUser.id || currentUser.is_admin)) {
+  if (currentUser && (String(p.user_id) === String(currentUser.id) || currentUser.is_admin)) {
     const delBtn = document.createElement('button');
     delBtn.className = 'post-action-btn post-delete-btn';
     delBtn.title = 'Delete post';
@@ -838,12 +838,46 @@ async function openPostById(postId) {
 })();
 
 // ── Delete own post ────────────────────────────────────────
-async function deletePost(postId, cardEl) {
-  if (!confirm('Delete this post? This cannot be undone.')) return;
-  try {
-    const res = await fetch(`${API}/api/posts/${postId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-    if (res.ok) { cardEl.remove(); posts = posts.filter(p => p.id !== postId); }
-  } catch {}
+function deletePost(postId, cardEl) {
+  showConfirm('Delete this post?', 'This cannot be undone.', async () => {
+    try {
+      const res = await fetch(`${API}/api/posts/${postId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        cardEl.remove();
+        posts = posts.filter(p => p.id !== postId);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.error || 'Could not delete post.');
+      }
+    } catch { showToast('Could not delete post.'); }
+  });
+}
+
+function showConfirm(title, body, onConfirm) {
+  const sheet = document.createElement('div');
+  sheet.className = 'confirm-sheet';
+  sheet.innerHTML = `
+    <div class="confirm-sheet-box">
+      <p class="confirm-sheet-title">${title}</p>
+      ${body ? `<p class="confirm-sheet-body">${body}</p>` : ''}
+      <button class="confirm-sheet-del">Delete</button>
+      <button class="confirm-sheet-cancel">Cancel</button>
+    </div>`;
+  document.body.appendChild(sheet);
+  requestAnimationFrame(() => sheet.classList.add('confirm-sheet-open'));
+  const close = () => { sheet.classList.remove('confirm-sheet-open'); setTimeout(() => sheet.remove(), 250); };
+  sheet.querySelector('.confirm-sheet-del').addEventListener('click', () => { close(); onConfirm(); });
+  sheet.querySelector('.confirm-sheet-cancel').addEventListener('click', close);
+  sheet.addEventListener('click', e => { if (e.target === sheet) close(); });
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'feed-toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('feed-toast-show'));
+  setTimeout(() => { t.classList.remove('feed-toast-show'); setTimeout(() => t.remove(), 300); }, 2500);
 }
 
 // ── Report post ────────────────────────────────────────────

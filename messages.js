@@ -166,11 +166,11 @@ function renderMessages(messages) {
 }
 
 function buildBubbleContent(body) {
-  try {
-    const d = JSON.parse(body);
-    if (d.__type === 'post_share') {
+  if (body && body.startsWith('{"__type":"post_share"')) {
+    try {
+      const d = JSON.parse(body);
       const img = d.image_url
-        ? `<img src="${esc(d.image_url)}" class="shared-post-img" alt="" loading="lazy" />`
+        ? `<img src="${d.image_url.replace(/"/g, '')}" class="shared-post-img" alt="" loading="lazy" />`
         : `<div class="shared-post-no-img">📷</div>`;
       const caption = d.caption
         ? `<p class="shared-post-caption">${esc(d.caption.length > 90 ? d.caption.slice(0, 90) + '…' : d.caption)}</p>`
@@ -187,8 +187,8 @@ function buildBubbleContent(body) {
           <span class="shared-post-hint">Tap to view profile →</span>
         </div>
       </a>`;
-    }
-  } catch {}
+    } catch (e) { console.error('post_share parse error', e); }
+  }
   return `<div class="chat-bubble">${esc(body)}</div>`;
 }
 

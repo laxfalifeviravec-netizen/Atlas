@@ -874,18 +874,41 @@ body {
 .onboarding-card > p {
   font-size: 14px; color: var(--c-text-2); text-align: center; margin-top: -8px;
 }
-.onboarding-features { display: flex; flex-direction: column; gap: 14px; }
-.onboarding-feature {
-  display: flex; align-items: center; gap: 14px;
+.ob-dots { display: flex; gap: 6px; justify-content: center; }
+.ob-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c-border); }
+.ob-dot.active { background: var(--c-accent); width: 20px; border-radius: 4px; }
+.onboarding-card input[type="text"], .onboarding-card input[type="number"] {
+  width: 100%; box-sizing: border-box; background: var(--c-bg);
+  border: 1px solid var(--c-border); border-radius: 10px;
+  padding: 12px 14px; font-size: 15px; color: var(--c-text);
+  font-family: var(--font-ui); outline: none;
 }
-.onboarding-icon {
-  width: 42px; height: 42px; border-radius: 10px;
-  background: rgba(228,165,48,0.1); border: 1px solid rgba(228,165,48,0.2);
+.onboarding-card input:focus { border-color: var(--c-accent); }
+.ob-car-row { display: flex; gap: 8px; }
+.ob-car-row input:first-child { width: 90px; flex-shrink: 0; }
+.ob-skip {
+  background: none; border: none; color: var(--c-text-2);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  font-family: var(--font-ui); padding: 4px; margin-top: -6px;
+}
+.ob-list { display: flex; flex-direction: column; max-height: 42vh; overflow-y: auto; }
+.ob-empty { font-size: 13px; color: var(--c-text-2); text-align: center; padding: 18px 8px; line-height: 1.5; }
+.ob-user { display: flex; align-items: center; gap: 12px; padding: 9px 2px; }
+.ob-user-av {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+  background: var(--c-accent); color: #0C0C0F; font-weight: 800; font-size: 13px;
   display: flex; align-items: center; justify-content: center;
-  color: var(--c-accent); flex-shrink: 0;
 }
-.onboarding-feature strong { display: block; font-size: 14px; font-weight: 600; margin-bottom: 1px; }
-.onboarding-feature span { font-size: 12px; color: var(--c-text-2); }
+.ob-user-av img { width: 100%; height: 100%; object-fit: cover; }
+.ob-user-info { flex: 1; min-width: 0; }
+.ob-user-info strong { display: block; font-size: 14px; }
+.ob-user-info span { display: block; font-size: 12px; color: var(--c-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ob-follow {
+  border: 1px solid var(--c-accent); background: transparent; color: var(--c-accent);
+  border-radius: 8px; padding: 7px 14px; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: var(--font-ui);
+}
+.ob-follow.on { background: var(--c-accent); color: #0C0C0F; }
 
 /* ── Utility ───────────────────────────────────────────────── */
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }

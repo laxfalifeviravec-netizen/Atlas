@@ -111,8 +111,14 @@ function renderActions(user) {
   const isOwn = currentUser && currentUser.id === user.id;
 
   if (isOwn) {
-    el.innerHTML = `<button class="btn btn-outline" id="editProfileBtn">Edit Profile</button>`;
+    el.innerHTML = `<button class="btn btn-outline" id="editProfileBtn">Edit Profile</button>
+      <button class="btn btn-outline" id="inviteBtn">Invite friends</button>`;
     document.getElementById('editProfileBtn').addEventListener('click', openEditModal);
+    document.getElementById('inviteBtn').addEventListener('click', () => shareInvite(currentUser));
+    fetch(`${API}/api/referral/stats`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json()).then(d => {
+        if (d.invited > 0) document.getElementById('inviteBtn').textContent = `Invite friends · ${d.invited} joined`;
+      }).catch(() => {});
     document.getElementById('tabSaved').style.display = '';
     document.getElementById('addCarWrap').style.display = '';
   } else {

@@ -703,6 +703,54 @@ const db = {
   },
 
   // ── Follows ──
+  async getSuggestedUsersFilled(forUserId, limit = 8) {
+    const ranked = await this.getSuggestedUsers(forUserId, limit);
+    if (ranked.length >= limit) return ranked;
+    const have = new Set(ranked.map(u => u.id));
+    const blocked = new Set(forUserId ? await this.getBlockedIds(forUserId) : []);
+    let followed = new Set(), others = [];
+    if (USE_SUPABASE) {
+      if (forUserId) {
+        const { data } = await sb.from('follows').select('following_id').eq('follower_id', forUserId);
+        followed = new Set((data || []).map(f => f.following_id));
+      }
+      const { data } = await sb.from('users').select('id, name, avatar, bio, plan')
+        .neq('id', forUserId || 0).order('id', { ascending: false }).limit(60);
+      others = data || [];
+    } else {
+      followed = new Set(_follows.filter(f => f.follower_id === forUserId).map(f => f.following_id));
+      others = _users.filter(u => u.id !== forUserId).reverse()
+        .map(u => ({ id: u.id, name: u.name, avatar: u.avatar, bio: u.bio, plan: u.plan }));
+    }
+    for (const u of others) {
+      if (ranked.length >= limit) break;
+      if (have.has(u.id) || followed.has(u.id) || blocked.has(u.id)) continue;
+      ranked.push(u);
+    }
+    return ranked;
+  },
+  async setReferrer(userId, refId) {
+    if (!refId || refId === userId) return false;
+    if (USE_SUPABASE) {
+      const { data: me, error } = await sb.from('users').select('referred_by, created_at').eq('id', userId).single();
+      if (error || !me || me.referred_by) return false;
+      if (me.created_at && Date.now() - new Date(me.created_at).getTime() > 24 * 3600 * 1000) return false;
+      const { data: ref } = await sb.from('users').select('id').eq('id', refId).single();
+      if (!ref) return false;
+      const { error: e2 } = await sb.from('users').update({ referred_by: refId }).eq('id', userId);
+      return !e2;
+    }
+    const me = _users.find(u => u.id === userId);
+    if (!me || me.referred_by || !_users.some(u => u.id === refId)) return false;
+    me.referred_by = refId; return true;
+  },
+  async countReferrals(userId) {
+    if (USE_SUPABASE) {
+      const { count, error } = await sb.from('users').select('id', { count: 'exact', head: true }).eq('referred_by', userId);
+      return error ? 0 : (count || 0);
+    }
+    return _users.filter(u => u.referred_by === userId).length;
+  },
   async followUser(followerId, followingId) {
     if (followerId === followingId) return { error: 'self' };
     if (USE_SUPABASE) {
@@ -1502,9 +1550,22 @@ app.delete('/api/push/subscribe', requireAuth, async (req, res) => {
 });
 
 // ── Suggested users ───────────────────────────────────────────
+app.post('/api/referral', requireAuth, async (req, res) => {
+  try {
+    const ok = await db.setReferrer(req.user.id, parseInt(req.body?.ref));
+    res.json({ ok });
+  } catch (e) { res.json({ ok: false }); }
+});
+
+app.get('/api/referral/stats', requireAuth, async (req, res) => {
+  try { res.json({ invited: await db.countReferrals(req.user.id) }); }
+  catch (e) { res.json({ invited: 0 }); }
+});
+
 app.get('/api/users/suggested', optionalAuth, async (req, res) => {
   try {
-    const users = await db.getSuggestedUsers(req.user?.id || 0, 8);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 8, 1), 20);
+    const users = await db.getSuggestedUsersFilled(req.user?.id || 0, limit);
     res.json({ users });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });

@@ -327,52 +327,10 @@
 
   <!-- ═══ ONBOARDING ══════════════════════════════════════════ -->
   <div class="onboarding-overlay" id="onboardingOverlay" style="display:none">
-    <div class="onboarding-card">
-      <div class="onboarding-logo">One Culture</div>
-      <h2>Welcome to the community.</h2>
-      <p>The app built for driving enthusiasts. Here's what you can do:</p>
-      <div class="onboarding-features">
-        <div class="onboarding-feature">
-          <div class="onboarding-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-          </div>
-          <div>
-            <strong>Feed</strong>
-            <span>Share and discover the best driving roads.</span>
-          </div>
-        </div>
-        <div class="onboarding-feature">
-          <div class="onboarding-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          </div>
-          <div>
-            <strong>Groups</strong>
-            <span>Create driving groups and share live location with your crew.</span>
-          </div>
-        </div>
-        <div class="onboarding-feature">
-          <div class="onboarding-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-          </div>
-          <div>
-            <strong>Roads</strong>
-            <span>Explore and submit the best driving roads on the map.</span>
-          </div>
-        </div>
-        <div class="onboarding-feature">
-          <div class="onboarding-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-          </div>
-          <div>
-            <strong>Marketplace</strong>
-            <span>Buy and sell cars, parts, and mods within the community.</span>
-          </div>
-        </div>
-      </div>
-      <button class="btn btn-primary btn-full" id="onboardingDone">Get Started</button>
-    </div>
+    <div class="onboarding-card" id="onboardingCard"></div>
   </div>
 
+  <script src="invite.js"></script>
   <script src="community.js"></script>
   <script src="create-sheet.js"></script>
   <script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js")); }</script>

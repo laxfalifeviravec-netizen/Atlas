@@ -340,6 +340,12 @@
   </div>
 
   <script>
+    // Remember who invited this visitor (survives the sign-in redirects below)
+    try {
+      const _ref = new URLSearchParams(location.search).get('ref');
+      if (_ref && /^\d+$/.test(_ref) && !localStorage.getItem('culture-token')) localStorage.setItem('culture-ref', _ref);
+    } catch (e) {}
+
     // Handle Apple Sign In redirect callback (iOS native flow)
     (function() {
       // Check URL fragment for Apple response_mode=fragment

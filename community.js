@@ -1041,13 +1041,136 @@ function showToast(msg) {
 // ── Onboarding ─────────────────────────────────────────────
 function showOnboarding() {
   const el = document.getElementById('onboardingOverlay');
-  if (el) { el.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+  if (!el) return;
+  el.style.display = 'flex'; document.body.style.overflow = 'hidden';
+  claimReferral();
+  renderOnboardingStep(0);
 }
-document.getElementById('onboardingDone')?.addEventListener('click', () => {
+
+async function claimReferral() {
+  const ref = localStorage.getItem('culture-ref');
+  if (!ref || !token) return;
+  try {
+    await fetch(`${API}/api/referral`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref })
+    });
+  } catch {}
+  localStorage.removeItem('culture-ref');
+}
+
+function finishOnboarding(then) {
   localStorage.setItem('culture-onboarded', '1');
   const el = document.getElementById('onboardingOverlay');
   if (el) { el.style.display = 'none'; document.body.style.overflow = ''; }
-});
+  loadFeed(true);
+  if (then) then();
+}
+
+function renderOnboardingStep(n) {
+  const card = document.getElementById('onboardingCard');
+  if (!card) return;
+  const dots = `<div class="ob-dots">${[0, 1, 2].map(i => `<span class="ob-dot${i === n ? ' active' : ''}"></span>`).join('')}</div>`;
+  const next = () => renderOnboardingStep(n + 1);
+
+  if (n === 0) {
+    card.innerHTML = `${dots}
+      <h2>What do you drive?</h2>
+      <p>Add your car to your garage so people can see your build.</p>
+      <div class="ob-car-row">
+        <input id="obYear" type="number" inputmode="numeric" placeholder="Year" min="1900" max="2100" />
+        <input id="obMake" type="text" placeholder="Make (e.g. Porsche)" maxlength="40" />
+      </div>
+      <input id="obModel" type="text" placeholder="Model (e.g. 911 GT3)" maxlength="60" />
+      <span class="field-error" id="obErr"></span>
+      <button class="btn btn-primary btn-full" id="obNext">Next</button>
+      <button class="ob-skip" id="obSkip">Skip for now</button>`;
+    document.getElementById('obSkip').addEventListener('click', next);
+    document.getElementById('obNext').addEventListener('click', async () => {
+      const year = document.getElementById('obYear').value.trim();
+      const make = document.getElementById('obMake').value.trim();
+      const model = document.getElementById('obModel').value.trim();
+      const err = document.getElementById('obErr');
+      if (!make && !model) return next();
+      if (!make || !model) { err.textContent = 'Add both make and model, or skip.'; return; }
+      try {
+        await fetch(`${API}/api/cars`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ year, make, model })
+        });
+      } catch {}
+      next();
+    });
+    return;
+  }
+
+  if (n === 1) {
+    card.innerHTML = `${dots}
+      <h2>Follow some drivers</h2>
+      <p>Their posts and roads will fill your feed.</p>
+      <div class="ob-list" id="obList"><div class="ob-empty">Finding drivers…</div></div>
+      <button class="btn btn-primary btn-full" id="obNext">Next</button>
+      <button class="ob-skip" id="obSkip">Skip for now</button>`;
+    document.getElementById('obSkip').addEventListener('click', next);
+    document.getElementById('obNext').addEventListener('click', next);
+    loadOnboardingUsers();
+    return;
+  }
+
+  card.innerHTML = `${dots}
+    <h2>You're in.</h2>
+    <p>Post your first photo and bring your friends along.</p>
+    <button class="btn btn-primary btn-full" id="obPost">Post your first photo</button>
+    <button class="btn btn-outline btn-full" id="obInvite">Invite friends</button>
+    <button class="ob-skip" id="obSkip">Go to my feed</button>`;
+  document.getElementById('obPost').addEventListener('click', () => finishOnboarding(() => openNewPost()));
+  document.getElementById('obInvite').addEventListener('click', () => shareInvite(currentUser));
+  document.getElementById('obSkip').addEventListener('click', () => finishOnboarding());
+}
+
+async function loadOnboardingUsers() {
+  const list = document.getElementById('obList');
+  try {
+    const res = await fetch(`${API}/api/users/suggested?limit=12`, { headers: { Authorization: `Bearer ${token}` } });
+    const { users = [] } = await res.json();
+    if (!users.length) {
+      list.innerHTML = `<div class="ob-empty">You're one of the first drivers here. Invite friends on the next step to get things going.</div>`;
+      return;
+    }
+    list.innerHTML = users.map(u => {
+      const init = (u.name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+      const av = u.avatar ? `<img src="${esc(u.avatar)}" alt="" />` : init;
+      return `<div class="ob-user" data-id="${u.id}">
+        <div class="ob-user-av">${av}</div>
+        <div class="ob-user-info"><strong>${esc(u.name || 'Driver')}</strong><span>${esc((u.bio || '').slice(0, 48))}</span></div>
+        <button class="ob-follow" data-following="0">Follow</button>
+      </div>`;
+    }).join('');
+    list.querySelectorAll('.ob-user').forEach(row => {
+      const btn = row.querySelector('.ob-follow');
+      btn.addEventListener('click', async () => {
+        const following = btn.dataset.following === '1';
+        btn.disabled = true;
+        try {
+          const r = await fetch(`${API}/api/follow/${row.dataset.id}`, {
+            method: following ? 'DELETE' : 'POST',
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (r.ok) {
+            btn.dataset.following = following ? '0' : '1';
+            btn.textContent = following ? 'Follow' : 'Following';
+            btn.classList.toggle('on', !following);
+          }
+        } catch {}
+        btn.disabled = false;
+      });
+    });
+  } catch {
+    list.innerHTML = `<div class="ob-empty">Couldn't load suggestions. You can find people later in Search.</div>`;
+  }
+}
 
 // ── Init ───────────────────────────────────────────────────
 (async () => {
@@ -1062,7 +1185,8 @@ document.getElementById('onboardingDone')?.addEventListener('click', () => {
     loadNotifications();
     notifPollTimer = setInterval(loadNotifications, 30000);
     // Show onboarding for brand-new users
-    if (_sp.get('new') === '1' && !localStorage.getItem('culture-onboarded')) {
+    const _recent = currentUser.created_at && (Date.now() - new Date(currentUser.created_at).getTime()) < 15 * 60 * 1000;
+    if (_sp.get('onboarding') === '1' || ((_sp.get('new') === '1' || _recent) && !localStorage.getItem('culture-onboarded'))) {
       showOnboarding();
     }
     // Request push permission after a short delay

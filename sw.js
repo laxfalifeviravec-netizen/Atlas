@@ -3,7 +3,7 @@
    Caches the app shell so it loads instantly and works offline.
    ============================================================ */
 
-const CACHE = 'culture-v38';
+const CACHE = 'culture-v39';
 
 const APP_SHELL = [
   '/',
@@ -55,6 +55,9 @@ const APP_SHELL = [
   '/create-sheet.js',
   '/dialogs.js',
   '/invite.js',
+  '/reels.html',
+  '/reels.css',
+  '/reels.js',
   '/photo-viewer.js',
   '/admin.html',
 ];

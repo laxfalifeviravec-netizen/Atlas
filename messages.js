@@ -169,8 +169,11 @@ function buildBubbleContent(body) {
   if (body && body.startsWith('{"__type":"post_share"')) {
     try {
       const d = JSON.parse(body);
+      const isVid = /\.(mp4|mov|webm|m4v)(\?|$)/i.test(d.image_url || '');
       const img = d.image_url
-        ? `<img src="${d.image_url.replace(/"/g, '')}" class="shared-post-img" alt="" loading="lazy" />`
+        ? (isVid
+            ? `<video src="${d.image_url.replace(/"/g, '')}#t=0.1" class="shared-post-img" muted playsinline preload="metadata"></video>`
+            : `<img src="${d.image_url.replace(/"/g, '')}" class="shared-post-img" alt="" loading="lazy" />`)
         : `<div class="shared-post-no-img">📷</div>`;
       const caption = d.caption
         ? `<p class="shared-post-caption">${esc(d.caption.length > 90 ? d.caption.slice(0, 90) + '…' : d.caption)}</p>`
@@ -179,7 +182,7 @@ function buildBubbleContent(body) {
         ? `<span class="shared-post-road">${esc(d.road_name)}</span>`
         : '';
       return `<div class="shared-post-card">
-        <a href="community.html?post=${parseInt(d.post_id)}" class="shared-post-main">
+        <a href="${isVid ? 'reels.html?id=' : 'community.html?post='}${parseInt(d.post_id)}" class="shared-post-main">
           ${img}
           <div class="shared-post-info">
             ${road}

@@ -751,6 +751,43 @@ const db = {
     }
     return _users.filter(u => u.referred_by === userId).length;
   },
+  async getReels(cursor, limit, userId, blockedIds = []) {
+    const isVid = /\.(mp4|mov|webm|m4v)$/i;
+    if (USE_SUPABASE) {
+      let q = sb.from('posts')
+        .select('id, user_id, image_url, caption, road_name, likes, created_at, users!posts_user_id_fkey(name, avatar)')
+        .or('image_url.ilike.*.mp4,image_url.ilike.*.mov,image_url.ilike.*.webm,image_url.ilike.*.m4v')
+        .order('id', { ascending: false }).limit(limit);
+      if (cursor) q = q.lt('id', cursor);
+      if (blockedIds.length) q = q.not('user_id', 'in', `(${blockedIds.join(',')})`);
+      const { data } = await q;
+      const rows = data || [];
+      const ids = rows.map(r => r.id);
+      const liked = new Set(), counts = {};
+      if (ids.length) {
+        if (userId) {
+          const { data: lk } = await sb.from('post_likes').select('post_id').eq('user_id', userId).in('post_id', ids);
+          (lk || []).forEach(l => liked.add(l.post_id));
+        }
+        const { data: cm } = await sb.from('comments').select('post_id').in('post_id', ids);
+        (cm || []).forEach(c => { counts[c.post_id] = (counts[c.post_id] || 0) + 1; });
+      }
+      return rows.map(r => ({
+        ...r, user_name: r.users?.name || '', user_avatar: r.users?.avatar || null, users: undefined,
+        liked: liked.has(r.id), comments: counts[r.id] || 0,
+      }));
+    }
+    return _posts
+      .filter(p => isVid.test(p.image_url || '') && (!cursor || p.id < cursor) && !blockedIds.includes(p.user_id))
+      .sort((a, b) => b.id - a.id).slice(0, limit)
+      .map(p => {
+        const u = _users.find(u => u.id === p.user_id) || {};
+        return { id: p.id, user_id: p.user_id, image_url: p.image_url, caption: p.caption, road_name: p.road_name,
+          likes: p.likes, created_at: p.created_at, user_name: u.name || '', user_avatar: u.avatar || null,
+          liked: userId ? _postLikes.has(`${userId}-${p.id}`) : false,
+          comments: _comments.filter(c => c.post_id === p.id).length };
+      });
+  },
   async followUser(followerId, followingId) {
     if (followerId === followingId) return { error: 'self' };
     if (USE_SUPABASE) {
@@ -1502,8 +1539,8 @@ app.post('/api/block/:userId', requireAuth, async (req, res) => {
     if (targetId === req.user.id) return res.status(400).json({ error: 'Cannot block yourself.' });
     await db.blockUser(req.user.id, targetId);
     // Also unfollow both directions
-    await db.unfollow(req.user.id, targetId).catch(() => {});
-    await db.unfollow(targetId, req.user.id).catch(() => {});
+    await db.unfollowUser(req.user.id, targetId).catch(() => {});
+    await db.unfollowUser(targetId, req.user.id).catch(() => {});
     res.json({ ok: true });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
@@ -1571,6 +1608,66 @@ app.get('/api/users/suggested', optionalAuth, async (req, res) => {
 });
 
 // ── Post routes ───────────────────────────────────────────────
+// ── Reels (short videos) ──────────────────────────────────────
+const REEL_EXT = /\.(mp4|mov|webm|m4v)$/i;
+const _reelUploadLog = new Map();
+function reelUploadAllowed(userId) {
+  const now = Date.now();
+  const recent = (_reelUploadLog.get(userId) || []).filter(t => now - t < 3600 * 1000);
+  if (recent.length >= 10) return false;
+  recent.push(now); _reelUploadLog.set(userId, recent);
+  return true;
+}
+
+app.get('/api/reels', optionalAuth, async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 6, 1), 12);
+    const cursor = parseInt(req.query.cursor) || 0;
+    const blockedIds = req.user ? await db.getBlockedIds(req.user.id) : [];
+    const reels = await db.getReels(cursor, limit, req.user?.id, blockedIds);
+    res.json({ reels, next_cursor: reels.length === limit ? reels[reels.length - 1].id : null });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+// Direct-to-storage upload: videos are too big for the serverless request limit
+app.post('/api/reels/upload-url', requireAuth, async (req, res) => {
+  try {
+    const ext = path.extname(String(req.body?.filename || '')).toLowerCase() || '.mp4';
+    if (!REEL_EXT.test(ext)) return res.status(400).json({ error: 'Use an MP4, MOV, M4V or WebM video.' });
+    if (!reelUploadAllowed(req.user.id)) return res.status(429).json({ error: 'Upload limit reached. Try again in an hour.' });
+    if (!USE_SUPABASE || !process.env.SUPABASE_ANON_KEY) return res.json({ mode: 'server' });
+    const filePath = `reels/${req.user.id}-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    const { data, error } = await sb.storage.from('uploads').createSignedUploadUrl(filePath);
+    if (error) throw error;
+    res.json({ mode: 'signed', signedUrl: data.signedUrl, path: filePath, anonKey: process.env.SUPABASE_ANON_KEY });
+  } catch (e) { console.error('reel upload-url', e); res.status(500).json({ error: 'Could not start the upload.' }); }
+});
+
+app.post('/api/reels', requireAuth, upload.single('video'), async (req, res) => {
+  try {
+    const caption = String(req.body?.caption || '').trim().slice(0, 300);
+    let video_url;
+    if (req.file) {
+      if (!req.file.mimetype.startsWith('video/')) return res.status(400).json({ error: 'Please choose a video.' });
+      video_url = await storeImage(req.file);
+    } else if (req.body?.video_path) {
+      const vp = String(req.body.video_path);
+      if (!USE_SUPABASE || !vp.startsWith(`reels/${req.user.id}-`) || !REEL_EXT.test(vp) || vp.includes('..'))
+        return res.status(400).json({ error: 'Invalid video.' });
+      video_url = sb.storage.from('uploads').getPublicUrl(vp).data.publicUrl;
+    } else return res.status(400).json({ error: 'A video is required.' });
+    const post = await db.createPost({
+      user_id: req.user.id, image_url: video_url, image_urls: [video_url],
+      caption, road_name: '', region: '',
+    });
+    const user = await db.findUserById(req.user.id);
+    res.status(201).json({ reel: { ...post, user_name: user?.name || '', user_avatar: user?.avatar || null, liked: false, comments: 0 } });
+  } catch (e) {
+    console.error('create reel', e);
+    res.status(500).json({ error: 'Could not post the reel.' });
+  }
+});
+
 app.get('/api/posts', optionalAuth, async (req, res) => {
   try {
     const page  = Math.max(1, parseInt(req.query.page)  || 1);

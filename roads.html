@@ -225,14 +225,19 @@
     </div>
   </div>
 
-  <!-- ═══ NAV TOP CARD (next turn — Google Maps style) ════════ -->
+  <!-- ═══ NAV TOP CARD (next turn) ═════════════════════════════ -->
   <div class="nav-top-card" id="navTopCard">
-    <div class="nav-top-arrow" id="navHUDArrow">
-      <svg viewBox="0 0 24 24" width="48" height="48"><path d="M12 19V5M5 12l7-7 7 7" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    <div class="nav-top-main">
+      <div class="nav-top-arrow" id="navHUDArrow"></div>
+      <div class="nav-top-text">
+        <div class="nav-top-dist" id="navHUDDist"></div>
+        <div class="nav-top-instruction" id="navHUDInstruction">Head to start</div>
+      </div>
     </div>
-    <div class="nav-top-text">
-      <div class="nav-top-dist" id="navHUDDist"></div>
-      <div class="nav-top-instruction" id="navHUDInstruction">Head to start</div>
+    <div class="nav-then" id="navHUDThen" style="display:none">
+      <span class="nav-then-lbl">Then</span>
+      <span class="nav-then-icon" id="navHUDThenIcon"></span>
+      <span class="nav-then-text" id="navHUDThenText"></span>
     </div>
   </div>
 
@@ -254,7 +259,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="20" height="20"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
   </button>
 
-  <!-- ═══ NAV BOTTOM BAR (time / speed / stop) ════════════════ -->
+  <!-- ═══ NAV BOTTOM BAR (time / speed / end) ═════════════════ -->
   <div class="nav-hud" id="navHUD">
     <div class="nav-hud-main">
       <div class="nav-remain-time" id="navRemainTime">—</div>
@@ -262,17 +267,14 @@
         <span id="navArriveTime">—</span>
         <span class="nav-hud-dot">·</span>
         <span id="navRemainDist">—</span>
-        <span class="nav-hud-dot">·</span>
-        <span id="navHUDRoadName" class="nav-hud-road"></span>
       </div>
+      <div class="nav-hud-road" id="navHUDRoadName"></div>
     </div>
     <div class="nav-speed-block">
       <div class="nav-speed-val" id="navSpeedVal">—</div>
       <div class="nav-speed-unit">mph</div>
     </div>
-    <button class="nav-stop-btn" id="navStopBtn" aria-label="Stop navigation">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
+    <button class="nav-stop-btn" id="navStopBtn" aria-label="End navigation">End</button>
   </div>
 
   <!-- ═══ SAVE ROUTE SHEET ═════════════════════════════════════ -->

@@ -82,9 +82,9 @@ body { overflow: hidden; }
 
 /* ── FAB toggle button — always visible on map ────────────── */
 .sidebar-toggle {
-  position: absolute; top: 12px; left: 12px; z-index: 1000;
+  position: absolute; top: 10px; left: 10px; z-index: 1000;
   background: var(--c-surface); border: 1px solid var(--c-border);
-  border-radius: 6px; padding: 9px 16px; cursor: pointer;
+  border-radius: 12px; padding: 9px 14px; cursor: pointer;
   font-size: 13px; font-weight: 600; font-family: var(--font-ui);
   color: var(--c-text); box-shadow: 0 2px 12px rgba(0,0,0,0.2);
   display: flex; align-items: center; gap: 6px; min-height: 44px;
@@ -107,7 +107,7 @@ body { overflow: hidden; }
     border-top: 1px solid var(--c-border);
     border-radius: 20px 20px 0 0;
     box-shadow: 0 -4px 24px rgba(0,0,0,0.3);
-    transform: translateY(100%);
+    transform: translateY(calc(100% + var(--bottom-nav-h)));
     z-index: 500;
   }
   .roads-sidebar.open { transform: translateY(0); }
@@ -137,9 +137,7 @@ body { overflow: hidden; }
   display: none; align-items: center; gap: 6px; min-height: 44px;
   -webkit-tap-highlight-color: transparent;
 }
-@media (max-width: 680px) {
-  .map-back-btn { display: flex; }
-}
+/* Back button removed from the map: the header and bottom bar already navigate */
 
 /* ── Locate-me map button ─────────────────────────────────── */
 .map-locate-btn {
@@ -157,7 +155,7 @@ body { overflow: hidden; }
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.55);
-  z-index: 700;
+  z-index: 1100;
   display: flex;
   align-items: flex-end;
   opacity: 0;
@@ -230,111 +228,127 @@ body.nav-active .roads-layout { height: 100vh; }
 body.nav-active .map-search-wrap { display: none; }
 body.nav-active .sidebar-toggle  { display: none; }
 
-/* ── Nav top card (Google Maps-style blue banner) ─────────────── */
+/* ── Nav top card — next turn ─────────────────────────────── */
+:root { --nav-hud-h: 104px; }
 .nav-top-card {
   position: fixed;
-  top: var(--header-h, 56px);
-  left: 0; right: 0;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  left: 10px; right: 10px;
   z-index: 601;
-  background: #1A73E8;
-  padding: 16px 20px 18px;
+  background: rgba(20, 20, 23, 0.96);
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 22px;
+  padding: 14px 16px;
   display: none;
-  align-items: center;
-  gap: 18px;
-  min-height: 110px;
-  box-shadow: 0 6px 28px rgba(0,0,0,.65);
-  transition: top 0.3s ease;
+  flex-direction: column;
+  box-shadow: 0 10px 34px rgba(0,0,0,.55);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
 }
-body.nav-active .nav-top-card { top: 0; }
 .nav-top-card.active { display: flex; }
+.nav-top-main { display: flex; align-items: center; gap: 14px; }
 .nav-top-arrow {
-  width: 76px; height: 76px; border-radius: 16px;
-  background: rgba(255,255,255,0.22);
+  width: 72px; height: 72px; border-radius: 18px; flex-shrink: 0;
+  background: var(--c-accent, #E4A530); color: #0C0C0F;
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; color: white;
 }
+.nav-top-arrow svg { width: 46px; height: 46px; }
 .nav-top-text { flex: 1; min-width: 0; }
 .nav-top-dist {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 54px; font-weight: 800; color: #fff; line-height: 1;
+  font-size: 46px; font-weight: 800; color: #fff; line-height: 1;
   letter-spacing: -0.5px;
 }
 .nav-top-instruction {
-  font-size: 17px; font-weight: 500; color: rgba(255,255,255,.92);
+  font-size: 19px; font-weight: 600; color: rgba(255,255,255,.92);
   overflow: hidden; text-overflow: ellipsis;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  margin-top: 5px; line-height: 1.3;
+  margin-top: 4px; line-height: 1.25;
 }
+.nav-then {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 12px; padding-top: 11px;
+  border-top: 1px solid rgba(255,255,255,.1);
+  font-size: 14px; color: rgba(255,255,255,.7);
+}
+.nav-then-lbl { font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: 11px; color: rgba(255,255,255,.5); }
+.nav-then-icon { display: inline-flex; color: #fff; }
+.nav-then-icon svg { width: 20px; height: 20px; }
+.nav-then-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
 
 /* ── Navigation bottom bar ──────────────────────────────────── */
 .nav-hud {
   position: fixed;
-  left: 0; right: 0;
-  bottom: var(--bottom-nav-h, 60px);
+  left: 10px; right: 10px;
+  bottom: calc(var(--bottom-nav-h, 60px) + 10px);
   z-index: 600;
-  background: #141417;
-  padding: 18px 20px calc(18px + env(safe-area-inset-bottom, 0px));
+  background: rgba(20, 20, 23, 0.96);
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 22px;
+  padding: 14px 14px 14px 18px;
   display: none;
   align-items: center;
-  gap: 14px;
-  box-shadow: 0 -6px 30px rgba(0,0,0,.7);
-  border-top: 1px solid rgba(255,255,255,.06);
+  gap: 12px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.55);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   transition: bottom 0.3s ease;
 }
-body.nav-active .nav-hud { bottom: 0; }
+body.nav-active .nav-hud { bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
 .nav-hud.active { display: flex; }
 .nav-hud-main { flex: 1; min-width: 0; }
 .nav-remain-time {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 40px; font-weight: 800; color: #fff; line-height: 1;
+  font-size: 38px; font-weight: 800; color: #34d399; line-height: 1;
   letter-spacing: -0.3px;
 }
 .nav-hud-sub {
   display: flex; align-items: center; gap: 6px;
-  font-size: 14px; color: rgba(255,255,255,.55); margin-top: 4px;
+  font-size: 15px; font-weight: 600; color: rgba(255,255,255,.85); margin-top: 4px;
 }
 .nav-hud-dot { opacity: .4; }
-.nav-hud-road { color: rgba(255,255,255,.7); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+.nav-hud-road {
+  font-size: 12px; color: rgba(255,255,255,.5); margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .nav-speed-block {
-  display: flex; flex-direction: column; align-items: center;
-  background: rgba(255,255,255,.07);
-  border: 1.5px solid rgba(255,255,255,.12);
-  border-radius: 12px; padding: 10px 14px; min-width: 62px;
+  width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.06);
+  border: 3px solid rgba(255,255,255,.85);
 }
 .nav-speed-val {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 32px; font-weight: 800; color: #fff; line-height: 1;
+  font-size: 28px; font-weight: 800; color: #fff; line-height: 1;
 }
-.nav-speed-unit { font-size: 11px; color: rgba(255,255,255,.5); letter-spacing: .08em; text-transform: uppercase; margin-top: 1px; }
+.nav-speed-unit { font-size: 9px; color: rgba(255,255,255,.55); letter-spacing: .1em; text-transform: uppercase; margin-top: 1px; }
 .nav-stop-btn {
-  width: 52px; height: 52px; border-radius: 50%;
+  height: 48px; padding: 0 20px; border-radius: 24px; flex-shrink: 0;
   background: #dc2626; border: none; color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; flex-shrink: 0; transition: background .12s;
-  box-shadow: 0 3px 14px rgba(220,38,38,.45);
+  font-family: inherit; font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: background .12s;
+  -webkit-tap-highlight-color: transparent;
 }
 .nav-stop-btn:active { background: #b91c1c; }
 
 /* ── Re-center button (nav mode, user panned away) ──────────── */
 .nav-recenter-btn {
   position: fixed;
-  right: 16px;
-  bottom: calc(var(--bottom-nav-h, 60px) + 110px);
+  right: 14px;
+  bottom: calc(var(--bottom-nav-h, 60px) + var(--nav-hud-h) + 12px);
   z-index: 610;
-  width: 48px; height: 48px; border-radius: 50%;
-  background: #141417;
-  border: 1.5px solid rgba(255,255,255,.15);
-  color: #1A73E8;
+  width: 50px; height: 50px; border-radius: 50%;
+  background: rgba(20,20,23,.96);
+  border: 1.5px solid rgba(255,255,255,.18);
+  color: #3b82f6;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 18px rgba(0,0,0,.65);
+  box-shadow: 0 4px 18px rgba(0,0,0,.55);
   cursor: pointer;
   transition: bottom 0.3s ease, background .12s;
   -webkit-tap-highlight-color: transparent;
 }
 body.nav-active .nav-recenter-btn {
-  bottom: 110px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--nav-hud-h) + 12px);
 }
-.nav-recenter-btn:active { background: rgba(26,115,232,.15); }
+.nav-recenter-btn:active { background: rgba(59,130,246,.2); }
 
 /* ── Live nav user marker ────────────────────────────────────── */
 .nav-user-wrap {
@@ -351,8 +365,8 @@ body.nav-active .nav-recenter-btn {
   100% { transform: scale(1.9); opacity: 0; }
 }
 .nav-user-chevron {
-  width: 26px; height: 26px; border-radius: 50%;
-  background: #2563eb; border: 2.5px solid #fff;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #3b82f6; border: 3px solid #fff;
   box-shadow: 0 2px 10px rgba(0,0,0,.55);
   display: flex; align-items: center; justify-content: center;
   position: relative; z-index: 1; transform-origin: center;
@@ -362,11 +376,11 @@ body.nav-active .nav-recenter-btn {
 /* ── Map search bar ──────────────────────────────────────────── */
 .map-search-wrap {
   position: absolute;
-  top: 12px;
-  left: 90px;
-  right: 48px;
+  top: 10px;
+  left: 104px;
+  right: 10px;
   z-index: 1000;
-  max-width: 340px;
+  max-width: 420px;
 }
 .map-search-row {
   display: flex;
@@ -374,8 +388,9 @@ body.nav-active .nav-recenter-btn {
   gap: 8px;
   background: var(--c-surface, #141417);
   border: 1.5px solid var(--c-border);
-  border-radius: 10px;
-  padding: 10px 12px;
+  border-radius: 12px;
+  padding: 0 12px;
+  min-height: 44px;
   box-shadow: 0 2px 12px rgba(0,0,0,.35);
   transition: border-color .15s;
 }
@@ -415,10 +430,10 @@ body.nav-active .nav-recenter-btn {
 .search-no-results { padding: 14px; font-size: 13px; color: var(--c-text-2); text-align: center; }
 
 @media (max-width: 680px) {
-  .map-search-wrap { left: 80px; right: 46px; max-width: none; }
+  .map-search-wrap { left: 104px; right: 10px; max-width: none; }
 }
 @media (min-width: 681px) {
-  .map-search-wrap { left: 12px; right: 48px; max-width: 300px; }
+  .map-search-wrap { left: 12px; right: 60px; max-width: 360px; }
 }
 
 /* ── Group Drive crew bar ────────────────────────────────────── */
@@ -438,7 +453,8 @@ body.nav-active .nav-recenter-btn {
   transition: bottom 0.3s ease;
 }
 body.nav-active .drive-crew-bar {
-  bottom: 88px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--nav-hud-h) + 18px);
+  left: 10px; right: 10px; border-radius: 14px;
 }
 .drive-crew-inner {
   display: flex; align-items: center; gap: 8px;
@@ -529,3 +545,50 @@ body.nav-active .drive-crew-bar {
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,.5);
 }
+
+/* ── Map theme: real dark/light basemaps, so no CSS tile filters ── */
+#roadsMap,
+#roadsMap .leaflet-tile-pane { filter: none !important; }
+#roadsMap { background: var(--c-bg); }
+
+/* Road outlines — keep lines readable on any map colour */
+.leaflet-overlay-pane path.road-casing { stroke: #0b0b0e; stroke-opacity: .6; }
+[data-theme="light"] .leaflet-overlay-pane path.road-casing { stroke: #fff; stroke-opacity: .9; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .leaflet-overlay-pane path.road-casing { stroke: #fff; stroke-opacity: .9; }
+}
+.leaflet-overlay-pane path.nav-route-casing { stroke: #fff; stroke-opacity: .95; }
+
+/* Themed popups and controls */
+#roadsMap .leaflet-popup-content-wrapper,
+#roadsMap .leaflet-popup-tip {
+  background: var(--c-surface); color: var(--c-text);
+  box-shadow: 0 8px 28px rgba(0,0,0,.38);
+}
+#roadsMap .leaflet-popup-content-wrapper { border-radius: 14px; }
+#roadsMap .leaflet-popup-close-button { color: var(--c-text-2); }
+#roadsMap .road-popup h4 { color: var(--c-text); }
+#roadsMap .leaflet-bar {
+  border: 1px solid var(--c-border); border-radius: 12px; overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,.3);
+}
+#roadsMap .leaflet-bar a,
+#roadsMap .leaflet-bar a:hover {
+  background: var(--c-surface); color: var(--c-text);
+  border-bottom: 1px solid var(--c-border);
+}
+#roadsMap .leaflet-bar a:last-child { border-bottom: none; }
+#roadsMap .leaflet-control-attribution {
+  background: rgba(0,0,0,.45); color: rgba(255,255,255,.7); font-size: 10px;
+}
+#roadsMap .leaflet-control-attribution a { color: rgba(255,255,255,.85); }
+
+/* Keep the driving view clean: hide map chrome that collides with the nav cards */
+body.nav-active .map-back-btn,
+body.nav-active #roadsMap .leaflet-top,
+body.nav-active .roads-sidebar,
+body.nav-active .sidebar-toggle { display: none !important; }
+
+/* Top-right controls sit below the search row; zoom moves to bottom-right */
+#roadsMap .leaflet-top.leaflet-right { margin-top: 62px; }
+#roadsMap .leaflet-bottom.leaflet-right { margin-bottom: 14px; }

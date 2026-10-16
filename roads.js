@@ -23,6 +23,8 @@ let navRoad = null;
 let navRoute = null;
 let navSteps = [];
 let navCurrentStep = 0;
+let navStepMin = Infinity;
+let navLastLL = null;
 let navWatchId = null;
 let navRouteLayer = null;
 let navNavUserMarker = null;
@@ -92,14 +94,25 @@ function isDarkTheme() {
   return t ? t !== 'light' : window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 function cartoTile(map, dark) {
-  const container = map.getContainer();
-  container.style.filter = dark
-    ? 'invert(1) hue-rotate(180deg) brightness(0.85) saturate(0.85)'
-    : '';
-  return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM contributors</a>',
-    maxZoom: 19,
-  }).addTo(map);
+  map.getContainer().style.filter = '';
+  const style = dark ? 'dark_all' : 'rastertiles/voyager';
+  const layer = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${style}/{z}/{x}/{y}{r}.png`, {
+    subdomains: 'abcd', maxZoom: 19, detectRetina: true,
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
+  });
+  // If the basemap can't be reached, fall back to plain OpenStreetMap tiles
+  let loaded = false, failed = 0, fellBack = false;
+  layer.on('tileload', () => { loaded = true; });
+  layer.on('tileerror', () => {
+    if (loaded || fellBack || ++failed < 6) return;
+    fellBack = true;
+    layer.remove();
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
+  });
+  return layer.addTo(map);
 }
 function applyMapTheme(map, dark) {
   if (roadsTileLayer) roadsTileLayer.remove();
@@ -108,7 +121,8 @@ function applyMapTheme(map, dark) {
 
 // ── Map Init ───────────────────────────────────────────────
 function initMap() {
-  roadsMap = L.map('roadsMap', { zoomControl: true }).setView([39.5, -98.35], 4);
+  roadsMap = L.map('roadsMap', { zoomControl: false }).setView([39.5, -98.35], 4);
+  L.control.zoom({ position: 'bottomright' }).addTo(roadsMap);
   roadsTileLayer = cartoTile(roadsMap, isDarkTheme());
 
   // Auto-zoom to user's location on load
@@ -382,14 +396,15 @@ async function renderRoadPolylines(roads) {
     const waypoints = samplePoints(r.points, 25);
     const snapped = await snapToRoad(`community-${r.id}`, waypoints);
 
-    const line = L.polyline(snapped, { color, weight: 4, opacity: 0.85 }).addTo(roadsMap);
+    const casing = L.polyline(snapped, { className: 'road-casing', weight: 8, interactive: false, lineCap: 'round', lineJoin: 'round' }).addTo(roadsMap);
+    const line = L.polyline(snapped, { color, weight: 4.5, opacity: 1, lineCap: 'round', lineJoin: 'round' }).addTo(roadsMap);
     line.bindPopup(popupHtml);
 
     const startMarker = L.circleMarker(snapped[0], {
       radius: 5, color, fillColor: color, fillOpacity: 1, weight: 2
     }).addTo(roadsMap).bindPopup(popupHtml);
 
-    const group = L.layerGroup([line, startMarker]);
+    const group = L.layerGroup([casing, line, startMarker]);
     roadPolylines[r.id] = group;
   }));
 }
@@ -420,7 +435,8 @@ function buildCuratedLayer(r, snappedPts) {
     </div>`;
 
   const group = L.layerGroup();
-  L.polyline(pts, { color, weight: 5, opacity: 0.9 }).bindPopup(popupHtml).addTo(group);
+  L.polyline(pts, { className: 'road-casing', weight: 9, interactive: false, lineCap: 'round', lineJoin: 'round' }).addTo(group);
+  L.polyline(pts, { color, weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round' }).bindPopup(popupHtml).addTo(group);
   L.circleMarker(pts[0], { radius: 5, color, fillColor: color, fillOpacity: 1, weight: 2 })
     .bindPopup(popupHtml).addTo(group);
   return group;
@@ -779,24 +795,30 @@ function startNavigation() {
   if (navRoute && pts) {
     const routeCoords = navRoute.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
     if (navRouteLayer) navRouteLayer.remove();
-    navRouteLayer = L.polyline(routeCoords, { color: '#2563eb', weight: 5, opacity: 0.9 }).addTo(roadsMap);
+    navRouteLayer = L.layerGroup([
+      L.polyline(routeCoords, { className: 'nav-route-casing', weight: 11, interactive: false, lineCap: 'round', lineJoin: 'round' }),
+      L.polyline(routeCoords, { color: '#3b82f6', weight: 6, opacity: 1, interactive: false, lineCap: 'round', lineJoin: 'round' }),
+    ]).addTo(roadsMap);
 
     roadsMap.fitBounds(L.latLngBounds([...routeCoords, ...pts]), { padding: [60, 100] });
     setTimeout(() => roadsMap.setZoom(16), 600);
 
     navSteps = (navRoute.legs[0]?.steps || []).map(step => ({
       instruction: formatNavManeuver(step.maneuver, step.name),
+      exit: step.maneuver.exit,
       distance: step.distance,
       type: step.maneuver.type,
       modifier: step.maneuver.modifier,
       location: step.maneuver.location,
     }));
-    navCurrentStep = 0;
+    navCurrentStep = navSteps.length > 1 ? 1 : 0;
+    navStepMin = Infinity; navLastLL = null;
     updateNavHUD();
   } else if (pts) {
     roadsMap.fitBounds(L.latLngBounds(pts), { padding: [60, 60] });
     document.getElementById('navHUDInstruction').textContent = 'Head to road start';
     document.getElementById('navHUDArrow').innerHTML = getNavArrowSVG('depart', 'straight');
+    document.getElementById('navHUDThen').style.display = 'none';
     document.getElementById('navHUDDist').textContent = '';
   }
 
@@ -826,7 +848,7 @@ function onNavPosition(pos) {
     navNavUserMarker = L.marker([lat, lng], {
       icon: L.divIcon({
         className: '',
-        html: `<div class="nav-user-wrap"><div class="nav-user-halo"></div><div class="nav-user-chevron"><svg viewBox="0 0 12 12" width="12" height="12" fill="white"><polygon points="6,1 10,10 6,7.5 2,10"/></svg></div></div>`,
+        html: `<div class="nav-user-wrap"><div class="nav-user-halo"></div><div class="nav-user-chevron"><svg viewBox="0 0 12 12" width="16" height="16" fill="white"><polygon points="6,1 10,10 6,7.5 2,10"/></svg></div></div>`,
         iconSize: [40, 40],
         iconAnchor: [20, 20],
       })
@@ -867,14 +889,17 @@ function onNavPosition(pos) {
     }
   }
 
-  // Advance turn step
-  if (navSteps.length > 0 && navCurrentStep < navSteps.length - 1) {
+  // Advance turn step and refresh the live distance to the next maneuver
+  navLastLL = [lat, lng];
+  if (navSteps.length > 0) {
     const step = navSteps[navCurrentStep];
-    if (step.location) {
-      const [sLng, sLat] = step.location;
-      const dist = roadsMap.distance([lat, lng], [sLat, sLng]);
-      if (dist < 50) { navCurrentStep++; updateNavHUD(); }
+    if (step && step.location && step.type !== 'arrive' && navCurrentStep < navSteps.length - 1) {
+      const d = roadsMap.distance(navLastLL, [step.location[1], step.location[0]]);
+      navStepMin = Math.min(navStepMin, d);
+      const passed = navStepMin < 70 && d > navStepMin + 20;
+      if (d < 35 || passed) { navCurrentStep++; navStepMin = Infinity; }
     }
+    updateNavHUD();
   }
 }
 
@@ -892,66 +917,92 @@ function updateETA() {
   }
 }
 
+function fmtNavDist(m) {
+  if (m < 160) {
+    const ft = m * 3.281;
+    return `${Math.max(10, ft >= 200 ? Math.round(ft / 50) * 50 : Math.round(ft / 10) * 10)} ft`;
+  }
+  const mi = m / 1609.34;
+  return mi < 10 ? `${mi.toFixed(1)} mi` : `${Math.round(mi)} mi`;
+}
+
 function updateNavHUD() {
   const step = navSteps[navCurrentStep];
-  const arrowEl = document.getElementById('navHUDArrow');
-  if (!step || navCurrentStep >= navSteps.length - 1) {
-    document.getElementById('navHUDInstruction').textContent = 'Arrive at destination';
-    document.getElementById('navHUDDist').textContent = '';
-    arrowEl.innerHTML = getNavArrowSVG('arrive', null);
-    return;
+  if (!step) return;
+  const isArrive = step.type === 'arrive';
+  let m = step.distance;
+  if (navLastLL && step.location) m = roadsMap.distance(navLastLL, [step.location[1], step.location[0]]);
+  else if (navCurrentStep > 0) m = navSteps[navCurrentStep - 1].distance;
+
+  document.getElementById('navHUDInstruction').textContent = isArrive ? 'Arrive at destination' : step.instruction;
+  document.getElementById('navHUDDist').textContent = fmtNavDist(m);
+  document.getElementById('navHUDArrow').innerHTML = getNavArrowSVG(step.type, step.modifier);
+
+  const thenEl = document.getElementById('navHUDThen');
+  const nxt = navSteps[navCurrentStep + 1];
+  if (nxt && !isArrive) {
+    thenEl.style.display = 'flex';
+    document.getElementById('navHUDThenIcon').innerHTML = getNavArrowSVG(nxt.type, nxt.modifier);
+    document.getElementById('navHUDThenText').textContent = nxt.type === 'arrive' ? 'Arrive at destination' : nxt.instruction;
+  } else {
+    thenEl.style.display = 'none';
   }
-  document.getElementById('navHUDInstruction').textContent = step.instruction;
-  const m = step.distance;
-  document.getElementById('navHUDDist').textContent =
-    m < 161 ? `${Math.round(m * 3.281)} ft` : `${(m / 1609.34).toFixed(1)} mi`;
-  arrowEl.innerHTML = getNavArrowSVG(step.type, step.modifier);
+}
+
+function bearingToCompass(deg) {
+  const names = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
+  return names[Math.round(((deg % 360) + 360) % 360 / 45) % 8];
 }
 
 function formatNavManeuver(m, streetName) {
-  const street = streetName ? ` onto ${streetName}` : '';
-  if (m.type === 'depart') return `Head ${m.modifier || 'north'}${street}`;
-  if (m.type === 'arrive') return 'Arrive at destination';
-  if (m.type === 'turn') return `Turn ${m.modifier || ''}${street}`;
-  if (m.type === 'continue' || m.type === 'new name') return `Continue${street}`;
-  if (m.type === 'merge') return `Merge ${m.modifier || ''}${street}`;
-  if (m.type === 'ramp' || m.type === 'on ramp') return `Take ramp${m.modifier ? ` ${m.modifier}` : ''}${street}`;
-  if (m.type === 'fork') return `Keep ${m.modifier || 'left'}${street}`;
-  if (m.type === 'roundabout' || m.type === 'rotary') return 'Enter roundabout';
-  if (m.type === 'exit roundabout') return `Exit roundabout${street}`;
-  return m.type || 'Continue';
+  const onto = streetName ? ` onto ${streetName}` : '';
+  const turns = {
+    left: 'Turn left', right: 'Turn right', straight: 'Continue straight',
+    'slight left': 'Bear left', 'slight right': 'Bear right',
+    'sharp left': 'Make a sharp left', 'sharp right': 'Make a sharp right', uturn: 'Make a U-turn',
+  };
+  const mod = m.modifier || 'straight';
+  const turn = turns[mod] || 'Continue';
+  switch (m.type) {
+    case 'depart':
+      return `Head ${m.bearing_after != null ? bearingToCompass(m.bearing_after) : 'out'}${streetName ? ` on ${streetName}` : ''}`;
+    case 'arrive': return 'Arrive at destination';
+    case 'turn': case 'end of road': return `${turn}${onto}`;
+    case 'continue': case 'new name':
+      return streetName ? `Continue on ${streetName}` : 'Continue straight';
+    case 'merge': return `Merge${mod === 'left' || mod === 'right' ? ' ' + mod : ''}${onto}`;
+    case 'on ramp': return `Take the ramp${mod !== 'straight' ? ' on the ' + mod.replace('slight ', '') : ''}${onto}`;
+    case 'off ramp': return `Take the exit${mod !== 'straight' ? ' on the ' + mod.replace('slight ', '') : ''}${onto}`;
+    case 'fork': return `Keep ${mod.includes('left') ? 'left' : mod.includes('right') ? 'right' : 'straight'}${onto}`;
+    case 'roundabout': case 'rotary': case 'roundabout turn': {
+      const n = m.exit;
+      const ord = n ? ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th'][n] || `${n}th` : '';
+      return n ? `At the roundabout, take the ${ord} exit${onto}` : `Enter the roundabout${onto}`;
+    }
+    case 'exit roundabout': case 'exit rotary': return `Exit the roundabout${onto}`;
+    default: return `${turn}${onto}`;
+  }
 }
 
 function getNavArrowSVG(type, modifier) {
-  const s = `viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="white" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"`;
-  if (type === 'arrive') {
-    return `<svg ${s}><circle cx="12" cy="12" r="8"/><polyline points="9 12 11 14 15 10"/></svg>`;
-  }
-  if (!modifier || modifier === 'straight') {
-    return `<svg ${s}><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
-  }
-  if (modifier === 'left') {
-    return `<svg ${s}><path d="M5 12h14M5 12l7-7M5 12l7 7"/></svg>`;
-  }
-  if (modifier === 'right') {
-    return `<svg ${s}><path d="M19 12H5M19 12l-7-7M19 12l-7 7"/></svg>`;
-  }
-  if (modifier === 'slight left') {
-    return `<svg ${s}><path d="M12 19V8M12 8l-6 6M12 8h6"/></svg>`;
-  }
-  if (modifier === 'slight right') {
-    return `<svg ${s}><path d="M12 19V8M12 8l6 6M12 8H6"/></svg>`;
-  }
-  if (modifier === 'sharp left') {
-    return `<svg ${s}><path d="M17 5H7v10M7 15l-4-4 4-4"/></svg>`;
-  }
-  if (modifier === 'sharp right') {
-    return `<svg ${s}><path d="M7 5h10v10M17 15l4-4-4-4"/></svg>`;
-  }
-  if (modifier === 'uturn') {
-    return `<svg ${s}><path d="M17 17V9a5 5 0 0 0-10 0v8M7 17l-4-4 4-4"/></svg>`;
-  }
-  return `<svg ${s}><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
+  const attrs = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"';
+  const PATHS = {
+    straight: 'M12 20V5M6 11l6-6 6 6',
+    right: 'M7 20v-7a4 4 0 0 1 4-4h8M15 5l4 4-4 4',
+    left: 'M17 20v-7a4 4 0 0 0-4-4H5M9 5L5 9l4 4',
+    'slight right': 'M8 20v-7l8-8M10 5h6v6',
+    'slight left': 'M16 20v-7l-8-8M14 5H8v6',
+    'sharp right': 'M5 6h9a4 4 0 0 1 4 4v9M14 15l4 4 4-4',
+    'sharp left': 'M19 6h-9a4 4 0 0 0-4 4v9M10 15l-4 4-4-4',
+    uturn: 'M17 20V9a5 5 0 0 0-10 0v4M3 11l4 4 4-4',
+    roundabout: 'M10 21v-6M14 11h6M17 8l3 3-3 3',
+    arrive: 'M6 21V4M6 4h12l-3 4 3 4H6',
+  };
+  let body;
+  if (type === 'arrive') body = `<path d="${PATHS.arrive}"/>`;
+  else if (type === 'roundabout' || type === 'rotary' || type === 'roundabout turn') body = `<circle cx="10" cy="11" r="4"/><path d="${PATHS.roundabout}"/>`;
+  else body = `<path d="${PATHS[modifier] || PATHS.straight}"/>`;
+  return `<svg ${attrs}>${body}</svg>`;
 }
 
 function panToUserOffset(lat, lng) {
@@ -988,7 +1039,7 @@ function stopNavigation() {
   const r = navRoad;
   const tracked = navTrackedPoints.slice();
   navRoad = null; navRoute = null; navSteps = []; navCurrentStep = 0;
-  navArrivalTime = 0; navTotalDistM = 0; navCompletedDistM = 0;
+  navArrivalTime = 0; navTotalDistM = 0; navCompletedDistM = 0; navStepMin = Infinity; navLastLL = null;
   navTrackedPoints = []; navLastTrackedPos = null;
 
   // Offer to save if user drove a meaningful distance

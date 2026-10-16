@@ -1608,7 +1608,7 @@ app.get('/api/users/suggested', optionalAuth, async (req, res) => {
 });
 
 // ── Post routes ───────────────────────────────────────────────
-// ── Reels (short videos) ──────────────────────────────────────
+// ── Rollers (short videos) ──────────────────────────────────────
 const REEL_EXT = /\.(mp4|mov|webm|m4v)$/i;
 const _reelUploadLog = new Map();
 function reelUploadAllowed(userId) {
@@ -1664,7 +1664,7 @@ app.post('/api/reels', requireAuth, upload.single('video'), async (req, res) => 
     res.status(201).json({ reel: { ...post, user_name: user?.name || '', user_avatar: user?.avatar || null, liked: false, comments: 0 } });
   } catch (e) {
     console.error('create reel', e);
-    res.status(500).json({ error: 'Could not post the reel.' });
+    res.status(500).json({ error: 'Could not post the roller.' });
   }
 });
 

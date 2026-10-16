@@ -275,7 +275,7 @@ function openShare(el) {
     try { await navigator.clipboard.writeText(url); toast('Link copied!'); } catch { toast(url); }
   } }];
   if (token) items.unshift({ label: 'Send to a driver', fn: () => openSend(r) });
-  actionSheet('Share this reel', items);
+  actionSheet('Share this roller', items);
 }
 
 function openSend(r) {
@@ -319,33 +319,33 @@ function openMore(el) {
   const r = el._reel;
   const own = currentUser && String(r.user_id) === String(currentUser.id);
   const items = [{ label: 'Copy link', fn: async () => { try { await navigator.clipboard.writeText(reelLink(r)); toast('Link copied!'); } catch { toast(reelLink(r)); } } }];
-  if (own || (currentUser && currentUser.is_admin)) items.push({ label: 'Delete reel', danger: true, fn: () => deleteReel(el) });
+  if (own || (currentUser && currentUser.is_admin)) items.push({ label: 'Delete roller', danger: true, fn: () => deleteReel(el) });
   if (!own) {
-    items.push({ label: 'Report reel', danger: true, fn: () => reportReel(r) });
+    items.push({ label: 'Report roller', danger: true, fn: () => reportReel(r) });
     items.push({ label: `Block ${r.user_name || 'user'}`, danger: true, fn: () => blockUser(r) });
   }
   actionSheet('', items);
 }
 
 async function deleteReel(el) {
-  if (!(await appConfirm('Delete this reel? This cannot be undone.', 'Delete'))) return;
+  if (!(await appConfirm('Delete this roller? This cannot be undone.', 'Delete'))) return;
   const r = el._reel;
   try {
     const res = await fetch(`${API}/api/posts/${r.id}`, { method: 'DELETE', headers: authHeaders() });
     if (!res.ok) throw new Error();
     removeReels(x => x.id === r.id);
-    toast('Reel deleted');
+    toast('Roller deleted');
   } catch { toast('Could not delete.'); }
 }
 
 function reportReel(r) {
   if (!requireLogin()) return;
   const reasons = ['Spam or scam', 'Inappropriate or offensive', 'Harassment or hate', 'Dangerous driving', 'Something else'];
-  actionSheet('Why are you reporting this reel?', reasons.map(reason => ({
+  actionSheet('Why are you reporting this roller?', reasons.map(reason => ({
     label: reason, fn: async () => {
       try {
         const res = await fetch(`${API}/api/report`, { method: 'POST', headers: authHeaders(true), body: JSON.stringify({ target_type: 'post', target_id: r.id, reason }) });
-        toast(res.ok ? "Thanks — we'll review this reel." : 'Could not send report.');
+        toast(res.ok ? "Thanks — we'll review this roller." : 'Could not send report.');
       } catch { toast('Could not send report.'); }
     },
   })));
@@ -353,7 +353,7 @@ function reportReel(r) {
 
 async function blockUser(r) {
   if (!requireLogin()) return;
-  if (!(await appConfirm(`Block ${r.user_name || 'this user'}? You won't see their reels and they can't message you.`, 'Block'))) return;
+  if (!(await appConfirm(`Block ${r.user_name || 'this user'}? You won't see their rollers and they can't message you.`, 'Block'))) return;
   try {
     const res = await fetch(`${API}/api/block/${r.user_id}`, { method: 'POST', headers: authHeaders() });
     if (!res.ok) throw new Error();
@@ -379,14 +379,14 @@ function openUpload() {
   if (!requireLogin()) return;
   let file = null;
   const { box, close } = openSheet(`
-    <div class="rs-title">New reel</div>
+    <div class="rs-title">New roller</div>
     <input type="file" id="rsFile" accept="video/*" style="display:none" />
     <div class="rs-pick" id="rsPick">Tap to choose or record a video<br><small>Up to 60 seconds and 50 MB</small></div>
     <video class="rs-preview" id="rsPreview" playsinline muted controls style="display:none"></video>
     <input class="rs-input" id="rsCaption" placeholder="Write a caption…" maxlength="300" style="display:none" />
     <div class="rs-bar" id="rsBar" style="display:none"><i></i></div>
     <div class="rs-err" id="rsErr"></div>
-    <button class="rs-primary" id="rsPost" disabled>Post reel</button>
+    <button class="rs-primary" id="rsPost" disabled>Post roller</button>
     <button class="rs-cancel" id="rsCancel">Cancel</button>`);
   const $ = id => box.querySelector('#' + id);
   const fail = m => { $('rsErr').textContent = m; };
@@ -420,7 +420,7 @@ function openUpload() {
       observer.observe(scroller.firstChild);
       activeIdx = -1; scroller.scrollTop = 0; setActive(0);
       emptyEl.style.display = 'none';
-      toast('Reel posted!');
+      toast('Roller posted!');
     } catch (e) {
       fail(e.message || 'Upload failed. Please try again.');
       $('rsPost').disabled = false; $('rsCancel').disabled = false; $('rsBar').style.display = 'none';
@@ -453,7 +453,7 @@ async function uploadReel(file, caption, onProgress) {
     if (up.status < 200 || up.status >= 300) throw new Error(up.status === 413 ? 'That video is too large for storage. Try a shorter or smaller clip.' : 'The upload was rejected. Please try again.');
     const res = await fetch(`${API}/api/reels`, { method: 'POST', headers: authHeaders(true), body: JSON.stringify({ video_path: info.path, caption }) });
     const d = await res.json();
-    if (!res.ok) throw new Error(d.error || 'Could not post the reel.');
+    if (!res.ok) throw new Error(d.error || 'Could not post the roller.');
     return d.reel;
   }
 
@@ -464,7 +464,7 @@ async function uploadReel(file, caption, onProgress) {
   if (up.status === 413) throw new Error('That video is too large to upload right now.');
   let d = {};
   try { d = JSON.parse(up.text); } catch {}
-  if (up.status < 200 || up.status >= 300) throw new Error(d.error || 'Could not post the reel.');
+  if (up.status < 200 || up.status >= 300) throw new Error(d.error || 'Could not post the roller.');
   return d.reel;
 }
 

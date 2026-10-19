@@ -416,8 +416,8 @@ function removeReels(pred) {
 }
 
 // ── Upload ─────────────────────────────────────────────────
-const MAX_BYTES = 50 * 1024 * 1024;
-const MAX_SECONDS = 60;
+let limits = { max_mb: 50, max_seconds: 60 };
+fetch(`${API}/api/reels/config`).then(r => r.json()).then(d => { if (d && d.max_mb) limits = d; }).catch(() => {});
 
 function openUpload() {
   if (!requireLogin()) return;
@@ -425,7 +425,7 @@ function openUpload() {
   const { box, close } = openSheet(`
     <div class="rs-title">New roller</div>
     <input type="file" id="rsFile" accept="video/*" style="display:none" />
-    <div class="rs-pick" id="rsPick">Tap to choose or record a video<br><small>Up to 60 seconds and 50 MB</small></div>
+    <div class="rs-pick" id="rsPick">Tap to choose or record a video<br><small>Up to ${limits.max_seconds} seconds and ${limits.max_mb} MB</small></div>
     <video class="rs-preview" id="rsPreview" playsinline muted controls style="display:none"></video>
     <input class="rs-input" id="rsCaption" placeholder="Write a caption…" maxlength="300" style="display:none" />
     <div class="rs-bar" id="rsBar" style="display:none"><i></i></div>
@@ -441,11 +441,11 @@ function openUpload() {
     if (!f) return;
     fail('');
     if (!f.type.startsWith('video/') && !/\.(mp4|mov|m4v|webm)$/i.test(f.name)) return fail('Please choose a video file.');
-    if (f.size > MAX_BYTES) return fail(`That video is ${(f.size / 1048576).toFixed(0)} MB. The limit is 50 MB. Trim it or lower the quality and try again.`);
+    if (f.size > limits.max_mb * 1048576) return fail(`That video is ${(f.size / 1048576).toFixed(0)} MB. The limit is ${limits.max_mb} MB. Trim it, or lower the video quality (Settings > Camera > Record Video) and try again.`);
     const url = URL.createObjectURL(f);
     const pv = $('rsPreview');
     pv.onloadedmetadata = () => {
-      if (pv.duration > MAX_SECONDS + 0.5) { fail(`That video is ${Math.round(pv.duration)} seconds. The limit is 60 seconds.`); return; }
+      if (pv.duration > limits.max_seconds + 0.5) { fail(`That video is ${Math.round(pv.duration)} seconds. The limit is ${limits.max_seconds} seconds.`); return; }
       file = f;
       $('rsPick').style.display = 'none'; pv.style.display = 'block'; $('rsCaption').style.display = 'block';
       $('rsPost').disabled = false;
@@ -485,7 +485,7 @@ function xhr(method, url, body, headers, onProgress) {
 }
 
 async function uploadReel(file, caption, onProgress) {
-  const ur = await fetch(`${API}/api/reels/upload-url`, { method: 'POST', headers: authHeaders(true), body: JSON.stringify({ filename: file.name, content_type: file.type }) });
+  const ur = await fetch(`${API}/api/reels/upload-url`, { method: 'POST', headers: authHeaders(true), body: JSON.stringify({ filename: file.name, content_type: file.type, size: file.size }) });
   const info = await ur.json();
   if (!ur.ok) throw new Error(info.error || 'Could not start the upload.');
 

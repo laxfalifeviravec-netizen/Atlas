@@ -1679,6 +1679,9 @@ app.get('/api/users/suggested', optionalAuth, async (req, res) => {
 // ── Post routes ───────────────────────────────────────────────
 // ── Rollers (short videos) ──────────────────────────────────────
 const REEL_EXT = /\.(mp4|mov|webm|m4v)$/i;
+const REEL_MAX_MB = Math.max(1, parseInt(process.env.ROLLER_MAX_MB) || 50);
+const REEL_MAX_SECONDS = Math.max(5, parseInt(process.env.ROLLER_MAX_SECONDS) || 60);
+app.get('/api/reels/config', (req, res) => res.json({ max_mb: REEL_MAX_MB, max_seconds: REEL_MAX_SECONDS }));
 const _reelUploadLog = new Map();
 function reelUploadAllowed(userId) {
   const now = Date.now();
@@ -1729,6 +1732,7 @@ app.post('/api/reels/upload-url', requireAuth, async (req, res) => {
   try {
     const ext = path.extname(String(req.body?.filename || '')).toLowerCase() || '.mp4';
     if (!REEL_EXT.test(ext)) return res.status(400).json({ error: 'Use an MP4, MOV, M4V or WebM video.' });
+    if (parseInt(req.body?.size) > REEL_MAX_MB * 1048576) return res.status(413).json({ error: `Videos can be up to ${REEL_MAX_MB} MB.` });
     if (!reelUploadAllowed(req.user.id)) return res.status(429).json({ error: 'Upload limit reached. Try again in an hour.' });
     if (!USE_SUPABASE || !process.env.SUPABASE_ANON_KEY) return res.json({ mode: 'server' });
     const filePath = `reels/${req.user.id}-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;

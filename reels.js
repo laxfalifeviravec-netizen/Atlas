@@ -6,7 +6,8 @@ let currentUser = null;
 const scroller = document.getElementById('reelsScroll');
 const emptyEl = document.getElementById('reelsEmpty');
 let reels = [];
-let nextCursor = null;
+let includeSeen = false;
+let endShown = false;
 let loading = false;
 let exhausted = false;
 let activeIdx = -1;
@@ -81,19 +82,58 @@ async function loadMore() {
   if (loading || exhausted) return;
   loading = true;
   try {
-    const q = nextCursor ? `?cursor=${nextCursor}&limit=6` : '?limit=6';
-    const r = await fetch(`${API}/api/reels${q}`, { headers: authHeaders() });
+    const params = new URLSearchParams({ limit: '6' });
+    if (includeSeen) params.set('include_seen', '1');
+    if (reels.length) params.set('exclude', reels.map(r => r.id).slice(-300).join(','));
+    const r = await fetch(`${API}/api/reels?${params}`, { headers: authHeaders() });
     const data = await r.json();
     const have = new Set(reels.map(x => x.id));
     const fresh = (data.reels || []).filter(x => !have.has(x.id));
-    nextCursor = data.next_cursor;
-    if (!nextCursor) exhausted = true;
+    if (!data.more) exhausted = true;
     reels.push(...fresh);
     fresh.forEach(r2 => appendReel(r2));
+    if (exhausted) showEnd(data.seen_hidden > 0);
   } catch {}
   loading = false;
-  emptyEl.style.display = reels.length ? 'none' : 'flex';
+  emptyEl.style.display = (reels.length || endShown) ? 'none' : 'flex';
 }
+
+// Final card once every roller has been watched
+function showEnd(hasSeen) {
+  if (endShown || (!reels.length && !hasSeen)) return;
+  endShown = true;
+  const el = document.createElement('section');
+  el.className = 'reel reel-end';
+  el.innerHTML = `
+    <div class="reel-end-inner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="44" height="44"><polyline points="20 6 9 17 4 12"/></svg>
+      <h2>You're all caught up</h2>
+      <p>You've watched all the new rollers. Check back soon.</p>
+      ${includeSeen ? '' : '<button class="btn btn-outline" id="watchSeenBtn">Watch ones I\'ve already seen</button>'}
+    </div>`;
+  scroller.appendChild(el);
+  el.querySelector('#watchSeenBtn')?.addEventListener('click', () => {
+    includeSeen = true; exhausted = false; endShown = false; el.remove(); loadMore();
+  });
+}
+
+// ── Seen tracking ──────────────────────────────────────────
+const seenQueue = new Set();
+let seenFlushTimer = null;
+let seenTimer = null;
+function queueSeen(id) {
+  if (!token) return;
+  seenQueue.add(id);
+  clearTimeout(seenFlushTimer);
+  seenFlushTimer = setTimeout(flushSeen, 2500);
+}
+function flushSeen() {
+  if (!seenQueue.size || !token) return;
+  const ids = [...seenQueue]; seenQueue.clear();
+  fetch(`${API}/api/seen`, { method: 'POST', keepalive: true, headers: authHeaders(true), body: JSON.stringify({ post_ids: ids }) }).catch(() => {});
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSeen(); });
+window.addEventListener('pagehide', flushSeen);
 
 // ── Rendering ──────────────────────────────────────────────
 function appendReel(r) {
@@ -174,6 +214,7 @@ function loadWindow(idx) {
   const els = scroller.children;
   for (let i = 0; i < els.length; i++) {
     const v = els[i].querySelector('video');
+    if (!v) continue;
     if (Math.abs(i - idx) <= 1) {
       if (!v.getAttribute('src')) { v.src = v.dataset.src; v.preload = 'auto'; }
     } else if (v.getAttribute('src')) {
@@ -185,12 +226,15 @@ function loadWindow(idx) {
 function setActive(idx) {
   if (idx === activeIdx) return;
   const prev = scroller.children[activeIdx];
-  if (prev) prev.querySelector('video').pause();
+  if (prev && prev.querySelector('video')) prev.querySelector('video').pause();
   activeIdx = idx;
   loadWindow(idx);
   const el = scroller.children[idx];
   if (!el) return;
   const v = el.querySelector('video');
+  if (!v) return;
+  clearTimeout(seenTimer);
+  seenTimer = setTimeout(() => queueSeen(el._reel.id), 1500);
   v.muted = muted;
   v.currentTime = 0;
   v.play().catch(() => {
@@ -364,11 +408,11 @@ async function blockUser(r) {
 
 function removeReels(pred) {
   reels = reels.filter(r => !pred(r));
-  Array.from(scroller.children).forEach(el => { if (pred(el._reel)) { observer.unobserve(el); el.remove(); } });
+  Array.from(scroller.children).forEach(el => { if (el._reel && pred(el._reel)) { observer.unobserve(el); el.remove(); } });
   activeIdx = -1;
   const idx = Math.round(scroller.scrollTop / Math.max(1, scroller.clientHeight));
   if (scroller.children.length) setActive(Math.min(idx, scroller.children.length - 1));
-  emptyEl.style.display = reels.length ? 'none' : 'flex';
+  emptyEl.style.display = (reels.length || endShown) ? 'none' : 'flex';
 }
 
 // ── Upload ─────────────────────────────────────────────────

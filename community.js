@@ -244,26 +244,83 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Feed ───────────────────────────────────────────────────
+const shownIds = new Set();
+let includeSeen = false;
+
 async function loadFeed(reset = false) {
-  if (reset) { page = 1; posts = []; document.getElementById('feedList').innerHTML = ''; }
+  const list = document.getElementById('feedList');
+  if (reset) { posts = []; shownIds.clear(); includeSeen = false; list.innerHTML = ''; document.getElementById('feedCaughtUp')?.remove(); }
   document.getElementById('feedLoading').style.display = 'flex';
+  document.getElementById('feedLoadMore').style.display = 'none';
   try {
-    const feedParam = feedMode === 'following' ? '&feed=following' : '';
-    const res = await fetch(`${API}/api/posts?page=${page}&limit=10${feedParam}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    const params = new URLSearchParams({ limit: '10' });
+    if (feedMode === 'following') params.set('feed', 'following');
+    if (includeSeen) params.set('include_seen', '1');
+    if (shownIds.size) params.set('exclude', [...shownIds].slice(-300).join(','));
+    const res = await fetch(`${API}/api/feed?${params}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
     const data = await res.json();
-    totalPages = data.pages;
-    posts = reset ? data.posts : [...posts, ...data.posts];
-    renderFeed(data.posts, reset);
-    document.getElementById('feedEmpty').style.display = posts.length === 0 ? 'flex' : 'none';
-    document.getElementById('feedLoadMore').style.display = page < totalPages ? 'flex' : 'none';
+    const fresh = data.posts || [];
+    fresh.forEach(p => shownIds.add(p.id));
+    posts = [...posts, ...fresh];
+    renderFeed(fresh, false);
+    const nothingAtAll = posts.length === 0 && !(data.seen_hidden > 0);
+    document.getElementById('feedEmpty').style.display = nothingAtAll ? 'flex' : 'none';
+    document.getElementById('feedLoadMore').style.display = data.more ? 'flex' : 'none';
+    if (!data.more && (posts.length > 0 || data.seen_hidden > 0)) showCaughtUp();
   } catch {}
   document.getElementById('feedLoading').style.display = 'none';
 }
 
+function showCaughtUp() {
+  document.getElementById('feedCaughtUp')?.remove();
+  const el = document.createElement('div');
+  el.id = 'feedCaughtUp';
+  el.className = 'feed-caught-up';
+  el.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="34" height="34"><polyline points="20 6 9 17 4 12"/></svg>
+    <h3>You're all caught up</h3>
+    <p>You've seen all the new posts. Check back soon for more.</p>
+    ${includeSeen ? '' : '<button class="btn btn-outline" id="showSeenBtn">Show posts I\'ve already seen</button>'}`;
+  document.getElementById('feedList').after(el);
+  el.querySelector('#showSeenBtn')?.addEventListener('click', () => { includeSeen = true; el.remove(); loadFeed(false); });
+}
+
+// ── Seen tracking: a post counts once half of it has been on screen for a second ──
+const seenQueue = new Set();
+const seenTimers = new Map();
+let seenFlushTimer = null;
+let seenObserver = null;
+
+function observeSeen(card) {
+  if (!token || !('IntersectionObserver' in window)) return;
+  if (!seenObserver) {
+    seenObserver = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const id = e.target.dataset.postId;
+        if (e.isIntersecting) {
+          seenTimers.set(id, setTimeout(() => {
+            seenQueue.add(parseInt(id)); seenObserver.unobserve(e.target);
+            clearTimeout(seenFlushTimer); seenFlushTimer = setTimeout(flushSeen, 3000);
+          }, 1000));
+        } else { clearTimeout(seenTimers.get(id)); seenTimers.delete(id); }
+      });
+    }, { threshold: 0.5 });
+  }
+  seenObserver.observe(card);
+}
+
+function flushSeen() {
+  if (!seenQueue.size || !token) return;
+  const ids = [...seenQueue]; seenQueue.clear();
+  fetch(`${API}/api/seen`, { method: 'POST', keepalive: true, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ post_ids: ids }) }).catch(() => {});
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSeen(); });
+window.addEventListener('pagehide', flushSeen);
+
 function renderFeed(newPosts, reset) {
   const list = document.getElementById('feedList');
   if (reset) list.innerHTML = '';
-  newPosts.forEach(p => list.appendChild(buildPostCard(p)));
+  newPosts.forEach(p => { const card = buildPostCard(p); card.dataset.postId = p.id; list.appendChild(card); observeSeen(card); });
 }
 
 function isVideoUrl(url) {
@@ -406,7 +463,7 @@ async function toggleLike(post, btn, card) {
   } catch {}
 }
 
-document.getElementById('loadMoreBtn').addEventListener('click', () => { page++; loadFeed(); });
+document.getElementById('loadMoreBtn').addEventListener('click', () => loadFeed());
 document.getElementById('emptyPostBtn').addEventListener('click', openNewPost);
 
 // ── Post Modal ─────────────────────────────────────────────

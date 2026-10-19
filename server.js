@@ -131,6 +131,7 @@ let _notifications = []; // { id, user_id, actor_id, actor_name, type, post_id, 
 let _uid = 1, _pid = 1, _cid = 1, _gid = 1, _rid = 1, _lid = 1, _roadId = 1, _sid = 1, _nid = 1;
 let _seeded = false;
 let _saved = [];        // { user_id, post_id }
+const _postViews = new Map(); // `${userId}-${postId}` -> last seen ms
 let _conversations = []; // { id, created_at }
 let _convMembers = [];  // { conv_id, user_id }
 let _messages = [];     // { id, conv_id, sender_id, body, read, created_at }
@@ -176,6 +177,28 @@ function requireAdmin(req, res, next) {
 }
 
 // ── Helpers: Supabase vs memory ───────────────────────────────
+// ── Feed ranking ──────────────────────────────────────────────
+// Score = weighted engagement decayed by age, boosted for followed authors and brand-new posts.
+function rankFeed(rows, ctx) {
+  const scored = rows.map(p => {
+    const hours = Math.max(0, (ctx.now - new Date(p.created_at).getTime()) / 3.6e6);
+    const eng = (p.likes || 0) + 2 * (ctx.comments[p.id] || 0) + 3 * (ctx.saves[p.id] || 0);
+    let score = (eng + 1) / Math.pow(hours + 2, 1.5);
+    if (ctx.following.has(p.user_id)) score *= 1.6;
+    if (hours < 6) score *= 1.25;
+    return { p, score };
+  });
+  scored.sort((a, b) => (b.p.is_pinned ? 1 : 0) - (a.p.is_pinned ? 1 : 0) || b.score - a.score);
+  // variety: never more than two posts in a row from the same author
+  const pending = scored.map(x => x.p), out = [];
+  while (pending.length) {
+    let i = pending.findIndex(p => !(out.length >= 2 && out[out.length - 1].user_id === p.user_id && out[out.length - 2].user_id === p.user_id));
+    if (i === -1) i = 0;
+    out.push(pending.splice(i, 1)[0]);
+  }
+  return out;
+}
+
 const db = {
   // ── Users ──
   async findUserByEmail(email) {
@@ -751,42 +774,88 @@ const db = {
     }
     return _users.filter(u => u.referred_by === userId).length;
   },
-  async getReels(cursor, limit, userId, blockedIds = []) {
+  async getSeenSet(userId, ids, days) {
+    const since = Date.now() - days * 864e5;
+    if (USE_SUPABASE) {
+      try {
+        const { data, error } = await sb.from('post_views').select('post_id')
+          .eq('user_id', userId).in('post_id', ids).gte('seen_at', new Date(since).toISOString());
+        return error ? new Set() : new Set((data || []).map(r => r.post_id));
+      } catch { return new Set(); }
+    }
+    return new Set(ids.filter(id => (_postViews.get(`${userId}-${id}`) || 0) >= since));
+  },
+  async markSeen(userId, ids) {
+    const now = Date.now();
+    if (USE_SUPABASE) {
+      try {
+        await sb.from('post_views').upsert(
+          ids.map(post_id => ({ user_id: userId, post_id, seen_at: new Date(now).toISOString() })),
+          { onConflict: 'user_id,post_id' });
+        if (Math.random() < 0.02) await sb.from('post_views').delete().lt('seen_at', new Date(now - 60 * 864e5).toISOString());
+      } catch {}
+      return;
+    }
+    ids.forEach(id => _postViews.set(`${userId}-${id}`, now));
+  },
+  async getRankedFeed({ userId = 0, followingOnly = false, videosOnly = false, exclude = [], includeSeen = false, blockedIds = [], limit = 10 }) {
+    const POOL = 300, SEEN_DAYS = 30;
     const isVid = /\.(mp4|mov|webm|m4v)$/i;
+    const excl = new Set(exclude);
+    const followingSet = userId ? new Set((await this.getFollowing(userId)).map(u => u.id)) : new Set();
+    if (followingOnly && !followingSet.size) return { posts: [], more: false, seen_hidden: 0 };
+
+    let pool;
     if (USE_SUPABASE) {
       let q = sb.from('posts')
-        .select('id, user_id, image_url, caption, road_name, likes, created_at, users!posts_user_id_fkey(name, avatar)')
-        .or('image_url.ilike.*.mp4,image_url.ilike.*.mov,image_url.ilike.*.webm,image_url.ilike.*.m4v')
-        .order('id', { ascending: false }).limit(limit);
-      if (cursor) q = q.lt('id', cursor);
+        .select(`id, user_id, image_url, image_urls, caption, road_name, region, likes, created_at, is_pinned,
+                 users!posts_user_id_fkey(name, avatar)`)
+        .order('created_at', { ascending: false }).limit(POOL);
+      if (videosOnly) q = q.or('image_url.ilike.*.mp4,image_url.ilike.*.mov,image_url.ilike.*.webm,image_url.ilike.*.m4v');
+      if (followingOnly) q = q.in('user_id', [...followingSet]);
       if (blockedIds.length) q = q.not('user_id', 'in', `(${blockedIds.join(',')})`);
       const { data } = await q;
-      const rows = data || [];
-      const ids = rows.map(r => r.id);
-      const liked = new Set(), counts = {};
-      if (ids.length) {
-        if (userId) {
-          const { data: lk } = await sb.from('post_likes').select('post_id').eq('user_id', userId).in('post_id', ids);
-          (lk || []).forEach(l => liked.add(l.post_id));
-        }
-        const { data: cm } = await sb.from('comments').select('post_id').in('post_id', ids);
-        (cm || []).forEach(c => { counts[c.post_id] = (counts[c.post_id] || 0) + 1; });
-      }
-      return rows.map(r => ({
-        ...r, user_name: r.users?.name || '', user_avatar: r.users?.avatar || null, users: undefined,
-        liked: liked.has(r.id), comments: counts[r.id] || 0,
-      }));
+      pool = data || [];
+    } else {
+      pool = _posts
+        .filter(p => (!videosOnly || isVid.test(p.image_url || '')) && (!followingOnly || followingSet.has(p.user_id)) && !blockedIds.includes(p.user_id))
+        .sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, POOL)
+        .map(p => { const u = _users.find(u => u.id === p.user_id) || {}; return { ...p, users: { name: u.name, avatar: u.avatar } }; });
     }
-    return _posts
-      .filter(p => isVid.test(p.image_url || '') && (!cursor || p.id < cursor) && !blockedIds.includes(p.user_id))
-      .sort((a, b) => b.id - a.id).slice(0, limit)
-      .map(p => {
-        const u = _users.find(u => u.id === p.user_id) || {};
-        return { id: p.id, user_id: p.user_id, image_url: p.image_url, caption: p.caption, road_name: p.road_name,
-          likes: p.likes, created_at: p.created_at, user_name: u.name || '', user_avatar: u.avatar || null,
-          liked: userId ? _postLikes.has(`${userId}-${p.id}`) : false,
-          comments: _comments.filter(c => c.post_id === p.id).length };
-      });
+    pool = pool.filter(p => !excl.has(p.id));
+    const seen = (userId && !includeSeen && pool.length) ? await this.getSeenSet(userId, pool.map(p => p.id), SEEN_DAYS) : new Set();
+    const candidates = pool.filter(p => !seen.has(p.id));
+    const seenHidden = pool.length - candidates.length;
+    if (!candidates.length) return { posts: [], more: false, seen_hidden: seenHidden };
+
+    const cids = candidates.map(p => p.id);
+    const comments = {}, saves = {};
+    if (USE_SUPABASE) {
+      const [cm, sv] = await Promise.all([
+        sb.from('comments').select('post_id').in('post_id', cids),
+        sb.from('saved_posts').select('post_id').in('post_id', cids),
+      ]);
+      (cm.data || []).forEach(r => { comments[r.post_id] = (comments[r.post_id] || 0) + 1; });
+      (sv.data || []).forEach(r => { saves[r.post_id] = (saves[r.post_id] || 0) + 1; });
+    } else {
+      _comments.forEach(c => { if (cids.includes(c.post_id)) comments[c.post_id] = (comments[c.post_id] || 0) + 1; });
+      _saved.forEach(r => { if (cids.includes(r.post_id)) saves[r.post_id] = (saves[r.post_id] || 0) + 1; });
+    }
+
+    const ranked = rankFeed(candidates, { now: Date.now(), comments, saves, following: followingSet });
+    const page = ranked.slice(0, limit);
+    const liked = new Set();
+    if (userId && page.length) {
+      if (USE_SUPABASE) {
+        const { data } = await sb.from('post_likes').select('post_id').eq('user_id', userId).in('post_id', page.map(p => p.id));
+        (data || []).forEach(l => liked.add(l.post_id));
+      } else page.forEach(p => { if (_postLikes.has(`${userId}-${p.id}`)) liked.add(p.id); });
+    }
+    return {
+      posts: page.map(p => ({ ...p, user_name: p.users?.name || '', user_avatar: p.users?.avatar || null, users: undefined, liked: liked.has(p.id), comments: comments[p.id] || 0 })),
+      more: ranked.length > limit,
+      seen_hidden: seenHidden,
+    };
   },
   async followUser(followerId, followingId) {
     if (followerId === followingId) return { error: 'self' };
@@ -1619,13 +1688,39 @@ function reelUploadAllowed(userId) {
   return true;
 }
 
+function parseFeedQuery(req) {
+  return {
+    limit: Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 20),
+    exclude: String(req.query.exclude || '').split(',').map(n => parseInt(n)).filter(Boolean).slice(0, 400),
+    includeSeen: req.query.include_seen === '1',
+  };
+}
+
+// Ranked "next batch" feed that skips posts the user has already seen
+app.get('/api/feed', optionalAuth, async (req, res) => {
+  try {
+    const userId = req.user?.id || 0;
+    const followingOnly = req.query.feed === 'following';
+    if (followingOnly && !userId) return res.json({ posts: [], more: false, seen_hidden: 0 });
+    const blockedIds = userId ? await db.getBlockedIds(userId) : [];
+    res.json(await db.getRankedFeed({ userId, followingOnly, blockedIds, ...parseFeedQuery(req) }));
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
+app.post('/api/seen', requireAuth, async (req, res) => {
+  try {
+    const ids = (Array.isArray(req.body?.post_ids) ? req.body.post_ids : []).map(n => parseInt(n)).filter(Boolean).slice(0, 60);
+    if (ids.length) await db.markSeen(req.user.id, ids);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false }); }
+});
+
 app.get('/api/reels', optionalAuth, async (req, res) => {
   try {
-    const limit = Math.min(Math.max(parseInt(req.query.limit) || 6, 1), 12);
-    const cursor = parseInt(req.query.cursor) || 0;
-    const blockedIds = req.user ? await db.getBlockedIds(req.user.id) : [];
-    const reels = await db.getReels(cursor, limit, req.user?.id, blockedIds);
-    res.json({ reels, next_cursor: reels.length === limit ? reels[reels.length - 1].id : null });
+    const userId = req.user?.id || 0;
+    const blockedIds = userId ? await db.getBlockedIds(userId) : [];
+    const r = await db.getRankedFeed({ userId, videosOnly: true, blockedIds, ...parseFeedQuery(req), limit: Math.min(parseFeedQuery(req).limit, 12) });
+    res.json({ reels: r.posts, more: r.more, seen_hidden: r.seen_hidden });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 

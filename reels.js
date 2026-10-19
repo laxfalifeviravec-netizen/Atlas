@@ -493,7 +493,10 @@ async function uploadReel(file, caption, onProgress) {
     const fd = new FormData();
     fd.append('cacheControl', '3600');
     fd.append('', file);
-    const up = await xhr('PUT', info.signedUrl, fd, { apikey: info.anonKey, Authorization: `Bearer ${info.anonKey}`, 'x-upsert': 'false' }, onProgress);
+    // Newer Supabase "publishable" keys (sb_publishable_...) are not JWTs and must not be sent as a Bearer token
+    const keyHeaders = { apikey: info.anonKey, 'x-upsert': 'false' };
+    if (!info.anonKey.startsWith('sb_')) keyHeaders.Authorization = `Bearer ${info.anonKey}`;
+    const up = await xhr('PUT', info.signedUrl, fd, keyHeaders, onProgress);
     if (up.status < 200 || up.status >= 300) throw new Error(up.status === 413 ? 'That video is too large for storage. Try a shorter or smaller clip.' : 'The upload was rejected. Please try again.');
     const res = await fetch(`${API}/api/reels`, { method: 'POST', headers: authHeaders(true), body: JSON.stringify({ video_path: info.path, caption }) });
     const d = await res.json();

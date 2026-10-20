@@ -84,7 +84,7 @@ function renderNav(user) {
   } else {
     const init = user.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
     el.innerHTML = `
-      <span class="nav-user-btn"><div class="avatar avatar-sm">${init}</div>${user.name.split(' ')[0]}</span>
+      <a href="profile.html?id=${user.id}" class="nav-user-btn" aria-label="Your profile"><div class="avatar avatar-sm">${init}</div></a>
       <button class="nav-signout-btn" id="navSignOut">Sign Out</button>`;
     document.getElementById('navSignOut').addEventListener('click', () => {
       localStorage.removeItem('culture-token'); token = null; currentUser = null; location.reload();

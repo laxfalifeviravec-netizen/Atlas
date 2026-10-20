@@ -58,7 +58,7 @@ async function loadConversations() {
         ? `<img src="${esc(otherAvatar)}" alt="" />`
         : init;
       const hasUnread = (conv.unread || 0) > 0;
-      const lastMsg   = conv.last_message?.body || 'Start the conversation…';
+      const lastMsg   = previewText(conv.last_message?.body) || 'Start the conversation…';
       const lastTime  = conv.last_message?.created_at || null;
 
       const row = document.createElement('div');
@@ -163,6 +163,13 @@ function renderMessages(messages) {
   if (wasAtBottom || lastMsgCount <= 1) {
     container.scrollTop = container.scrollHeight;
   }
+}
+
+function previewText(body) {
+  if (typeof body === 'string' && body.startsWith('{"__type":"post_share"')) {
+    try { return /\.(mp4|mov|webm|m4v)(\?|$)/i.test(JSON.parse(body).image_url || '') ? 'Shared a roller' : 'Shared a post'; } catch { return 'Shared a post'; }
+  }
+  return body || '';
 }
 
 function buildBubbleContent(body) {

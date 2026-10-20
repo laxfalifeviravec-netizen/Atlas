@@ -129,7 +129,6 @@ let _listings = [], _roads = [], _stories = [];
 let _follows = []; // { follower_id, following_id }
 let _notifications = []; // { id, user_id, actor_id, actor_name, type, post_id, read, created_at }
 let _uid = 1, _pid = 1, _cid = 1, _gid = 1, _rid = 1, _lid = 1, _roadId = 1, _sid = 1, _nid = 1;
-let _seeded = false;
 let _saved = [];        // { user_id, post_id }
 const _postViews = new Map(); // `${userId}-${postId}` -> last seen ms
 let _conversations = []; // { id, created_at }
@@ -868,6 +867,16 @@ const db = {
     if (_follows.some(f => f.follower_id === followerId && f.following_id === followingId)) return { following: true };
     _follows.push({ follower_id: followerId, following_id: followingId });
     return { following: true };
+  },
+  async getFollowers(userId) {
+    if (USE_SUPABASE) {
+      const { data } = await sb.from('follows')
+        .select('follower_id, users!follows_follower_id_fkey(id, name, avatar, bio)')
+        .eq('following_id', userId);
+      return (data || []).map(f => f.users).filter(Boolean);
+    }
+    return _follows.filter(f => f.following_id === userId)
+      .map(f => _users.find(u => u.id === f.follower_id)).filter(Boolean);
   },
   async getFollowing(userId) {
     if (USE_SUPABASE) {
@@ -2140,6 +2149,16 @@ app.get('/api/users/:id', optionalAuth, async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
 });
 
+const publicUser = u => ({ id: u.id, name: u.name, avatar: u.avatar || null, bio: u.bio || '' });
+app.get('/api/users/:id/followers', async (req, res) => {
+  try { res.json({ users: (await db.getFollowers(parseInt(req.params.id))).map(publicUser) }); }
+  catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+app.get('/api/users/:id/following', async (req, res) => {
+  try { res.json({ users: (await db.getFollowing(parseInt(req.params.id))).map(publicUser) }); }
+  catch (e) { console.error(e); res.status(500).json({ error: 'Server error.' }); }
+});
+
 app.get('/api/users/:id/posts', async (req, res) => {
   try {
     res.json({ posts: await db.getUserPosts(parseInt(req.params.id)) });
@@ -2347,78 +2366,6 @@ app.delete('/api/cars/:id', requireAuth, async (req, res) => {
 });
 
 // ── Seed (only runs once, only if DB is empty) ────────────────
-async function seed() {
-  if (_seeded) return;
-  _seeded = true;
-
-  // Skip seed if Supabase is connected and already has users
-  if (USE_SUPABASE) {
-    const { count } = await sb.from('users').select('id', { count: 'exact', head: true });
-    if (count > 0) return;
-  } else if (_users.length > 0) return;
-
-  const password_hash = await bcrypt.hash('culture123', 10);
-  const teamUser = await db.createUser({
-    name: 'One Culture Team', email: 'team@one-culture.app',
-    password_hash, avatar: null, bio: 'The official One Culture account.', plan: 'Explorer',
-  });
-
-  const demoPosts = [
-    { image_url: 'https://images.unsplash.com/photo-1544636331-9d95400dcc31?w=800&auto=format&fit=crop&q=80', caption: 'Tail of the Dragon — 318 curves in 11 miles. Nothing else comes close.', road_name: 'Tail of the Dragon (US-129)', region: 'Southeast' },
-    { image_url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80', caption: 'Beartooth Highway at sunrise. Worth every switchback.', road_name: 'Beartooth Highway (US-212)', region: 'Mountain West' },
-    { image_url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=80', caption: 'Pacific Coast Highway. Windows down, ocean to the left. Nothing beats it.', road_name: 'Pacific Coast Highway (CA-1)', region: 'West Coast' },
-    { image_url: 'https://images.unsplash.com/photo-1580274455191-1d9d5f78f3d7?w=800&auto=format&fit=crop&q=80', caption: 'Million Dollar Highway descending to Ouray. Colorado\'s finest tarmac.', road_name: 'Million Dollar Highway (US-550)', region: 'Mountain West' },
-    { image_url: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&auto=format&fit=crop&q=80', caption: 'Skyline Drive in the fall. The M3 felt right at home.', road_name: 'Skyline Drive', region: 'Northeast' },
-    { image_url: 'https://images.unsplash.com/photo-1617531653332-bd46c16f7d10?w=800&auto=format&fit=crop&q=80', caption: 'Going-to-the-Sun Road through Glacier NP. One of the greats.', road_name: 'Going-to-the-Sun Road', region: 'Mountain West' },
-  ];
-  for (const p of demoPosts) {
-    await db.createPost({ user_id: teamUser.id, ...p });
-  }
-
-  const demoGroups = [
-    { name: 'Pacific Coast Runners', description: 'Weekly drives along PCH and mountain roads of Southern California.', meeting_point: 'Malibu, CA', route_name: 'Pacific Coast Highway' },
-    { name: 'Dragon Slayers', description: 'Dedicated to the Tail of the Dragon and Cherohala Skyway.', meeting_point: 'Deals Gap, NC', route_name: 'US-129 Loop' },
-    { name: 'Rocky Mountain Rally', description: 'Colorado and Wyoming alpine passes.', meeting_point: 'Denver, CO', route_name: 'Alpine Triangle' },
-  ];
-  for (const g of demoGroups) {
-    await db.createGroup({ creator_id: teamUser.id, ...g });
-  }
-
-  const demoListings = [
-    { title: 'Porsche 911 GT3 RS — Track Ready', price: '$289,000', category: 'Cars', description: '2023 GT3 RS, Weissach Package, 1,200 miles. Immaculate.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1614200187524-dc4b892acf16?w=800&auto=format&fit=crop&q=80' },
-    { title: 'BMW M3 Competition — Frozen Isle Green', price: '$82,500', category: 'Cars', description: '2022 F80 M3 Competition, 6-speed manual. Carbon seats, track package.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&auto=format&fit=crop&q=80' },
-    { title: 'Akrapovič Titanium Exhaust — 992 GT3', price: '$4,200', category: 'Mods', description: 'Full titanium slip-on system. Near new, under 500 miles.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1609521263047-f8f205293f24?w=800&auto=format&fit=crop&q=80' },
-    { title: 'Michelin Pilot Cup 2 R — 305/30/20 (set of 2)', price: '$1,100', category: 'Wheels', description: 'Rear tires for 992. 7/10 tread remaining.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&auto=format&fit=crop&q=80' },
-    { title: 'Racepak IQ3 Street Dash Logger', price: '$650', category: 'Electronics', description: 'Full digital dash with GPS lap timing and 0-60 timer.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&auto=format&fit=crop&q=80' },
-    { title: 'Brembo GT Brake Kit — M4 Front', price: '$3,800', category: 'Mods', description: 'Six-piston Brembo GT kit for F8x M3/M4. Barely used.', contact: 'team@one-culture.app', image_url: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800&auto=format&fit=crop&q=80' },
-  ];
-  for (const l of demoListings) {
-    await db.createListing({ user_id: teamUser.id, ...l });
-  }
-
-  const demoEvents = [
-    { creator_id: teamUser.id, title: 'Pacific Coast Sunday Run', description: 'Weekly cruise from Santa Monica to Malibu. All cars welcome.', date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0,10), location: 'Santa Monica, CA', lat: 34.0195, lng: -118.4912 },
-    { creator_id: teamUser.id, title: 'Dragon Slayers Mountain Drive', description: 'Tail of the Dragon convoy. Meet at Deals Gap at 9am.', date: new Date(Date.now() + 14 * 86400000).toISOString().slice(0,10), location: 'Deals Gap, NC', lat: 35.4678, lng: -83.9035 },
-    { creator_id: teamUser.id, title: 'Cars & Coffee — Denver', description: 'Monthly meet at Union Station. Bring whatever you drive.', date: new Date(Date.now() + 3 * 86400000).toISOString().slice(0,10), location: 'Denver, CO', lat: 39.7527, lng: -104.9982 },
-  ];
-  for (const e of demoEvents) { await db.createEvent(e); }
-}
-
-// ── Patch broken seed post images (one-time migration) ───────
-async function patchSeedImages() {
-  if (!USE_SUPABASE) return;
-  const patches = [
-    { caption: 'Tail of the Dragon', image_url: 'https://images.unsplash.com/photo-1544636331-9d95400dcc31?w=800&auto=format&fit=crop&q=80' },
-    { caption: 'Beartooth Highway',  image_url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80' },
-    { caption: 'Pacific Coast Highway', image_url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=80' },
-    { caption: 'Million Dollar Highway', image_url: 'https://images.unsplash.com/photo-1580274455191-1d9d5f78f3d7?w=800&auto=format&fit=crop&q=80' },
-    { caption: 'Skyline Drive',      image_url: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&auto=format&fit=crop&q=80' },
-    { caption: 'Going-to-the-Sun',   image_url: 'https://images.unsplash.com/photo-1617531653332-bd46c16f7d10?w=800&auto=format&fit=crop&q=80' },
-  ];
-  for (const { caption, image_url } of patches) {
-    await sb.from('posts').update({ image_url }).ilike('caption', `%${caption}%`).ilike('image_url', '%unsplash.com/photo-__%');
-  }
-}
 
 // ── Admin routes ──────────────────────────────────────────────
 app.get('/api/admin/users', requireAdmin, async (req, res) => {
@@ -2501,8 +2448,7 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
 });
 
 if (require.main === module) {
-  seed().then(patchSeedImages).then(() => app.listen(PORT, () => console.log(`One Culture API running on http://localhost:${PORT}`))).catch(console.error);
+  app.listen(PORT, () => console.log(`One Culture API running on http://localhost:${PORT}`));
 } else {
-  seed().then(patchSeedImages).catch(console.error);
   module.exports = app;
 }

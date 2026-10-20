@@ -86,8 +86,7 @@ function renderStories(stories) {
       <div class="story-avatar-wrap">
         <div class="story-avatar-inner">${initials}</div>
       </div>
-      <span>${(s.user_name||'').split(' ')[0] || 'Driver'}</span>
-      <span class="story-time-left">${storyTimeLeft(s.created_at)}</span>`;
+      <span>${(s.user_name||'').split(' ')[0] || 'Driver'}</span>`;
     btn.addEventListener('click', () => openStoryViewer(i));
     scroll.appendChild(btn);
   });
@@ -188,11 +187,11 @@ storyImageInput.addEventListener('change', e => {
 document.getElementById('submitStoryBtn').addEventListener('click', async () => {
   if (!storyFile) { document.getElementById('storyError').textContent = 'Please select an image.'; return; }
   const fd = new FormData();
-  fd.append('image', storyFile);
+  fd.append('image', await shrinkImage(storyFile));
   fd.append('road_name', document.getElementById('storyRoadName').value.trim());
   try {
     const res = await fetch(`${API}/api/stories`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
-    if (!res.ok) { const d = await res.json(); document.getElementById('storyError').textContent = d.error; return; }
+    if (!res.ok) { const d = await readUploadResponse(res); document.getElementById('storyError').textContent = d.error; return; }
     newStoryOverlay.classList.remove('open');
     storyFile = null; storyPreview.style.display = 'none'; storyUploadZone.style.display = '';
     document.getElementById('storyRoadName').value = '';
@@ -320,7 +319,8 @@ window.addEventListener('pagehide', flushSeen);
 function renderFeed(newPosts, reset) {
   const list = document.getElementById('feedList');
   if (reset) list.innerHTML = '';
-  newPosts.forEach(p => { const card = buildPostCard(p); card.dataset.postId = p.id; list.appendChild(card); observeSeen(card); });
+  // Videos only count as watched in Rollers, so scrolling past one here doesn't use it up
+  newPosts.forEach(p => { const card = buildPostCard(p); card.dataset.postId = p.id; list.appendChild(card); if (!isVideoUrl(p.image_url || '')) observeSeen(card); });
 }
 
 function isVideoUrl(url) {
@@ -633,22 +633,29 @@ function renderPostThumbs() {
 document.getElementById('submitPostBtn').addEventListener('click', async () => {
   const err = document.getElementById('newPostError');
   if (!postFiles.length) { err.textContent = 'Please select a photo or video.'; return; }
+  const videos = postFiles.filter(isVideoFile);
+  if (videos.length && postFiles.length > 1) { err.textContent = 'Post a video on its own, or remove it to post photos.'; return; }
   err.textContent = '';
-  const fd = new FormData();
-  postFiles.forEach(f => fd.append('images', f));
-  fd.append('caption',   document.getElementById('postCaption').value.trim());
-  fd.append('road_name', document.getElementById('postRoadName').value.trim());
-  fd.append('region',    document.getElementById('postRegion').value);
-  fd.append('mod_category', (document.getElementById('postModCategory')?.value||'').trim());
-  fd.append('mod_title',    (document.getElementById('postModTitle')?.value||'').trim());
-  fd.append('mod_price',    (document.getElementById('postModPrice')?.value||'').trim());
-  fd.append('mod_url',      (document.getElementById('postModUrl')?.value||'').trim());
   const btn = document.getElementById('submitPostBtn');
+  const label = btn.textContent;
   btn.disabled = true; btn.textContent = 'Sharing…';
   try {
-    const res = await fetch(`${API}/api/posts`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
-    const data = await res.json();
-    if (!res.ok) { err.textContent = data.error; return; }
+    if (videos.length) {
+      await uploadVideo(videos[0], document.getElementById('postCaption').value.trim(), token, p => { btn.textContent = `Uploading ${p}%`; });
+    } else {
+      const fd = new FormData();
+      (await shrinkImages(postFiles)).forEach(f => fd.append('images', f));
+      fd.append('caption',   document.getElementById('postCaption').value.trim());
+      fd.append('road_name', document.getElementById('postRoadName').value.trim());
+      fd.append('region',    document.getElementById('postRegion').value);
+      fd.append('mod_category', (document.getElementById('postModCategory')?.value||'').trim());
+      fd.append('mod_title',    (document.getElementById('postModTitle')?.value||'').trim());
+      fd.append('mod_price',    (document.getElementById('postModPrice')?.value||'').trim());
+      fd.append('mod_url',      (document.getElementById('postModUrl')?.value||'').trim());
+      const res = await fetch(`${API}/api/posts`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+      const data = await readUploadResponse(res);
+      if (!res.ok) { err.textContent = data.error || 'Upload failed. Try again.'; return; }
+    }
     newPostOverlay.classList.remove('open'); document.body.style.overflow = '';
     // Reset
     postFiles = [];
@@ -664,8 +671,8 @@ document.getElementById('submitPostBtn').addEventListener('click', async () => {
     const md = document.getElementById('modDetails');
     if (md) md.removeAttribute('open');
     await loadFeed(true);
-  } catch { err.textContent = 'Upload failed. Try again.'; }
-  finally { btn.disabled = false; btn.textContent = 'Share Road'; }
+  } catch (e) { err.textContent = e.message || 'Upload failed. Try again.'; }
+  finally { btn.disabled = false; btn.textContent = label; }
 });
 
 // ── Auth Modal ─────────────────────────────────────────────

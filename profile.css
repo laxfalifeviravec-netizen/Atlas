@@ -132,7 +132,6 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 2px;
-  background: var(--c-border);
 }
 
 .profile-grid-tile {
@@ -297,3 +296,21 @@
 .diff-Moderate { background: rgba(234,179,8,0.12);  color: #ca8a04; }
 .diff-Hard     { background: rgba(249,115,22,0.12); color: #ea580c; }
 .diff-Expert   { background: rgba(220,38,38,0.12);  color: #dc2626; }
+
+/* ── Followers / following sheet ─────────────────────────── */
+.people-title { font-family: var(--font-head); font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+.people-list { display: flex; flex-direction: column; }
+.people-row { display: flex; align-items: center; gap: 12px; padding: 10px 2px; color: var(--c-text); text-decoration: none; border-bottom: 1px solid var(--c-border); }
+.people-row:last-child { border-bottom: none; }
+.people-row .avatar { width: 40px; height: 40px; flex-shrink: 0; overflow: hidden; }
+.people-row .avatar img { width: 100%; height: 100%; object-fit: cover; }
+.people-info { min-width: 0; display: flex; flex-direction: column; }
+.people-info strong { font-size: 15px; }
+.people-info span { font-size: 12px; color: var(--c-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.people-empty { color: var(--c-text-2); text-align: center; padding: 24px 0; font-size: 14px; }
+
+.profile-grid-tile video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.profile-grid-play {
+  position: absolute; top: 8px; right: 8px; color: #fff;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.6)); display: flex;
+}

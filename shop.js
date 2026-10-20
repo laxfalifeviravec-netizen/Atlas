@@ -1,44 +1,15 @@
 /* One Culture — Shop JS */
 
 /* ── Mods of the Week sponsor config ─────────────────────────
-   Update this object weekly to swap in a new brand sponsor.
-   Set enabled: false to hide the section entirely.
+   Off until a real sponsor signs on. To run a week, set enabled: true and fill in:
+   week: 'Nov 3 – Nov 9', sponsor: { name, tagline, url, color },
+   mods: [{ title, category, price, description, url, icon }]
    ─────────────────────────────────────────────────────────── */
 const MOTW = {
-  enabled: true,
-  week: 'Sept 29 – Oct 5, 2026',
-  sponsor: {
-    name: 'COBB Tuning',
-    tagline: 'Official Performance Partner',
-    url: 'https://cobbtuning.com',
-    color: '#E8622A',           // brand accent (used for badges + CTA)
-  },
-  mods: [
-    {
-      title: 'Accessport V3',
-      category: 'Performance',
-      price: '$695',
-      description: 'The world\'s best-selling aftermarket ECU device. Tune, monitor, and diagnose your car.',
-      url: 'https://cobbtuning.com/accessport',
-      icon: '⚡',
-    },
-    {
-      title: 'Stage 2 Power Package',
-      category: 'Performance',
-      price: '$1,495',
-      description: 'Intake, downpipe, and Accessport map. Proven gains on WRX, STI, and FXT platforms.',
-      url: 'https://cobbtuning.com',
-      icon: '🚀',
-    },
-    {
-      title: 'SF Intake System',
-      category: 'Performance',
-      price: '$399',
-      description: 'High-flow short ram intake with performance filter. More air, better sound.',
-      url: 'https://cobbtuning.com',
-      icon: '🌬️',
-    },
-  ],
+  enabled: false,
+  week: '',
+  sponsor: { name: '', tagline: '', url: '', color: '' },
+  mods: [],
 };
 
 const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')

@@ -59,12 +59,26 @@ async function loadEvents() {
   }
 }
 
+// Day-only dates ("2026-10-24") are local calendar days; parsing them as UTC shifts them a day back in the US.
+function eventDate(raw) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw || '');
+  if (m) return { d: new Date(+m[1], +m[2] - 1, +m[3]), hasTime: false };
+  const d = new Date(raw);
+  return { d, hasTime: !(d.getHours() === 0 && d.getMinutes() === 0) };
+}
+function eventIsPast({ d, hasTime }) {
+  if (hasTime) return d < new Date();
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return d < today;
+}
+
 function buildEventCard(evt) {
-  const d = new Date(evt.date);
-  const isPast = d < new Date();
+  const ed = eventDate(evt.date);
+  const d = ed.d;
+  const isPast = eventIsPast(ed);
   const month = d.toLocaleDateString(undefined, { month: 'short' }).toUpperCase();
   const day   = d.getDate();
-  const time  = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const time  = ed.hasTime ? d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : d.toLocaleDateString(undefined, { weekday: 'short' });
 
   const card = document.createElement('div');
   card.className = 'evt-card';
@@ -82,12 +96,29 @@ function buildEventCard(evt) {
       </div>` : ''}
       <div class="evt-meta">
         <span class="evt-going-count">${evt.attendee_count || 0} going</span>
-        ${evt.going ? '<span class="evt-badge">Going</span>' : ''}
         ${isPast ? '<span class="evt-badge past">Past</span>' : ''}
       </div>
-    </div>`;
+    </div>
+    ${!isPast && token ? `<button class="evt-going-btn${evt.going ? ' on' : ''}" aria-pressed="${evt.going ? 'true' : 'false'}">${evt.going ? 'Going ✓' : 'Going?'}</button>` : ''}`;
 
   card.addEventListener('click', () => openEventDetail(evt));
+  const goingBtn = card.querySelector('.evt-going-btn');
+  if (goingBtn) goingBtn.addEventListener('click', async e => {
+    e.stopPropagation();
+    goingBtn.disabled = true;
+    try {
+      const res = await fetch(`${API}/api/events/${evt.id}/rsvp`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      evt.attendee_count = Math.max(0, (evt.attendee_count || 0) + (data.going === evt.going ? 0 : (data.going ? 1 : -1)));
+      evt.going = data.going;
+      goingBtn.classList.toggle('on', evt.going);
+      goingBtn.setAttribute('aria-pressed', evt.going ? 'true' : 'false');
+      goingBtn.textContent = evt.going ? 'Going ✓' : 'Going?';
+      card.querySelector('.evt-going-count').textContent = `${evt.attendee_count} going`;
+    } catch { showAppMsg('Could not update. Try again.'); }
+    goingBtn.disabled = false;
+  });
   return card;
 }
 
@@ -97,10 +128,11 @@ const detailOverlay = document.getElementById('eventDetailOverlay');
 async function openEventDetail(evt) {
   document.getElementById('evtDetailTitle').textContent = evt.title;
 
-  const d = new Date(evt.date);
-  const isPast = d < new Date();
+  const ed = eventDate(evt.date);
+  const d = ed.d;
+  const isPast = eventIsPast(ed);
   const dateStr = d.toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-  const timeStr = d.toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' });
+  const timeStr = ed.hasTime ? d.toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' }) : '';
 
   let attendeesHtml = '';
   try {
@@ -129,7 +161,7 @@ async function openEventDetail(evt) {
   const isCreator = currentUser && currentUser.id === evt.creator_id;
 
   document.getElementById('evtDetailBody').innerHTML = `
-    <div class="evt-detail-date">${esc(dateStr)} at ${esc(timeStr)}</div>
+    <div class="evt-detail-date">${esc(dateStr)}${timeStr ? ` at ${esc(timeStr)}` : ''}</div>
     ${evt.location ? `<div class="evt-detail-location">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
       ${esc(evt.location)}

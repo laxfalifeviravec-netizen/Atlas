@@ -189,3 +189,13 @@ input[type="datetime-local"]:focus { border-color: var(--c-accent); }
 input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   filter: invert(0.7);
 }
+
+.evt-card { position: relative; }
+.evt-going-btn {
+  align-self: center; flex-shrink: 0; margin-left: auto;
+  border: 1px solid var(--c-accent); background: transparent; color: var(--c-accent);
+  border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 700;
+  font-family: var(--font-ui); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.evt-going-btn.on { background: var(--c-accent); color: #0C0C0F; }
+.evt-going-btn:disabled { opacity: .6; }

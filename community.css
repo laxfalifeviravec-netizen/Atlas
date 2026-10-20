@@ -374,7 +374,7 @@ body {
 .post-card-likes { padding: 0 12px 3px; font-size: 13px; font-weight: 600; }
 .post-card-caption { padding: 2px 12px 6px; font-size: 13px; line-height: 1.5; }
 .post-card-caption strong { font-weight: 600; margin-right: 5px; }
-.post-card-time { padding: 0 12px 10px; font-size: 10px; color: var(--c-text-2); text-transform: uppercase; letter-spacing: 0.5px; }
+.post-card-time { padding: 0 12px 10px; font-size: 12px; color: var(--c-text-2); }
 
 /* On mobile: no gap, no border-radius, full-width, no side border (classic IG mobile) */
 @media (max-width: 520px) {
@@ -1031,3 +1031,52 @@ body {
 .feed-caught-up h3 { font-family: var(--font-head); font-size: 20px; color: var(--c-text); }
 .feed-caught-up p { font-size: 13px; max-width: 260px; line-height: 1.5; }
 .feed-caught-up .btn { margin-top: 8px; }
+
+/* ── Shared header: logo on one line, page actions, avatar ─ */
+.app-logo { white-space: nowrap; }
+.app-header-actions { flex-shrink: 0; }
+.app-header #themeToggle,
+.app-header #newStoryBtn,
+.app-header .nav-signout-btn { display: none !important; }
+.app-header .nav-user-btn { display: flex; align-items: center; text-decoration: none; margin-left: 4px; }
+
+/* ── Bottom sheet (shared) ───────────────────────────────────── */
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 1100;
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s ease;
+}
+.sheet-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+.sheet-overlay.open .sheet {
+  transform: translateY(0);
+}
+.sheet {
+  width: 100%;
+  background: var(--c-surface, #141417);
+  border-radius: 20px 20px 0 0;
+  padding: 0 20px calc(28px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--c-border);
+  margin: 12px auto 20px;
+}
+
+
+/* Buttons use the app font in sentence case (overrides the old site stylesheet) */
+.btn { text-transform: none; font-family: var(--font-ui); letter-spacing: 0.15px; border-radius: 10px; }

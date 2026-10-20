@@ -40,7 +40,7 @@ function renderNav(user) {
   } else {
     const init = user.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
     el.innerHTML = `
-      <span class="nav-user-btn"><div class="avatar avatar-sm">${init}</div>${user.name.split(' ')[0]}</span>
+      <a href="profile.html?id=${user.id}" class="nav-user-btn" aria-label="Your profile"><div class="avatar avatar-sm">${init}</div></a>
       <button class="nav-signout-btn" id="navSignOut">Sign Out</button>`;
     document.getElementById('navSignOut').addEventListener('click', () => {
       localStorage.removeItem('culture-token'); token = null; currentUser = null; location.reload();
@@ -78,9 +78,15 @@ function filterAndRender() {
   renderGrid(results);
 }
 
+const CAT_ICON_PATHS = {
+  Cars: '<path d="M3 13l2.2-5.2A2 2 0 0 1 7 6.6h10a2 2 0 0 1 1.8 1.2L21 13v4a1 1 0 0 1-1 1h-1.5"/><path d="M5.5 18H4a1 1 0 0 1-1-1v-4h18"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/>',
+  Mods: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3 17.8V21h3.2l6.3-6.3a4 4 0 0 0 5.2-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>',
+  Wheels: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3v6.5M12 14.5V21M3 12h6.5M14.5 12H21"/>',
+  Electronics: '<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>',
+  Other: '<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',
+};
 function catIcon(cat) {
-  const icons = { Cars:'🚗', Mods:'🔧', Wheels:'🛞', Electronics:'📡', Other:'📦' };
-  return icons[cat] || '📦';
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="1em" height="1em">${CAT_ICON_PATHS[cat] || CAT_ICON_PATHS.Other}</svg>`;
 }
 
 function buildListingCard(l) {
@@ -278,7 +284,7 @@ document.getElementById('submitListingBtn').addEventListener('click', async () =
   err.textContent = '';
 
   const fd = new FormData();
-  listingFiles.forEach(f => fd.append('images', f));
+  (await shrinkImages(listingFiles)).forEach(f => fd.append('images', f));
   fd.append('title', title);
   fd.append('price', price);
   fd.append('category', document.getElementById('listingCategory').value);
@@ -289,8 +295,8 @@ document.getElementById('submitListingBtn').addEventListener('click', async () =
   btn.disabled = true; btn.textContent = 'Posting…';
   try {
     const res = await fetch(`${API}/api/marketplace`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
-    const data = await res.json();
-    if (!res.ok) { err.textContent = data.error; return; }
+    const data = await readUploadResponse(res);
+    if (!res.ok) { err.textContent = data.error || 'Upload failed. Try again.'; return; }
     createListingOverlay.classList.remove('open'); document.body.style.overflow = '';
     listingFiles = [];
     const thumbsGrid = document.getElementById('listingThumbsGrid');

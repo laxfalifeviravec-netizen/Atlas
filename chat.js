@@ -65,7 +65,7 @@ async function loadConversations() {
 function buildConvRow(c) {
   const name    = esc(c.other_name || c.other_user_name || c.name || 'Unknown');
   const init    = (name[0] || '?').toUpperCase();
-  const preview = esc(c.last_message?.body || c.last_message || '');
+  const preview = esc(previewText(c.last_message?.body || (typeof c.last_message === 'string' ? c.last_message : '')));
   const time    = (c.last_message?.created_at || c.last_message_at) ? relTime(c.last_message?.created_at || c.last_message_at) : '';
   const unread  = (c.unread || c.unread_count || 0) > 0;
   return `
@@ -162,6 +162,13 @@ async function loadMessages() {
     convMsgs.innerHTML = msgs.map(m => buildMsgBubble(m)).join('');
     if (atBottom || convMsgs.scrollTop === 0) convMsgs.scrollTop = convMsgs.scrollHeight;
   } catch {}
+}
+
+function previewText(body) {
+  if (typeof body === 'string' && body.startsWith('{"__type":"post_share"')) {
+    try { return /\.(mp4|mov|webm|m4v)(\?|$)/i.test(JSON.parse(body).image_url || '') ? 'Shared a roller' : 'Shared a post'; } catch { return 'Shared a post'; }
+  }
+  return body || '';
 }
 
 function buildMsgBubble(m) {

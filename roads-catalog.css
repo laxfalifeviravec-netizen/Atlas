@@ -236,3 +236,23 @@
 @media (min-width: 480px) {
   .rc-grid { grid-template-columns: repeat(3, 1fr); }
 }
+
+.rc-search-wrap { position: relative; padding: 10px 14px 0; }
+.rc-search-wrap svg { position: absolute; left: 26px; top: 50%; margin-top: 5px; transform: translateY(-50%); color: var(--c-text-2); pointer-events: none; }
+.rc-search {
+  width: 100%; box-sizing: border-box; background: var(--c-surface); color: var(--c-text);
+  border: 1px solid var(--c-border); border-radius: 12px; padding: 11px 14px 11px 38px;
+  font-family: var(--font-ui); font-size: 15px; outline: none;
+}
+.rc-search:focus { border-color: var(--c-accent); }
+.rc-count { padding: 4px 16px 0; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--c-text-2); }
+.rc-more { display: block; margin: 8px auto 24px; }
+.rc-community { color: var(--c-accent); font-weight: 600; }
+a.rd-drive-btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+.rc-diff-badge.expert   { background: #2e0e1c; color: #d0407a; }
+.rc-card-desc { overflow: hidden; }
+.rc-count { padding: 4px 2px 10px; }
+@media (max-width: 560px) {
+  .rc-grid { grid-template-columns: 1fr; }
+  .rc-card-name { font-size: 20px; }
+}

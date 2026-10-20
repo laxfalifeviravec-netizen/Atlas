@@ -472,47 +472,8 @@ function openUpload() {
   });
 }
 
-function xhr(method, url, body, headers, onProgress) {
-  return new Promise((resolve, reject) => {
-    const x = new XMLHttpRequest();
-    x.open(method, url);
-    Object.entries(headers || {}).forEach(([k, v]) => x.setRequestHeader(k, v));
-    if (onProgress && x.upload) x.upload.onprogress = e => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
-    x.onload = () => resolve({ status: x.status, text: x.responseText });
-    x.onerror = () => reject(new Error('Network error during upload. Check your connection and try again.'));
-    x.send(body);
-  });
-}
-
-async function uploadReel(file, caption, onProgress) {
-  const ur = await fetch(`${API}/api/reels/upload-url`, { method: 'POST', headers: authHeaders(true), body: JSON.stringify({ filename: file.name, content_type: file.type, size: file.size }) });
-  const info = await ur.json();
-  if (!ur.ok) throw new Error(info.error || 'Could not start the upload.');
-
-  if (info.mode === 'signed') {
-    const fd = new FormData();
-    fd.append('cacheControl', '3600');
-    fd.append('', file);
-    // Newer Supabase "publishable" keys (sb_publishable_...) are not JWTs and must not be sent as a Bearer token
-    const keyHeaders = { apikey: info.anonKey, 'x-upsert': 'false' };
-    if (!info.anonKey.startsWith('sb_')) keyHeaders.Authorization = `Bearer ${info.anonKey}`;
-    const up = await xhr('PUT', info.signedUrl, fd, keyHeaders, onProgress);
-    if (up.status < 200 || up.status >= 300) throw new Error(up.status === 413 ? 'That video is too large for storage. Try a shorter or smaller clip.' : 'The upload was rejected. Please try again.');
-    const res = await fetch(`${API}/api/reels`, { method: 'POST', headers: authHeaders(true), body: JSON.stringify({ video_path: info.path, caption }) });
-    const d = await res.json();
-    if (!res.ok) throw new Error(d.error || 'Could not post the roller.');
-    return d.reel;
-  }
-
-  const fd = new FormData();
-  fd.append('video', file);
-  fd.append('caption', caption);
-  const up = await xhr('POST', `${API}/api/reels`, fd, { Authorization: `Bearer ${token}` }, onProgress);
-  if (up.status === 413) throw new Error('That video is too large to upload right now.');
-  let d = {};
-  try { d = JSON.parse(up.text); } catch {}
-  if (up.status < 200 || up.status >= 300) throw new Error(d.error || 'Could not post the roller.');
-  return d.reel;
+function uploadReel(file, caption, onProgress) {
+  return window.uploadVideo(file, caption, token, onProgress);
 }
 
 // ── Init ───────────────────────────────────────────────────

@@ -85,7 +85,7 @@ function renderResults({ users = [], posts = [] }) {
           <div class="srch-user-avatar">${avatar}</div>
           <div>
             <div class="srch-user-name">${esc(u.name)}</div>
-            <div class="srch-user-plan">${esc(u.plan || 'Explorer')}</div>
+            ${u.bio ? `<div class="srch-user-plan">${esc(u.bio)}</div>` : ''}
           </div>
         </a>`;
     }).join('');

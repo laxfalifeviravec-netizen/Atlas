@@ -85,7 +85,7 @@ function renderProfile(user) {
   }
 
   document.getElementById('profileName').textContent = user.name;
-  document.getElementById('profilePlan').textContent = user.plan || 'Explorer';
+  document.getElementById('profilePlan').style.display = 'none';
   document.getElementById('profileBio').textContent = user.bio || '';
   if (!user.bio) document.getElementById('profileBio').style.display = 'none';
 
@@ -93,17 +93,44 @@ function renderProfile(user) {
   document.getElementById('statFollowerCount').textContent = fmtNum(user.follower_count);
   document.getElementById('statFollowingCount').textContent = fmtNum(user.following_count);
 
-  document.getElementById('statFollowers').onclick = () => {
-    location.href = `following.html?tab=followers&id=${user.id}`;
-  };
-  document.getElementById('statFollowing').onclick = () => {
-    location.href = `following.html?tab=following&id=${user.id}`;
-  };
+  document.getElementById('statFollowers').onclick = () => openPeopleSheet('followers', user);
+  document.getElementById('statFollowing').onclick = () => openPeopleSheet('following', user);
   document.getElementById('statPosts').onclick = () => {
     document.getElementById('tabPosts')?.click();
   };
 
   renderActions(user);
+}
+
+// Followers / following list in a bottom sheet
+async function openPeopleSheet(kind, user) {
+  const ov = document.createElement('div');
+  ov.className = 'sheet-overlay';
+  ov.innerHTML = `<div class="sheet people-sheet">
+      <div class="sheet-handle"></div>
+      <div class="people-title">${kind === 'followers' ? 'Followers' : 'Following'}</div>
+      <div class="people-list"><div class="people-empty">Loading…</div></div>
+    </div>`;
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => ov.classList.add('open'));
+  const close = () => { ov.classList.remove('open'); setTimeout(() => ov.remove(), 300); };
+  ov.addEventListener('click', e => { if (e.target === ov) close(); });
+  const list = ov.querySelector('.people-list');
+  try {
+    const res = await fetch(`${API}/api/users/${user.id}/${kind}`);
+    const { users = [] } = await res.json();
+    if (!users.length) {
+      list.innerHTML = `<div class="people-empty">${kind === 'followers' ? 'No followers yet.' : 'Not following anyone yet.'}</div>`;
+      return;
+    }
+    list.innerHTML = users.map(u => {
+      const init = (u.name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+      return `<a class="people-row" href="profile.html?id=${u.id}">
+        <div class="avatar avatar-sm">${u.avatar ? `<img src="${esc(u.avatar)}" alt="" />` : init}</div>
+        <div class="people-info"><strong>${esc(u.name)}</strong>${u.bio ? `<span>${esc(u.bio)}</span>` : ''}</div>
+      </a>`;
+    }).join('');
+  } catch { list.innerHTML = '<div class="people-empty">Couldn\'t load this list. Try again.</div>'; }
 }
 
 function renderActions(user) {
@@ -207,14 +234,7 @@ async function loadSaved() {
     const { posts } = await res.json();
     grid.innerHTML = '';
     if (!posts || posts.length === 0) { empty.style.display = 'flex'; return; }
-    posts.forEach(p => {
-      const imgSrc = p.image_url.startsWith('http') ? p.image_url : `${API}${p.image_url}`;
-      const tile = document.createElement('div');
-      tile.className = 'profile-grid-tile';
-      tile.innerHTML = `<img src="${imgSrc}" alt="" loading="lazy" /><div class="profile-grid-tile-overlay"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="16" height="16"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> ${p.likes||0}</div>`;
-      tile.addEventListener('click', () => { location.href = `community.html?post=${p.id}`; });
-      grid.appendChild(tile);
-    });
+    posts.forEach(p => grid.appendChild(gridTile(p)));
   } catch { grid.innerHTML = ''; empty.style.display = 'flex'; }
 }
 
@@ -347,24 +367,22 @@ async function loadGrid(userId) {
     grid.innerHTML = '';
     if (!posts || posts.length === 0) { emptyEl.style.display = 'flex'; return; }
     emptyEl.style.display = 'none';
-    posts.forEach(p => {
-      const tile = document.createElement('div');
-      tile.className = 'profile-grid-tile';
-      tile.innerHTML = `
-        <img src="${p.image_url}" alt="" loading="lazy" />
-        <div class="profile-grid-tile-overlay">
-          <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="16" height="16"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          ${p.likes || 0}
-        </div>`;
-      tile.addEventListener('click', () => openPost(p));
-      grid.appendChild(tile);
-    });
+    posts.forEach(p => grid.appendChild(gridTile(p)));
   } catch {}
 }
 
-function openPost(p) {
-  // Navigate to community feed with the post highlighted
-  location.href = `community.html?post=${p.id}`;
+// One square in a profile grid. Rollers show their first frame with a play badge and open in Rollers.
+function gridTile(p) {
+  const src = esc((p.image_url || '').startsWith('http') ? p.image_url : `${API}${p.image_url || ''}`);
+  const isVideo = /\.(mp4|mov|webm|m4v)(\?|$)/i.test(p.image_url || '');
+  const tile = document.createElement('div');
+  tile.className = 'profile-grid-tile';
+  tile.innerHTML = isVideo
+    ? `<video src="${src}#t=0.1" muted playsinline preload="metadata"></video>
+       <span class="profile-grid-play"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><polygon points="7 4 20 12 7 20 7 4"/></svg></span>`
+    : `<img src="${src}" alt="" loading="lazy" />`;
+  tile.addEventListener('click', () => { location.href = isVideo ? `reels.html?id=${p.id}` : `community.html?post=${p.id}`; });
+  return tile;
 }
 
 // ── Edit profile modal ─────────────────────────────────────
@@ -415,7 +433,7 @@ document.getElementById('saveProfileBtn').addEventListener('click', async () => 
   const fd = new FormData();
   fd.append('name', name);
   fd.append('bio', bio);
-  if (editAvatarFile) fd.append('avatar', editAvatarFile);
+  if (editAvatarFile) fd.append('avatar', await shrinkImage(editAvatarFile, 800));
 
   const btn = document.getElementById('saveProfileBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
@@ -435,6 +453,22 @@ document.getElementById('saveProfileBtn').addEventListener('click', async () => 
   } catch { err.textContent = 'Failed to save.'; }
   finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
 });
+
+// Light / dark appearance lives here instead of every page header
+function isDarkNow() {
+  const t = document.documentElement.getAttribute('data-theme');
+  return t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function syncAppearanceBtn() {
+  document.getElementById('appearanceBtn').textContent = isDarkNow() ? 'Switch to light mode' : 'Switch to dark mode';
+}
+document.getElementById('appearanceBtn').addEventListener('click', () => {
+  const next = isDarkNow() ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('culture-theme', next); } catch {}
+  syncAppearanceBtn();
+});
+syncAppearanceBtn();
 
 document.getElementById('signOutBtn').addEventListener('click', () => {
   localStorage.removeItem('culture-token');
